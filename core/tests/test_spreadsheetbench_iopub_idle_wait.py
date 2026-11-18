@@ -3,7 +3,7 @@
 The shell channel's execute_reply and the iopub stream messages travel on different sockets,
 so the reply can arrive first. The vendored `wait_for_messages` returned at the reply and
 silently dropped the late output ("[Code executed successfully with no output]"). The adapter
-patches its staged copy of jupyter.py (third_party/ stays byte-identical to upstream).
+patches its staged copy of jupyter.py (harness/ stays byte-identical to upstream).
 
 These tests run the patched coroutine against a fake websocket; no docker or jupyter needed.
 """
@@ -17,7 +17,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 ADAPTER = REPO / "benchmarks" / "spreadsheetbench" / "template" / "adapter.py"
-VENDOR_JUPYTER = REPO / "third_party" / "spreadsheetbench" / "code_exec_docker" / "jupyter.py"
+VENDOR_JUPYTER = REPO / "benchmarks" / "spreadsheetbench" / "harness" / "code_exec_docker" / "jupyter.py"
 
 
 def _patch_fn():

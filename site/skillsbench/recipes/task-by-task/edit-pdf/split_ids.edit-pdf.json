@@ -1,5 +1,0 @@
-{
-  "train": ["edit-pdf"],
-  "val": ["edit-pdf"],
-  "test": ["edit-pdf"]
-}

@@ -52,10 +52,10 @@ on:
         default: direct
         options: [direct, blackbox]
       tier:
-        description: "Which tier. smoke (default) is a few tasks per benchmark. full is a benchmark's whole/original task set. full_verified is a benchmark's verified/curated re-release, where upstream publishes one. pilot is a cost/runtime measurement rig whose rewards are NOT comparable to anything. full and full_verified are both expensive and run only when named, never under `all`. A tier only runs for benchmarks that populate it — see ci/benchmarks/<bench>/README.md for what each tier means for that benchmark."
+        description: "Which tier. smoke (default) is a few tasks per benchmark. full is a benchmark's whole/original task set. full_verified is a benchmark's verified/curated re-release, where upstream publishes one. pilot is a cost/runtime measurement rig whose rewards are NOT comparable to anything. canary is a minimal pipeline check (1 task, 1 trial, 1 iteration) whose rewards mean nothing. full and full_verified are both expensive and run only when named, never under `all`. A tier only runs for benchmarks that populate it — see ci/benchmarks/<bench>/README.md for what each tier means for that benchmark."
         type: choice
         default: smoke
-        options: [all, smoke, pilot, full, full_verified]
+        options: [all, smoke, canary, pilot, full, full_verified]
       iterations:
         description: "Optimizer iterations. LEAVE BLANK for the tier default (smoke 3, everything else 10). Set a value to override deliberately — including on smoke, where more rounds are how you watch a per-iteration curve rather than a single step. WHAT ONE ITERATION BUYS DEPENDS ON THE ALGORITHM: on the hill-climb (deterministic) path it is one optimizer call; under agent-optimize it is one CANDIDATE taken to a gate decision, so a wave of three parallel siblings spends three iterations at once. Budget accordingly — 3 under agent-optimize can mean a single wave and no iteration at all."
         type: string
@@ -94,13 +94,9 @@ on:
           - "DeepSeek-V3.2"
           - "gpt-oss-120b-a100"
           - "Kimi-K2.7-Code"
-          - "ibm-ete-int/aws/claude-haiku-4-5"
           - "ibm-ete-int/aws/claude-haiku-5-5"
-          - "ibm-ete-int/aws/claude-opus-4-7"
-          - "ibm-ete-int/aws/claude-opus-4-8"
           - "ibm-ete-int/aws/claude-opus-5"
           - "ibm-ete-int/aws/claude-opus-5-5"
-          - "ibm-ete-int/aws/claude-sonnet-4-6"
           - "ibm-ete-int/aws/claude-sonnet-5"
           - "ibm-ete-int/aws/claude-sonnet-5-5"
           - "ibm-ete-int/aws/gpt-oss-120b"
@@ -118,9 +114,6 @@ on:
           - "ibm-ete-int/azure/gpt-6-sol"
           - "ibm-ete-int/azure/gpt-6.1-sol"
           - "ibm-ete-int/Azure/o4-mini"
-          - "ibm-ete-int/claude-haiku-4-5-20251001"
-          - "ibm-ete-int/claude-opus-4-6"
-          - "ibm-ete-int/claude-opus-4-8"
           - "ibm-ete-int/gcp/gemini-3-pro-preview"
           - "ibm-ete-int/gcp/gemini-3.1-pro-preview"
           - "ibm-ete-int/gcp/gemini-3.5-flash-lite"
@@ -129,6 +122,7 @@ on:
           - "ibm-ete-int/gemini-2.5-pro"
           - "ibm-ete-int/rits/google/gemma-4-31B"
           - "ibm-ete/aws/claude-haiku-4-5"
+          - "ibm-ete/aws/claude-haiku-5-5"
           - "ibm-ete/aws/claude-opus-4-7"
           - "ibm-ete/aws/claude-opus-5"
           - "ibm-ete/aws/claude-opus-5-5"
@@ -140,6 +134,7 @@ on:
           - "ibm-ete/aws/us.claude-opus-4-7"
           - "ibm-ete/azure/DeepSeek-V3.2"
           - "ibm-ete/azure/DeepSeek-V4-Flash"
+          - "ibm-ete/azure/FW-GLM-5.3"
           - "ibm-ete/azure/FW-GLM-5.3-Flash"
           - "ibm-ete/azure/FW-Kimi-K3"
           - "ibm-ete/Azure/gpt-4.1"
@@ -153,19 +148,30 @@ on:
           - "ibm-ete/azure/gpt-5.3-codex"
           - "ibm-ete/azure/gpt-5.4"
           - "ibm-ete/azure/gpt-5.5"
+          - "ibm-ete/azure/gpt-5.6-luna"
+          - "ibm-ete/azure/gpt-5.6-sol"
+          - "ibm-ete/azure/gpt-5.6-terra"
+          - "ibm-ete/azure/gpt-6-astra"
+          - "ibm-ete/azure/gpt-6-luna"
+          - "ibm-ete/azure/gpt-6-sol"
+          - "ibm-ete/azure/gpt-6.1-sol"
           - "ibm-ete/claude-haiku-4-5-20251001"
           - "ibm-ete/claude-opus-4-6"
           - "ibm-ete/claude-opus-4-7"
           - "ibm-ete/claude-opus-4-8"
           - "ibm-ete/claude-sonnet-4-5-20250929"
           - "ibm-ete/claude-sonnet-4-6"
+          - "ibm-ete/claude-sonnet-5-5"
           - "ibm-ete/GCP/gemini-2.0-flash"
           - "ibm-ete/gcp/gemini-3-flash-preview"
           - "ibm-ete/gcp/gemini-3-pro-preview"
           - "ibm-ete/gcp/gemini-3.1-pro-preview"
+          - "ibm-ete/gcp/gemini-3.5-flash-lite"
+          - "ibm-ete/gcp/gemini-3.6-flash"
           - "ibm-ete/gemini-2.5-flash"
           - "ibm-ete/gemini-2.5-pro"
           - "ibm-ete/gpt-5.5"
+          - "ibm-ete/gpt-6-astra"
           - "ibm-ete/rits/google/gemma-4-31B"
           # ---- RITS (skillberry-1 lite-rits proxy) — see resolve_provider.sh ----
           # Curated from the live rits.json catalog (105 models), granite family excluded on
@@ -212,13 +218,9 @@ on:
           - "DeepSeek-V3.2"
           - "gpt-oss-120b-a100"
           - "Kimi-K2.7-Code"
-          - "ibm-ete-int/aws/claude-haiku-4-5"
           - "ibm-ete-int/aws/claude-haiku-5-5"
-          - "ibm-ete-int/aws/claude-opus-4-7"
-          - "ibm-ete-int/aws/claude-opus-4-8"
           - "ibm-ete-int/aws/claude-opus-5"
           - "ibm-ete-int/aws/claude-opus-5-5"
-          - "ibm-ete-int/aws/claude-sonnet-4-6"
           - "ibm-ete-int/aws/claude-sonnet-5"
           - "ibm-ete-int/aws/claude-sonnet-5-5"
           - "ibm-ete-int/aws/gpt-oss-120b"
@@ -236,9 +238,6 @@ on:
           - "ibm-ete-int/azure/gpt-6-sol"
           - "ibm-ete-int/azure/gpt-6.1-sol"
           - "ibm-ete-int/Azure/o4-mini"
-          - "ibm-ete-int/claude-haiku-4-5-20251001"
-          - "ibm-ete-int/claude-opus-4-6"
-          - "ibm-ete-int/claude-opus-4-8"
           - "ibm-ete-int/gcp/gemini-3-pro-preview"
           - "ibm-ete-int/gcp/gemini-3.1-pro-preview"
           - "ibm-ete-int/gcp/gemini-3.5-flash-lite"
@@ -247,6 +246,7 @@ on:
           - "ibm-ete-int/gemini-2.5-pro"
           - "ibm-ete-int/rits/google/gemma-4-31B"
           - "ibm-ete/aws/claude-haiku-4-5"
+          - "ibm-ete/aws/claude-haiku-5-5"
           - "ibm-ete/aws/claude-opus-4-7"
           - "ibm-ete/aws/claude-opus-5"
           - "ibm-ete/aws/claude-opus-5-5"
@@ -258,6 +258,7 @@ on:
           - "ibm-ete/aws/us.claude-opus-4-7"
           - "ibm-ete/azure/DeepSeek-V3.2"
           - "ibm-ete/azure/DeepSeek-V4-Flash"
+          - "ibm-ete/azure/FW-GLM-5.3"
           - "ibm-ete/azure/FW-GLM-5.3-Flash"
           - "ibm-ete/azure/FW-Kimi-K3"
           - "ibm-ete/Azure/gpt-4.1"
@@ -271,19 +272,30 @@ on:
           - "ibm-ete/azure/gpt-5.3-codex"
           - "ibm-ete/azure/gpt-5.4"
           - "ibm-ete/azure/gpt-5.5"
+          - "ibm-ete/azure/gpt-5.6-luna"
+          - "ibm-ete/azure/gpt-5.6-sol"
+          - "ibm-ete/azure/gpt-5.6-terra"
+          - "ibm-ete/azure/gpt-6-astra"
+          - "ibm-ete/azure/gpt-6-luna"
+          - "ibm-ete/azure/gpt-6-sol"
+          - "ibm-ete/azure/gpt-6.1-sol"
           - "ibm-ete/claude-haiku-4-5-20251001"
           - "ibm-ete/claude-opus-4-6"
           - "ibm-ete/claude-opus-4-7"
           - "ibm-ete/claude-opus-4-8"
           - "ibm-ete/claude-sonnet-4-5-20250929"
           - "ibm-ete/claude-sonnet-4-6"
+          - "ibm-ete/claude-sonnet-5-5"
           - "ibm-ete/GCP/gemini-2.0-flash"
           - "ibm-ete/gcp/gemini-3-flash-preview"
           - "ibm-ete/gcp/gemini-3-pro-preview"
           - "ibm-ete/gcp/gemini-3.1-pro-preview"
+          - "ibm-ete/gcp/gemini-3.5-flash-lite"
+          - "ibm-ete/gcp/gemini-3.6-flash"
           - "ibm-ete/gemini-2.5-flash"
           - "ibm-ete/gemini-2.5-pro"
           - "ibm-ete/gpt-5.5"
+          - "ibm-ete/gpt-6-astra"
           - "ibm-ete/rits/google/gemma-4-31B"
           # ---- RITS (skillberry-1 lite-rits proxy) — see resolve_provider.sh and the
           # agent_model list above for the same catalog note. ----
@@ -397,7 +409,7 @@ jobs:
           # any bench that gains one uses the same tier rather than inventing a name with its
           # own task count baked in. Sizes, datasets and costs differ per benchmark and are
           # documented under ci/benchmarks/<bench>/ — never here.
-          TIERS = ["smoke", "pilot", "full", "full_verified"]
+          TIERS = ["smoke", "canary", "pilot", "full", "full_verified"]
           # tau2_sierra / tau2_sierra_blackbox are the DELIVERY ARMS of benchmarks/tau2/examples/sierra_airline
           # (vanilla tau2 pinned at its TAU2_REFERENCE_SHA): same tasks and tiers, candidate
           # delivered in-process versus through the Skillberry Store + Proxy-Agent. They stay
@@ -413,15 +425,17 @@ jobs:
           ARM_OF = {"direct": "tau2_sierra", "blackbox": "tau2_sierra_blackbox"}
           # Tiers that `tier=all` must NOT sweep in — they only run when named explicitly.
           # `pilot` is a cost/runtime measurement rig: its splits are sized for measurement,
-          # so its rewards are not comparable to anything, and the aggregate job publishes
-          # EVERY leg to benchmark-history. Letting "all" pick it up would put meaningless
+          # so its rewards are not comparable to anything, and every bench job publishes
+          # its leg to the skillberry-runs dashboard. Letting "all" pick it up would put meaningless
           # numbers on the benchmarks page. A `benchmark-pilot-<bench>` label still works,
           # because that names both the tier and the bench deliberately.
+          # `canary` is a pipeline check (1 task x 1 trial x 1 iteration): it exists to exercise the
+          # run -> live -> publish path cheaply, and its numbers mean nothing.
           # `full_verified` is a REAL comparison tier, unlike pilot — it is excluded for COST,
           # not for honesty. A benchmark populating both whole-set tiers would put two of them
           # in every `all` dispatch, and each is a full-length run on its own. Run it by name:
           # `tier=full_verified`, or a `benchmark-full_verified-<bench>` label.
-          EXPLICIT_ONLY_TIERS = {"pilot", "full_verified"}
+          EXPLICIT_ONLY_TIERS = {"pilot", "full_verified", "canary"}
 
           # Is the repository actually checked out here? See the fail-open note below.
           tree_present = os.path.isdir("ci/benchmarks")
@@ -551,7 +565,7 @@ jobs:
       # so a dispatch of iterations=5 on smoke was silently ignored and the operator learned it
       # only by reading ITERATIONS in the job log. Smoke is the tier you iterate the algorithm
       # on, so pinning it was the wrong knob to make unreachable.
-      ITERATIONS: ${{ github.event.inputs.iterations || (matrix.tier == 'smoke' && '3') || '10' }}
+      ITERATIONS: ${{ github.event.inputs.iterations || (matrix.tier == 'canary' && '1') || (matrix.tier == 'smoke' && '3') || '10' }}
       # Smoke pins 3 trials, same as it pins iterations, and for a measurable reason.
       # Run 31183768756 was dispatched with trials=1 and re-scored the SAME seed capability at
       # 0.400 (baseline) then 0.200 (finalize) — pytest-dev__pytest-7432 flipped 1.000 -> 0.000
@@ -573,7 +587,7 @@ jobs:
       # trials, is the dominant noise term (val SE 0.158 at 10 tasks x 3 vs ~0.079 at 40 x 1),
       # and `grow.py` exists to buy replication only where a candidate looks promising.
       # Input FIRST, as with ITERATIONS: a tier pin that leads short-circuits the dispatch.
-      NUM_TRIALS: ${{ github.event.inputs.trials || (matrix.tier == 'smoke' && '3') || ((matrix.tier == 'full' || matrix.tier == 'full_verified') && '1') || '10' }}
+      NUM_TRIALS: ${{ github.event.inputs.trials || ((matrix.tier == 'canary' || matrix.tier == 'full' || matrix.tier == 'full_verified') && '1') || (matrix.tier == 'smoke' && '3') || '10' }}
       # Plain catalog names by default, so a PR-label run also gets provider fallback. The
       # provider actually used is chosen by ci_setup.sh and exported as *_MODEL_RESOLVED.
       AGENT_MODEL: ${{ github.event.inputs.agent_model || 'gpt-oss-120b' }}
@@ -609,9 +623,33 @@ jobs:
       - name: Setup runner env
         run: bash ci/benchmarks/lib/ci_setup.sh "${{ matrix.bench }}"
 
+      # Early warning for a runner whose DNS has gone slow. On 2026-11-18 two of skillberry-1's
+      # four nameservers stopped answering after IBM's network change; every lookup then waited
+      # ~8 s for them to time out before a working one answered, which made the artifact upload's
+      # CreateArtifact call time out on every attempt (runs 44284485344, 44305019470, 44307953014).
+      # Only timings are printed: this log is public, so no resolver addresses or domains.
+      - name: Check the runner's DNS
+        continue-on-error: true
+        timeout-minutes: 2
+        run: |
+          set +e
+          slow=0
+          for h in github.com api.github.com results-receiver.actions.githubusercontent.com; do
+            t0=$(date +%s.%N); getent ahosts "$h" >/dev/null; rc=$?; t1=$(date +%s.%N)
+            s=$(awk -v a="$t0" -v b="$t1" 'BEGIN{printf "%.2f", b-a}')
+            echo "DNS lookup of $h: rc=$rc in ${s}s"
+            awk -v s="$s" 'BEGIN{exit !(s > 2)}' && slow=1
+          done
+          if [ "$slow" = 1 ]; then
+            echo "::warning::DNS lookups on runner ${RUNNER_NAME:-?} take over 2 s: some nameserver in /etc/resolv.conf is probably not answering, so every connection waits for it to time out first. Remove or reorder it on the runner (dig @<nameserver> github.com tests each one)."
+          fi
+          exit 0
+
       - name: Start live snapshot poller
+        # Live data goes to its own branch in skillberry-runs/live (see live_push.sh). The token
+        # can reach that repo ONLY, so a poller bug cannot touch records or benchmark data.
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.SKILLBERRY_RUNS_LIVE_TOKEN }}
         run: |
           run_dir="$GITHUB_WORKSPACE/ci/benchmarks/.work/suite_${{ matrix.tier }}_${{ matrix.bench }}_proj/.capevolve/run_suite"
           nohup bash ci/benchmarks/lib/live_push.sh "$run_dir" "${{ github.run_id }}" "${{ matrix.tier }}-${{ matrix.bench }}" \
@@ -633,7 +671,7 @@ jobs:
         # `::warning::` below is what a cleanup failure is allowed to cost.
         timeout-minutes: 3
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.SKILLBERRY_RUNS_LIVE_TOKEN }}
         run: |
           bash ci/benchmarks/lib/live_push.sh --cleanup "${{ github.run_id }}" "${{ matrix.tier }}-${{ matrix.bench }}" \
             "$RUNNER_TEMP/live_push_${{ matrix.tier }}_${{ matrix.bench }}.pid" \
@@ -660,8 +698,8 @@ jobs:
       #
       # Ordered BEFORE the publishing steps, not last. `job.status` is evaluated when a step
       # runs, so a gate placed after "Write run metadata" leaves runmeta.json recording
-      # "conclusion": "success" for a run that then fails the gate — and the aggregate job
-      # publishes that to benchmark-history, where a crashed run reads as a clean success
+      # "conclusion": "success" for a run that then fails the gate — and the publish step
+      # sends that to the dashboard, where a crashed run reads as a clean success
       # (runs 30553822478 and 30608405812 are both recorded that way). Everything downstream
       # is `if: always()`, so metrics/UI/artifacts/PR-comment are still published on failure;
       # only the recorded conclusion changes.
@@ -712,7 +750,7 @@ jobs:
           gate_k_se="${GATE_K_SE:-${gate_k_se_file:-1.0}}"
           # Emit both free-form fields as JSON *string literals*. Shell quoting alone is not
           # enough: a branch name containing a double quote would close the string early and
-          # produce a runmeta.json the aggregate job cannot parse (verified locally).
+          # produce a runmeta.json the publish step cannot parse (verified locally).
           branch_json=$("${CAPEVOLVE_PY:-python3}" -c 'import json,os;print(json.dumps(os.environ["BRANCH_NAME"]))')
           source_json=$("${CAPEVOLVE_PY:-python3}" -c 'import json,os;print(json.dumps(os.environ["SOURCE_TEXT"]))')
           cat > "$out/runmeta.json" <<JSON
@@ -746,14 +784,33 @@ jobs:
           JSON
           cat "$out/runmeta.json"
 
+      # Each leg publishes its own results to the skillberry-runs org
+      # (https://skillberry-runs.github.io/dashboard/), with plain git to github.com:
+      #   ci_ui/<run_id>__<tier>-<bench>/        -> the benchmark's own repo (its "Open UI" data)
+      #   records/<run_id>__<tier>-<bench>.json  -> skillberry-runs/dashboard (its push deploys the site)
+      # Until 2026-11-18 a GitHub-hosted `aggregate` job did this from uploaded artifacts; after
+      # IBM's network change the runners' artifact uploads time out, so publishing no longer goes
+      # through the artifact service at all. See publish_results.sh. The token can write the
+      # dashboard and the benchmark repos only (Contents), and is passed to this step alone.
+      - name: Publish results to skillberry-runs
+        if: always()
+        timeout-minutes: 20
+        env:
+          GH_TOKEN: ${{ secrets.SKILLBERRY_RUNS_RESULTS_TOKEN }}
+        run: |
+          PY="${CAPEVOLVE_PY:-python3}" bash ci/benchmarks/lib/publish_results.sh \
+            "$GITHUB_WORKSPACE/ci/benchmarks/.work/suite_${{ matrix.tier }}_${{ matrix.bench }}" \
+            "${{ github.run_id }}" "${{ matrix.tier }}-${{ matrix.bench }}"
+
+      # A download convenience only (the run's files on its Actions page); publishing does not
+      # depend on it (see "Publish results to skillberry-runs"), so a failed upload must not fail
+      # the job.
       - name: Upload artifacts (metrics + optimized capabilities)
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: benchmarks-${{ matrix.tier }}-${{ matrix.bench }}
-          # EXACTLY ONE path. A second one makes upload-artifact re-root the artifact at the
-          # common ancestor of both, and the aggregate job reads runmeta.json flat at the root —
-          # it would then skip the leg and publish no history row.
           path: ci/benchmarks/.work/suite_${{ matrix.tier }}_${{ matrix.bench }}/**
           if-no-files-found: warn
 
@@ -776,114 +833,3 @@ jobs:
             } else {
               await github.rest.issues.createComment({owner, repo, issue_number, body});
             }
-
-  # Collect each run's per-(run x bench) record onto the benchmark-history branch (single
-  # writer → no push races). benchmarks.json/meta.json are no longer committed here — they're
-  # regenerated from records/ at Pages-deploy time (pages.yml) to avoid an ever-growing file
-  # being rewritten in full on every run.
-  # Runs on a GitHub-hosted runner (JSON + git only; no VPC access needed).
-  aggregate:
-    name: aggregate history
-    needs: [bench]
-    if: always()
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    concurrency:
-      group: benchmark-history-write
-      cancel-in-progress: false
-    steps:
-      - uses: actions/checkout@v4              # for ci/benchmarks/lib/record.py
-
-      - name: Download all benchmark artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: _artifacts
-          # `pattern` (unlike `name`) tolerates matching zero artifacts, which is what keeps
-          # this green when no benchmarks ran — e.g. a PR without the benchmark label, so
-          # every bench matrix job was skipped. Build-records handles the empty case.
-          # NB: do NOT add `if-no-files-found` here. That is an upload-artifact input;
-          # download-artifact ignores it, so it only ever looked like a safeguard.
-          pattern: benchmarks-*
-
-      - name: Check for UI snapshots
-        id: uicheck
-        run: |
-          if find _artifacts -type d -path '*/ui/data' 2>/dev/null | grep -q .; then
-            echo "found=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "found=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Set up Node.js 22
-        if: steps.uicheck.outputs.found == 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Build static dashboard shell
-        if: steps.uicheck.outputs.found == 'true'
-        working-directory: dashboard/frontend
-        run: |
-          npm ci
-          VITE_STATIC=1 npx vite build --outDir "$RUNNER_TEMP/ui_shell"
-
-      - name: Build records + assemble UI snapshots
-        run: |
-          # upload-artifact stores files flat at the artifact root (the least-common-ancestor
-          # of ci/benchmarks/.work/suite_<tier>_<bench>/** is that dir), so runmeta.json/
-          # metrics.jsonl/ui/ live directly under _artifacts/benchmarks-<tier>-<bench>/. The dir
-          # suffix is the <tier>-<bench> slug — use it verbatim to keep record files unique
-          # per (run, tier, bench) so smoke and full of the same bench never collide.
-          mkdir -p _new_records _hist_runs
-          have=0; built=0
-          for d in _artifacts/benchmarks-*; do
-            [ -d "$d" ] || continue
-            slug="$(basename "$d" | sed 's/^benchmarks-//')"   # e.g. smoke-tau2 / full-tau2
-            rm="$d/runmeta.json"; metrics="$d/metrics.jsonl"; steps="$d/steps.jsonl"
-            [ -f "$rm" ] || { echo "::warning::no runmeta for $slug, skipping"; continue; }
-            have=$((have+1))
-            rid="$(python3 -c "import json;print(json.load(open('$rm'))['run_id'])")"
-            has_ui_flag=""
-            if [ -d "$d/ui/data" ] && [ -n "$(ls -A "$d/ui/data" 2>/dev/null)" ]; then
-              dest="_hist_runs/${rid}__${slug}/ui"
-              mkdir -p "$dest"
-              cp -R "$RUNNER_TEMP/ui_shell/." "$dest/"
-              cp -R "$d/ui/data" "$dest/data"
-              has_ui_flag="--has-ui"
-            fi
-            python3 ci/benchmarks/lib/record.py build "$metrics" --runmeta "$rm" --steps "$steps" $has_ui_flag \
-              > "_new_records/${rid}__${slug}.json" && built=$((built+1))
-            echo "built _new_records/${rid}__${slug}.json"
-          done
-          ls -la _new_records || true
-          # Guard: if artifacts with runmeta exist but produced no records, fail loudly
-          # instead of silently exiting 0 (which previously masked a path bug).
-          if [ "$have" -gt 0 ] && [ "$built" -lt "$have" ]; then
-            echo "::error::found $have runmeta artifact(s) but built only $built record(s)"; exit 1
-          fi
-
-      - name: Push to benchmark-history (single writer, with rebase-retry)
-        run: |
-          [ -n "$(ls -A _new_records 2>/dev/null)" ] || { echo "no records to push"; exit 0; }
-          git config --global user.name "skillberry-bot"
-          git config --global user.email "actions@github.com"
-          for attempt in 1 2 3 4 5; do
-            rm -rf _hist
-            git clone --depth 1 --branch benchmark-history \
-              "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" _hist || {
-                echo "branch missing — bootstrap it per ci/benchmarks/README.md"; exit 1; }
-            mkdir -p _hist/records
-            cp _new_records/*.json _hist/records/
-            if [ -d _hist_runs ] && [ -n "$(ls -A _hist_runs 2>/dev/null)" ]; then
-              mkdir -p _hist/runs
-              cp -R _hist_runs/. _hist/runs/
-            fi
-            cd _hist
-            git add records
-            [ -d runs ] && git add runs
-            git commit -m "bench: record run ${{ github.run_id }}" || { echo "nothing to commit"; exit 0; }
-            if git push origin benchmark-history; then echo "pushed"; exit 0; fi
-            echo "push race, retrying ($attempt)"; cd ..; sleep 3
-          done
-          echo "failed to push after retries"; exit 1

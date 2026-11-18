@@ -63,27 +63,19 @@ def _pid_alive(pid) -> bool:
     return True
 
 
-def helper_refusal(spec: dict, cand: Path, parent: Path | None):
-    """PR-3 helper checks (static lint, then the smoke run) on a proposed candidate, or None.
+def helper_refusal(spec: dict, cand: Path, parent: Path | None, seed: Path | None = None):
+    """The helper gate (``cap_evolve.helper_gate``) on a proposed candidate: ``(check, detail)`` of the first
+    failing check, or None. The same rules as the pregate and every other caller; a failure costs 0 rollouts.
 
-    Optional: ``cap_evolve.helpers`` / ``helper_smoke`` are imported only if they exist and
-    ``helpers.enabled`` is set, so without PR-3 this is a no-op. A failure costs 0 rollouts."""
+    Off when helpers are off or the gate was switched off. A gate that cannot run raises ``GateConfigError``:
+    the conductor must stop rather than accept candidates with the check silently off."""
     try:
-        from cap_evolve import helper_smoke, helpers
+        from cap_evolve import helper_gate, helpers
     except ImportError:
         return None
-    if not helpers.enabled(spec):
-        return None
-    cfg = helpers.resolve(spec)
-    if cfg.get("lint", True):
-        r = helpers.lint_candidate(cand, cfg, parent)
-        if not r.get("ok", True):
-            return "helper_lint", "; ".join(map(str, r.get("findings") or []))[:300]
-    if cfg.get("smoke", True):
-        r = helper_smoke.run_smoke(cand, cfg, parent=parent)
-        if not r.get("ok", True):
-            return "helper_smoke", str(r.get("detail"))[:300]
-    return None
+    res = helper_gate.gate(cand, helpers.resolve(spec), parent=parent, seed=seed)
+    bad = next((c for c in res["checks"] if not c["ok"]), None)
+    return (bad["name"], str(bad["detail"])[:300]) if bad else None
 
 
 class P2Port:
@@ -443,7 +435,8 @@ class RealBackend(P2Port, conductor.Backend):
         work = self.ctx.work(tag)
         if not work.is_dir():
             return {"ok": False, "refused": "no_candidate"}
-        bad = helper_refusal(self.spec, work, digest.cand_dir(self.run_dir, parent))
+        bad = helper_refusal(self.spec, work, digest.cand_dir(self.run_dir, parent),
+                             digest.cand_dir(self.run_dir, "seed"))
         if bad:
             return {"ok": False, "refused": bad[0], "detail": bad[1]}
         h = proposer.read_hypothesis(work)

@@ -1,5 +1,0 @@
-{
-  "train": ["parallel-tfidf-search"],
-  "val": ["parallel-tfidf-search"],
-  "test": ["parallel-tfidf-search"]
-}

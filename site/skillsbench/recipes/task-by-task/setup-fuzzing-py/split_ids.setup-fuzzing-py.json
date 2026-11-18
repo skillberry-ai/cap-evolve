@@ -1,5 +1,0 @@
-{
-  "train": ["setup-fuzzing-py"],
-  "val": ["setup-fuzzing-py"],
-  "test": ["setup-fuzzing-py"]
-}

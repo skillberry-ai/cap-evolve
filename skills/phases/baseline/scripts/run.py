@@ -108,6 +108,12 @@ def main(argv=None) -> int:
     except Exception:  # noqa: BLE001 — provenance must never block a baseline
         pass
 
+    # The helper gate (cap_evolve.helper_gate), checked before the first rollout of the run: a gate that cannot
+    # run (unreadable ids_file, missing fixtures file, an invalid helpers table) stops the run HERE, not after
+    # the baseline was paid for; a run with helpers on and the gate off is warned about and logged.
+    from cap_evolve import helper_gate
+    helper_gate.for_run(run_dir, Path(args.project))
+
     try:
         try:
             from cap_evolve.specfile import read_yaml

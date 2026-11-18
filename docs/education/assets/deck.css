@@ -1,0 +1,278 @@
+/* ───────────────────────────────────────────────────────────────────────
+   cap-evolve education decks — shared slide engine styles.
+   One fixed 1280×720 slide canvas, scaled to the window by deck.js.
+   Palette matches the cap-evolve site and dashboard:
+   blue #3b82f6 = primary, amber #f59e0b = champion/best, green = accept,
+   red = reject, slate = seed.
+   ─────────────────────────────────────────────────────────────────────── */
+
+:root {
+  --bg: #07090d;
+  --panel: #0d1117;
+  --panel-2: #141b24;
+  --border: #1e2733;
+  --ink: #e6edf3;
+  --body: #c2ccd8;
+  --muted: #8b98a9;
+  --accent: #3b82f6;
+  --accent-soft: rgba(59, 130, 246, 0.16);
+  --accent-ink: #93c5fd;
+  --amber: #f59e0b;
+  --amber-soft: rgba(245, 158, 11, 0.16);
+  --amber-ink: #fbbf24;
+  --green: #22c55e;
+  --green-soft: rgba(34, 197, 94, 0.15);
+  --green-ink: #4ade80;
+  --red: #ef4444;
+  --red-soft: rgba(239, 68, 68, 0.15);
+  --red-ink: #f87171;
+  --violet: #a78bfa;
+  --violet-soft: rgba(167, 139, 250, 0.16);
+  --seed: #64748b;
+  --code-bg: #0b1017;
+  --radius: 14px;
+  --font: "Fira Sans", "Segoe UI", system-ui, -apple-system, Helvetica, Arial, sans-serif;
+  --mono: "Fira Code", "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  --hebrew: "Rubik", "Arial Hebrew", "Noto Sans Hebrew", Arial, sans-serif;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--body); font-family: var(--font); }
+body { overflow: hidden; }
+a { color: var(--accent-ink); }
+
+/* ── stage and slides ─────────────────────────────────────────────── */
+#stage { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+body.notes-open #stage { bottom: var(--notes-h, 34vh); }
+#canvas { width: 1280px; height: 720px; position: relative; transform-origin: center center; flex: none; }
+
+.slide {
+  position: absolute; inset: 0; width: 1280px; height: 720px;
+  padding: 56px 72px 64px; display: none; flex-direction: column;
+  background:
+    radial-gradient(900px 420px at 100% 0%, rgba(59,130,246,0.10), transparent 60%),
+    radial-gradient(700px 380px at 0% 100%, rgba(245,158,11,0.06), transparent 60%),
+    var(--bg);
+  border: 1px solid var(--border); border-radius: 6px; overflow: hidden;
+}
+.slide.active { display: flex; animation: fadein .25s ease-out; }
+@keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* chapter label + page number (filled in by deck.js) */
+.slide .chapter-tag { position: absolute; top: 20px; left: 72px; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.slide .page-no { position: absolute; bottom: 18px; right: 28px; font-size: 13px; color: var(--muted); font-family: var(--mono); }
+.slide .brand { position: absolute; bottom: 18px; left: 72px; font-size: 13px; color: var(--muted); }
+.slide .brand b { color: var(--accent-ink); font-weight: 600; }
+
+/* ── typography ───────────────────────────────────────────────────── */
+.slide h1 { font-size: 54px; line-height: 1.1; margin: 0 0 18px; color: var(--ink); font-weight: 700; letter-spacing: -0.01em; }
+.slide h2 { font-size: 38px; line-height: 1.15; margin: 0 0 22px; color: var(--ink); font-weight: 700; }
+.slide h3 { font-size: 23px; margin: 0 0 10px; color: var(--ink); font-weight: 600; }
+.slide p { font-size: 22px; line-height: 1.45; margin: 0 0 14px; }
+.slide .lead { font-size: 27px; line-height: 1.4; color: var(--body); max-width: 1000px; }
+.slide .small { font-size: 17px; }
+.slide .muted { color: var(--muted); }
+.slide ul, .slide ol { font-size: 22px; line-height: 1.45; margin: 0 0 14px; padding-left: 28px; }
+.slide li { margin: 0 0 8px; }
+.slide li::marker { color: var(--accent); }
+.slide strong, .slide b { color: var(--ink); }
+.slide code { font-family: var(--mono); font-size: .88em; background: var(--panel-2); border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; color: var(--accent-ink); }
+.slide pre { font-family: var(--mono); font-size: 16px; line-height: 1.5; background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; margin: 0 0 14px; color: var(--ink); overflow: hidden; white-space: pre; }
+.slide pre code { background: none; border: 0; padding: 0; color: inherit; font-size: inherit; }
+.slide pre .c { color: #6b7888; }          /* comment */
+.slide pre .k { color: #c792ea; }          /* keyword */
+.slide pre .s { color: #a5d6a7; }          /* string */
+.slide pre .f { color: #82aaff; }          /* function / name */
+.slide pre .n { color: #f78c6c; }          /* number / constant */
+.slide pre .hl { background: rgba(245,158,11,.18); border-radius: 3px; }
+
+.accent { color: var(--accent-ink); } .amber { color: var(--amber-ink); }
+.green { color: var(--green-ink); } .red { color: var(--red-ink); } .violet { color: var(--violet); }
+
+/* ── title slide and section divider ──────────────────────────────── */
+.slide.title { justify-content: center; }
+.slide.title .kicker { font-size: 18px; letter-spacing: .18em; text-transform: uppercase; color: var(--amber-ink); margin-bottom: 18px; }
+.slide.title h1 { font-size: 66px; max-width: 1050px; }
+.slide.title .lead { margin-top: 6px; }
+.slide.title .meta { margin-top: 34px; display: flex; gap: 14px; flex-wrap: wrap; }
+.slide.divider { justify-content: center; align-items: flex-start; }
+.slide.divider .num { font-size: 120px; font-weight: 800; color: var(--accent); opacity: .35; line-height: 1; }
+.slide.divider h2 { font-size: 52px; }
+
+/* ── layout helpers ───────────────────────────────────────────────── */
+.row { display: flex; gap: 24px; align-items: stretch; }
+.col { flex: 1; min-width: 0; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.center { text-align: center; } .mt { margin-top: 18px; } .mt-lg { margin-top: 34px; } .grow { flex: 1; }
+.v-center { display: flex; flex-direction: column; justify-content: center; }
+
+/* ── cards and tiles ──────────────────────────────────────────────── */
+.card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; }
+.card h3 { font-size: 21px; margin-bottom: 6px; }
+.card p, .card li { font-size: 18px; line-height: 1.4; margin-bottom: 6px; }
+.card ul { font-size: 18px; padding-left: 20px; margin: 0; }
+.card .icon { font-size: 30px; line-height: 1; margin-bottom: 8px; }
+.card.blue { border-color: rgba(59,130,246,.55); background: linear-gradient(180deg, var(--accent-soft), var(--panel) 70%); }
+.card.amber { border-color: rgba(245,158,11,.55); background: linear-gradient(180deg, var(--amber-soft), var(--panel) 70%); }
+.card.green { border-color: rgba(34,197,94,.5); background: linear-gradient(180deg, var(--green-soft), var(--panel) 70%); }
+.card.red { border-color: rgba(239,68,68,.5); background: linear-gradient(180deg, var(--red-soft), var(--panel) 70%); }
+.card.violet { border-color: rgba(167,139,250,.5); background: linear-gradient(180deg, var(--violet-soft), var(--panel) 70%); }
+
+/* a term tile: name, kind, one-line definition */
+.term { background: var(--panel); border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 10px; padding: 12px 16px; }
+.term .name { font-family: var(--mono); font-size: 19px; color: var(--ink); font-weight: 600; }
+.term .kind { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-left: 8px; }
+.term .def { font-size: 17px; line-height: 1.38; margin-top: 4px; color: var(--body); }
+.term.amber { border-left-color: var(--amber); } .term.green { border-left-color: var(--green); }
+.term.red { border-left-color: var(--red); } .term.violet { border-left-color: var(--violet); }
+
+.pill { display: inline-block; font-size: 15px; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--panel-2); color: var(--body); }
+.pill.blue { border-color: rgba(59,130,246,.6); color: var(--accent-ink); background: var(--accent-soft); }
+.pill.amber { border-color: rgba(245,158,11,.6); color: var(--amber-ink); background: var(--amber-soft); }
+.pill.green { border-color: rgba(34,197,94,.6); color: var(--green-ink); background: var(--green-soft); }
+.pill.red { border-color: rgba(239,68,68,.6); color: var(--red-ink); background: var(--red-soft); }
+
+.callout { border-radius: 12px; padding: 14px 18px; font-size: 20px; line-height: 1.4; background: var(--accent-soft); border: 1px solid rgba(59,130,246,.45); color: var(--ink); }
+.callout.amber { background: var(--amber-soft); border-color: rgba(245,158,11,.5); }
+.callout.green { background: var(--green-soft); border-color: rgba(34,197,94,.45); }
+.callout.red { background: var(--red-soft); border-color: rgba(239,68,68,.45); }
+
+.big-number { font-size: 72px; font-weight: 800; color: var(--amber-ink); line-height: 1; }
+.big-number + .label { font-size: 17px; color: var(--muted); margin-top: 6px; }
+
+/* ── flow diagram: boxes joined by arrows ─────────────────────────── */
+.flow { display: flex; align-items: center; gap: 0; flex-wrap: nowrap; }
+.flow .step { flex: 1; min-width: 0; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 14px 12px; text-align: center; }
+.flow .step b { display: block; font-size: 19px; color: var(--ink); margin-bottom: 4px; }
+.flow .step span { font-size: 15px; color: var(--muted); line-height: 1.3; display: block; }
+.flow .step.blue { border-color: var(--accent); background: var(--accent-soft); }
+.flow .step.amber { border-color: var(--amber); background: var(--amber-soft); }
+.flow .step.green { border-color: var(--green); background: var(--green-soft); }
+.flow .step.red { border-color: var(--red); background: var(--red-soft); }
+.flow .step.violet { border-color: var(--violet); background: var(--violet-soft); }
+.flow .arrow { flex: none; width: 34px; text-align: center; color: var(--muted); font-size: 24px; }
+.flow.vertical { flex-direction: column; align-items: stretch; }
+.flow.vertical .arrow { width: auto; height: 26px; line-height: 26px; }
+
+/* ── folder tree ──────────────────────────────────────────────────── */
+.tree { font-family: var(--mono); font-size: 16px; line-height: 1.55; background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; white-space: pre; color: var(--ink); }
+.tree .d { color: var(--accent-ink); }  /* directory */
+.tree .c { color: #6b7888; }            /* comment */
+.tree .h { color: var(--amber-ink); }   /* highlighted */
+
+/* ── tables ───────────────────────────────────────────────────────── */
+.slide table { border-collapse: collapse; width: 100%; font-size: 18px; }
+.slide th { text-align: left; color: var(--muted); font-weight: 600; font-size: 14px; text-transform: uppercase; letter-spacing: .06em; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+.slide td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.35; }
+.slide td code { font-size: 15px; }
+
+/* ── progressive reveal: elements with .step-in appear one per key press ── */
+.slide .fragment { opacity: 0; transition: opacity .25s, transform .25s; transform: translateY(6px); }
+.slide .fragment.shown { opacity: 1; transform: none; }
+
+/* inline SVG diagrams: use these classes for consistent colors */
+svg.diagram { width: 100%; height: auto; display: block; }
+svg.diagram text { font-family: var(--font); fill: var(--body); }
+svg.diagram .box { fill: var(--panel); stroke: var(--border); stroke-width: 1.5; }
+svg.diagram .box.blue { fill: rgba(59,130,246,.14); stroke: var(--accent); }
+svg.diagram .box.amber { fill: rgba(245,158,11,.14); stroke: var(--amber); }
+svg.diagram .box.green { fill: rgba(34,197,94,.13); stroke: var(--green); }
+svg.diagram .box.red { fill: rgba(239,68,68,.13); stroke: var(--red); }
+svg.diagram .box.violet { fill: rgba(167,139,250,.14); stroke: var(--violet); }
+svg.diagram .line { stroke: var(--muted); stroke-width: 1.8; fill: none; }
+svg.diagram .line.dash { stroke-dasharray: 6 5; }
+svg.diagram .title { fill: var(--ink); font-weight: 600; }
+svg.diagram .label { fill: var(--muted); font-size: 13px; }
+svg.diagram .mono { font-family: var(--mono); }
+
+/* ── speaker notes (hidden inside slides, shown in the notes panel) ── */
+.slide aside.notes { display: none; }
+#notes-panel {
+  position: fixed; left: 0; right: 0; bottom: 0; height: var(--notes-h, 34vh);
+  background: #0a0e14; border-top: 1px solid var(--border); display: none;
+  flex-direction: column; z-index: 20;
+}
+body.notes-open #notes-panel { display: flex; }
+#notes-head { display: flex; align-items: center; gap: 10px; padding: 8px 16px; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--muted); }
+#notes-head .sp { flex: 1; }
+#notes-head button, #toolbar button {
+  font: inherit; font-size: 13px; color: var(--body); background: var(--panel-2); border: 1px solid var(--border);
+  border-radius: 6px; padding: 4px 10px; cursor: pointer;
+}
+#notes-head button.on { border-color: var(--accent); color: var(--accent-ink); }
+#notes-body { flex: 1; overflow: auto; padding: 14px 22px 22px; font-size: 18px; line-height: 1.6; color: var(--ink); }
+#notes-body p { margin: 0 0 10px; }
+#notes-body ul { margin: 0 0 10px; padding-left: 22px; }
+#notes-body[dir="rtl"] { font-family: var(--hebrew); }
+#notes-body[dir="rtl"] ul { padding-left: 0; padding-right: 22px; }
+#notes-body .time, .handout-notes .time, .p-notes .time { color: var(--amber-ink); font-size: 14px; }
+#check-result { position: fixed; top: 0; left: 0; z-index: 99; background: #000; color: #0f0; font-size: 12px; }
+
+/* ── toolbar and help ─────────────────────────────────────────────── */
+#toolbar { position: fixed; top: 10px; right: 12px; display: flex; gap: 6px; z-index: 30; opacity: .15; transition: opacity .2s; }
+#toolbar:hover { opacity: 1; }
+#progress { position: fixed; left: 0; top: 0; height: 3px; background: var(--accent); z-index: 30; transition: width .2s; }
+body.notes-open #progress { top: auto; }
+#help {
+  position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.7); z-index: 50;
+}
+#help.open { display: flex; }
+#help .box { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 24px 30px; min-width: 460px; font-size: 16px; line-height: 1.9; }
+#help kbd { font-family: var(--mono); background: var(--panel-2); border: 1px solid var(--border); border-radius: 5px; padding: 1px 7px; color: var(--accent-ink); }
+
+/* ── overview (grid of all slides) ────────────────────────────────── */
+body.overview { overflow: auto; }
+body.overview #stage { position: static; display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 18px; padding: 24px; }
+body.overview #canvas { display: contents; transform: none !important; }
+body.overview .slide { position: relative; display: flex; inset: auto; cursor: pointer; zoom: 0.25; width: 1280px; height: 720px; animation: none; }
+body.overview .slide .fragment { opacity: 1; transform: none; }
+body.overview .slide.active { outline: 8px solid var(--amber); }
+
+/* ── handout: every slide plus its notes, one after another ───────── */
+body.handout { overflow: auto; }
+body.handout #stage { position: static; display: block; padding: 24px 0; }
+body.handout #canvas { display: block; transform: none !important; width: auto; height: auto; }
+body.handout .slide-wrap { width: 960px; margin: 0 auto 36px; }
+body.handout .slide { position: relative; display: flex; zoom: 0.75; animation: none; inset: auto; }
+body.handout .slide .fragment { opacity: 1; transform: none; }
+body.handout .handout-notes { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px 20px; margin-top: 10px; font-size: 16px; line-height: 1.6; color: var(--ink); }
+body.handout .handout-notes[dir="rtl"] { font-family: var(--hebrew); }
+body.handout .handout-notes[dir="rtl"] ul { padding-left: 0; padding-right: 22px; }
+
+/* ── presenter window ─────────────────────────────────────────────── */
+body.presenter { overflow: hidden; }
+body.presenter #stage { display: none; }
+#presenter { display: none; position: fixed; inset: 0; grid-template-columns: 1.25fr 1fr; grid-template-rows: auto 1fr; gap: 14px; padding: 14px; }
+body.presenter #presenter { display: grid; }
+#presenter .p-head { grid-column: 1 / 3; display: flex; gap: 16px; align-items: center; font-size: 15px; color: var(--muted); }
+#presenter .p-head .clock { font-family: var(--mono); font-size: 24px; color: var(--amber-ink); }
+#presenter .p-head .sp { flex: 1; }
+#presenter .p-head button { font: inherit; font-size: 13px; color: var(--body); background: var(--panel-2); border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+#presenter .p-head button.on { border-color: var(--accent); color: var(--accent-ink); }
+#presenter .p-left { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+#presenter .p-frame { position: relative; overflow: hidden; border-radius: 8px; background: #000; }
+#presenter .p-frame .slide { display: flex; animation: none; transform-origin: 0 0; }
+#presenter .p-frame .slide .fragment { opacity: 1; transform: none; }
+#presenter .p-label { font-size: 13px; color: var(--muted); }
+#presenter .p-notes { overflow: auto; background: #0a0e14; border: 1px solid var(--border); border-radius: 8px; padding: 18px 22px; font-size: 21px; line-height: 1.6; color: var(--ink); }
+#presenter .p-notes[dir="rtl"] { font-family: var(--hebrew); }
+#presenter .p-notes[dir="rtl"] ul { padding-left: 0; padding-right: 22px; }
+#presenter .p-notes p { margin: 0 0 12px; }
+
+/* ── print: one slide per page ────────────────────────────────────── */
+@media print {
+  @page { size: 1280px 720px; margin: 0; }
+  html, body { height: auto; overflow: visible; background: var(--bg); }
+  #toolbar, #notes-panel, #progress, #help, #presenter { display: none !important; }
+  #stage { position: static; display: block; }
+  #canvas { transform: none !important; width: 1280px; height: auto; }
+  .slide { position: relative; display: flex !important; page-break-after: always; break-after: page; border: 0; border-radius: 0; animation: none; }
+  .slide .fragment { opacity: 1 !important; transform: none !important; }
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+
+/* time markers stay left-to-right inside Hebrew notes */
+.time { unicode-bidi: isolate; direction: ltr; display: inline-block; }

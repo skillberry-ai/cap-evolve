@@ -1,5 +1,0 @@
-{
-  "train": ["fix-build-google-auto"],
-  "val": ["fix-build-google-auto"],
-  "test": ["fix-build-google-auto"]
-}

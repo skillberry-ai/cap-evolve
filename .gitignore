@@ -32,8 +32,8 @@ venv/
 !dashboard/frontend/dist/**
 
 # keep the vendored Reveal.js used by the management-review deck
-!presentation/reveal/dist/
-!presentation/reveal/dist/**
+!docs/management-presentation/reveal/dist/
+!docs/management-presentation/reveal/dist/**
 
 # keep the prebuilt evograph weakness-graph view (served by scripts/view.py at runtime)
 !skills/algorithms/evograph/dashboard/frontend/dist/

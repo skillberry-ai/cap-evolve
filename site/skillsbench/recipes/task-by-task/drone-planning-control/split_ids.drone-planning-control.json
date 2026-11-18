@@ -1,5 +1,0 @@
-{
-  "train": ["drone-planning-control"],
-  "val": ["drone-planning-control"],
-  "test": ["drone-planning-control"]
-}

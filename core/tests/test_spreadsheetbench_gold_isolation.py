@@ -28,7 +28,7 @@ pytest.importorskip("tqdm")
 
 REPO = Path(__file__).resolve().parents[2]
 ADAPTER_DIR = REPO / "benchmarks" / "spreadsheetbench" / "template"
-HARNESS = REPO / "third_party" / "spreadsheetbench"
+HARNESS = REPO / "benchmarks" / "spreadsheetbench" / "harness"
 GOLD_RE = re.compile(r"(_answer|_golden|^golden|^answer)", re.I)
 
 

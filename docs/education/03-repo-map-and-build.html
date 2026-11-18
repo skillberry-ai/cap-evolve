@@ -1,0 +1,696 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chapter 3 · Repository map and build</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Fira+Sans:wght@400;600;700;800&family=Rubik:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/deck.css">
+<style>
+  .tree.sm { font-size: 15px; line-height: 1.5; }
+  pre.sm { font-size: 15px; }
+  .slide table.tight td { padding: 6px 10px; font-size: 16px; }
+  .slide table.tight th { padding: 6px 10px; }
+  .layer h3 { font-size: 19px; margin-bottom: 2px; }
+  .layer .meta { font-family: var(--mono); font-size: 15px; color: var(--amber-ink); margin-bottom: 6px; }
+  .layer p { font-size: 16px; }
+  .card.mini li { font-size: 16px; margin-bottom: 4px; }
+  .card.mini h3 { font-size: 19px; }
+</style>
+</head>
+<body data-chapter="Chapter 3 · Repository map and build" data-minutes="20">
+<div id="stage"><div id="canvas">
+
+<!-- 1 ═══ Title ═══ -->
+<section class="slide title">
+  <div class="kicker">cap-evolve onboarding · Chapter 3 of 8</div>
+  <h1>Repository map and build</h1>
+  <p class="lead">Where every part of cap-evolve lives, how the packages depend on each other, and how to build, install and change them.</p>
+  <div class="meta"><span class="pill blue">20 minutes</span><span class="pill">Level: software engineering</span><span class="pill amber">Source: main branch</span></div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[0:00–0:40]</span> Welcome to chapter 3. In the first two chapters we talked about what cap-evolve does and about its words and objects. Now we open the repository. The goal of this chapter is simple. After 20 minutes you should know where to look for any piece of code, which package owns it, and how to build and install it on your laptop. We will not read deep code yet. Chapters 4 and 5 do that. Here we draw the map.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[0:00–0:40]</span> ברוכים הבאים לפרק 3. בשני הפרקים הראשונים דיברנו על מה cap-evolve עושה ועל המושגים והאובייקטים שלו. עכשיו פותחים את ה-repository. המטרה פשוטה: אחרי 20 דקות תדעו איפה לחפש כל חלק בקוד, איזה package אחראי עליו, ואיך לבנות ולהתקין אותו על המחשב שלכם. אנחנו עוד לא קוראים קוד לעומק, את זה נעשה בפרקים 4 ו-5. כאן אנחנו מציירים את המפה.</p>
+  </aside>
+</section>
+
+<!-- 2 ═══ Agenda ═══ -->
+<section class="slide">
+  <h2>What you will learn</h2>
+  <div class="grid-2">
+    <div class="card blue"><h3>1 · The map</h3><p>Every top-level folder, one line each. How the packages depend on each other.</p></div>
+    <div class="card"><h3>2 · The core package</h3><p><code>core/cap_evolve</code>: pure stdlib, 67 modules, grouped into 8 layers.</p></div>
+    <div class="card violet"><h3>3 · Skills, registry, benchmarks</h3><p>The skill folder shape, <code>manifest.json</code>, the count tests, adapters.</p></div>
+    <div class="card amber"><h3>4 · Dashboard, plugin, installer</h3><p>FastAPI + React build, the Claude Code plugin, <code>install.sh</code> hosts.</p></div>
+    <div class="card"><h3>5 · Around the product</h3><p>Harbor, telemetry, OpenShift, site, CI workflows.</p></div>
+    <div class="card green"><h3>6 · How we work</h3><p>The <code>.claude/skills</code> workflow, DCO sign-off, house rules.</p></div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[0:40–1:20]</span> Here is the plan. First, the map of the top-level folders, and a picture of how the Python packages depend on each other. Second, the core package, which is the only place where honest evaluation lives. We will group its 67 files into layers, so you can find things fast. Third, the skills library, its registry, and the benchmark adapters. Fourth, the dashboard build, the Claude Code plugin and the installer. Fifth, the things around the product: Harbor, telemetry, OpenShift, the website and CI. And last, how the team works day to day: the development skills in the repo and the DCO sign-off rule.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[0:40–1:20]</span> זו התוכנית. קודם, מפה של התיקיות ברמה העליונה, ותמונה של איך ה-packages של Python תלויים זה בזה. שנית, ה-core package, שהוא המקום היחיד שבו חיה ההערכה הכנה. נחלק את 67 הקבצים שלו לשכבות כדי שתמצאו דברים מהר. שלישית, ספריית ה-skills, ה-registry שלה וה-adapters של ה-benchmarks. רביעית, ה-build של ה-dashboard, ה-plugin של Claude Code וה-installer. חמישית, מה שמסביב למוצר: Harbor, telemetry, OpenShift, האתר ו-CI. ובסוף, איך הצוות עובד ביום-יום: ה-skills לפיתוח שנמצאים ב-repo וכלל ה-DCO sign-off.</p>
+  </aside>
+</section>
+
+<!-- 3 ═══ Top-level: the product ═══ -->
+<section class="slide">
+  <h2>Top-level map · the product</h2>
+  <div class="row">
+    <div class="col" style="flex:1.45">
+      <div class="tree"><span class="d">cap-evolve/</span>
+├── <span class="h">core/</span>           <span class="c"># cap-evolve-core: loop, gate, CLI</span>
+├── <span class="d">skills/</span>         <span class="c"># 22 Agent Skills (SKILL.md)</span>
+├── <span class="d">benchmarks/</span>     <span class="c"># adapters, templates, examples</span>
+├── <span class="d">dashboard/</span>      <span class="c"># backend/ FastAPI + frontend/ React</span>
+├── <span class="d">plugins/</span>        <span class="c"># cap-evolve Claude Code plugin</span>
+├── install.sh      <span class="c"># copy skills into any host</span>
+├── llms.txt        <span class="c"># entry page for agents</span>
+├── RUN.md          <span class="c"># top-level prompt for an agent</span>
+├── conftest.py     <span class="c"># root pytest file, now empty</span>
+└── .claude-plugin/ <span class="c"># marketplace.json for the plugin</span></div>
+    </div>
+    <div class="col v-center">
+      <div class="callout"><b>One rule shapes the tree.</b><br>Honesty lives only in <code>core/cap_evolve</code>. Everything user-facing is a skill.</div>
+      <div class="callout amber mt">Extending cap-evolve almost never means touching <code>core/</code>. You add a skill or an adapter.</div>
+      <p class="small muted mt">Source: CLAUDE.md, CONTRIBUTING.md, conftest.py</p>
+    </div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[1:20–2:40]</span> These are the folders that make up the product itself. <code>core/</code> is the Python package <code>cap-evolve-core</code>. It holds the loop, the splits, the gate and the CLI. <code>skills/</code> holds 22 Agent Skills. A skill is a folder with a <code>SKILL.md</code> file that an agent can read and a script that the CLI can run. <code>benchmarks/</code> holds the adapters, which connect cap-evolve to one benchmark. <code>dashboard/</code> has a FastAPI backend and a React frontend. <code>plugins/</code> has the Claude Code plugin. <code>install.sh</code> copies the skills into other agent hosts.</p>
+    <p><code>llms.txt</code> is a short page for agents that read the repo. <code>conftest.py</code> at the root is empty now. It used to exclude a duplicate test file from the old evograph dashboard. The key rule: CONTRIBUTING says honesty lives only in core. So a new feature is usually a new skill, not a change to core.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[1:20–2:40]</span> אלה התיקיות שמרכיבות את המוצר עצמו. <code>core/</code> הוא ה-package של Python שנקרא <code>cap-evolve-core</code>. יש בו את הלולאה, ה-splits, ה-gate וה-CLI. ב-<code>skills/</code> יש 22 Agent Skills. Skill הוא תיקייה עם קובץ <code>SKILL.md</code> שסוכן יכול לקרוא, וסקריפט שה-CLI יכול להריץ. ב-<code>benchmarks/</code> נמצאים ה-adapters, שמחברים את cap-evolve ל-benchmark מסוים. ב-<code>dashboard/</code> יש backend ב-FastAPI ו-frontend ב-React. ב-<code>plugins/</code> נמצא ה-plugin של Claude Code, ו-<code>install.sh</code> מעתיק את ה-skills ל-hosts אחרים.</p>
+    <p><code>llms.txt</code> הוא דף קצר לסוכנים שקוראים את ה-repo. ה-<code>conftest.py</code> בשורש ריק היום; פעם הוא החריג קובץ בדיקה כפול מה-dashboard הישן של evograph. הכלל החשוב: CONTRIBUTING אומר שהכנות חיה רק ב-core. לכן פיצ'ר חדש הוא בדרך כלל skill חדש, ולא שינוי ב-core.</p>
+  </aside>
+</section>
+
+<!-- 4 ═══ Top-level: around the product ═══ -->
+<section class="slide">
+  <h2>Top-level map · around the product</h2>
+  <div class="grid-2">
+    <div class="tree sm"><span class="c"># extra packages and deploy</span>
+├── <span class="d">capevolve_harbor/</span>    <span class="c"># Harbor runner glue</span>
+├── <span class="d">capevolve_telemetry/</span> <span class="c"># MLflow + OTel observers</span>
+└── <span class="d">openshift/</span>           <span class="c"># vLLM + runner manifests</span>
+
+<span class="c"># docs and web</span>
+├── <span class="d">docs/</span>         <span class="c"># ARCHITECTURE, INSTALL, EXTENDING…</span>
+├── <span class="d">site/</span>         <span class="c"># GitHub Pages, plain HTML</span>
+└── <span class="d">docs/management-presentation/</span> <span class="c"># Reveal.js management deck</span></div>
+    <div class="tree sm"><span class="c"># development and CI</span>
+├── <span class="d">ci/</span>            <span class="c"># CI scripts + ci/benchmarks/</span>
+├── <span class="d">.github/</span>       <span class="c"># 15 workflows, issue templates</span>
+├── <span class="d">scripts/</span>       <span class="c"># demo video, site preview, tools</span>
+├── <span class="d">.claude/skills/</span> <span class="c"># 5 dev-workflow skills</span>
+├── <span class="d">.bob/rules/</span>    <span class="c"># same rules for IBM Bob Shell</span>
+└── <span class="d">.review/</span>       <span class="c"># a saved post-merge review</span>
+
+<span class="c"># top-level docs</span>
+README · CHANGELOG · CONTRIBUTING
+SECURITY · CITATION.cff · LICENSE</div>
+  </div>
+  <p class="small muted mt">Source: ls of /tmp/cap-evolve-main; site/README.md; docs/management-presentation/README.md; benchmarks/spreadsheetbench/harness/NOTICE.md</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[2:40–3:50]</span> The rest of the tree supports the product. Two small extra packages sit at the top level: <code>capevolve_harbor</code> and <code>capevolve_telemetry</code>. <code>openshift/</code> has Kubernetes manifests and a runner Dockerfile. <code>benchmarks/spreadsheetbench/harness</code> is a filtered git subtree of the SpreadsheetBench harness. The adapter uses it to run and score tasks.</p>
+    <p><code>docs/</code> holds the long Markdown docs. <code>site/</code> is the public website. It is hand-written HTML with no build step. <code>docs/management-presentation/</code> is a 17-slide Reveal.js deck for management reviews. On the right: <code>ci/</code> and <code>.github/</code> for CI, <code>scripts/</code> for one-off tools like the demo video. <code>.claude/skills</code> holds the team's development workflow, and <code>.bob/rules</code> gives the same rules to IBM Bob Shell. We come back to most of these later in this chapter.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[2:40–3:50]</span> שאר העץ תומך במוצר. בשורש יש שני packages קטנים נוספים: <code>capevolve_harbor</code> ו-<code>capevolve_telemetry</code>. ב-<code>openshift/</code> יש manifests של Kubernetes ו-Dockerfile ל-runner. <code>benchmarks/spreadsheetbench/harness</code> הוא git subtree מסונן של ה-harness של SpreadsheetBench, וה-adapter משתמש בו כדי להריץ ולתת ציון למשימות.</p>
+    <p>ב-<code>docs/</code> נמצאים המסמכים הארוכים ב-Markdown. <code>site/</code> הוא האתר הציבורי, HTML שנכתב ביד בלי שלב build. <code>docs/management-presentation/</code> הוא מצגת Reveal.js של 17 שקפים לסקירות הנהלה. בצד ימין: <code>ci/</code> ו-<code>.github/</code> בשביל CI, ו-<code>scripts/</code> לכלים חד-פעמיים כמו סרטון הדמו. ב-<code>.claude/skills</code> נמצא תהליך הפיתוח של הצוות, ו-<code>.bob/rules</code> נותן את אותם כללים ל-IBM Bob Shell. לרובם נחזור בהמשך הפרק.</p>
+  </aside>
+</section>
+
+<!-- 5 ═══ Package dependency picture ═══ -->
+<section class="slide">
+  <h2>How the parts depend on each other</h2>
+  <svg class="diagram" viewBox="0 0 1136 450">
+    <defs><marker id="ar5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8b98a9"/></marker></defs>
+    <!-- left column -->
+    <rect class="box" x="20" y="10" width="300" height="80" rx="12"/>
+    <text class="title" x="170" y="44" text-anchor="middle">plugins/cap-evolve</text>
+    <text class="label mono" x="170" y="68" text-anchor="middle">hooks/ · agents/ · plugin.json</text>
+    <rect class="box violet" x="20" y="160" width="300" height="100" rx="12"/>
+    <text class="title" x="170" y="198" text-anchor="middle">skills/ (22 skills)</text>
+    <text class="label mono" x="170" y="224" text-anchor="middle">scripts/run.py · check.py</text>
+    <text class="label" x="170" y="245" text-anchor="middle">print one JSON object on stdout</text>
+    <rect class="box" x="20" y="340" width="300" height="90" rx="12"/>
+    <text class="title" x="170" y="376" text-anchor="middle">benchmarks/ adapters</text>
+    <text class="label mono" x="170" y="402" text-anchor="middle">adapter.py</text>
+    <!-- core -->
+    <rect class="box blue" x="420" y="150" width="300" height="140" rx="14"/>
+    <text class="title" x="570" y="188" text-anchor="middle">cap-evolve-core</text>
+    <text class="label mono" x="570" y="214" text-anchor="middle">core/cap_evolve</text>
+    <text class="label" x="570" y="238" text-anchor="middle">pure stdlib · 67 modules</text>
+    <text class="label mono" x="570" y="262" text-anchor="middle">CLI: cap-evolve</text>
+    <!-- right column -->
+    <rect class="box green" x="816" y="10" width="300" height="100" rx="12"/>
+    <text class="title" x="966" y="44" text-anchor="middle">capevolve-dashboard</text>
+    <text class="label mono" x="966" y="68" text-anchor="middle">fastapi · uvicorn</text>
+    <text class="label mono" x="966" y="90" text-anchor="middle">serves frontend/dist</text>
+    <rect class="box" x="816" y="180" width="300" height="80" rx="12"/>
+    <text class="title" x="966" y="214" text-anchor="middle">capevolve-telemetry</text>
+    <text class="label mono" x="966" y="238" text-anchor="middle">[mlflow] · [otel]</text>
+    <rect class="box amber" x="816" y="340" width="300" height="90" rx="12"/>
+    <text class="title" x="966" y="376" text-anchor="middle">capevolve-harbor</text>
+    <text class="label mono" x="966" y="402" text-anchor="middle">harbor run (subprocess)</text>
+    <!-- arrows -->
+    <path class="line dash" d="M170,90 L170,160" marker-end="url(#ar5)"/>
+    <text class="label mono" x="182" y="130">skills → ../../skills</text>
+    <path class="line" d="M320,190 L420,190" marker-end="url(#ar5)"/>
+    <text class="label mono" x="370" y="180" text-anchor="middle">import</text>
+    <path class="line" d="M420,240 L320,240" marker-end="url(#ar5)"/>
+    <text class="label mono" x="370" y="262" text-anchor="middle">subprocess</text>
+    <path class="line" d="M320,380 L470,290" marker-end="url(#ar5)"/>
+    <text class="label mono" x="420" y="360">CapabilityAdapter</text>
+    <path class="line" d="M816,70 L680,150" marker-end="url(#ar5)"/>
+    <text class="label mono" x="760" y="95" text-anchor="end">reduce_run()</text>
+    <path class="line" d="M816,220 L720,220" marker-end="url(#ar5)"/>
+    <text class="label mono" x="768" y="210" text-anchor="middle">Observer</text>
+    <path class="line" d="M816,380 L680,290" marker-end="url(#ar5)"/>
+    <text class="label mono" x="764" y="360" text-anchor="end">Rollout / Score</text>
+  </svg>
+  <p class="small muted">Arrows point at what is used. Sources: core/cap_evolve/_bootstrap.py, observer.py, dashboard/backend/pyproject.toml, capevolve_harbor/__init__.py</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[3:50–5:00]</span> This picture shows the direction of every dependency. Core is in the middle, and it depends on nothing outside the Python standard library. Everything else points at core.</p>
+    <ul>
+      <li>Skill scripts are loose files. A host copies them anywhere. So each skill has a <code>_bootstrap.py</code> that finds core, for example through the <code>CAPEVOLVE_CORE</code> environment variable.</li>
+      <li>The other way, the CLI in core runs each skill's <code>scripts/run.py</code> as a subprocess and parses the one JSON object it prints.</li>
+      <li>Adapters subclass <code>CapabilityAdapter</code> from <code>adapter.py</code>.</li>
+      <li>The dashboard package lists <code>cap-evolve-core</code> as a dependency and calls <code>reduce_run()</code>. Core never imports the dashboard. It only starts it as a subprocess.</li>
+      <li>Telemetry satisfies the <code>Observer</code> protocol without importing it. Harbor turns Harbor results into <code>Rollout</code> and <code>Score</code>.</li>
+    </ul>
+    <p>The plugin's <code>skills</code> entry is a symlink to the real <code>skills/</code> folder.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[3:50–5:00]</span> התמונה הזו מראה את הכיוון של כל תלות. ה-core נמצא באמצע, והוא לא תלוי בשום דבר מחוץ ל-standard library של Python. כל השאר מצביע עליו.</p>
+    <ul>
+      <li>הסקריפטים של ה-skills הם קבצים בודדים, ו-host יכול להעתיק אותם לכל מקום. לכן לכל skill יש <code>_bootstrap.py</code> שמוצא את ה-core, למשל דרך משתנה הסביבה <code>CAPEVOLVE_CORE</code>.</li>
+      <li>בכיוון ההפוך, ה-CLI שב-core מריץ את <code>scripts/run.py</code> של כל skill כ-subprocess, ומפרסר את אובייקט ה-JSON היחיד שהוא מדפיס.</li>
+      <li>ה-adapters יורשים מ-<code>CapabilityAdapter</code> שב-<code>adapter.py</code>.</li>
+      <li>ה-package של ה-dashboard מגדיר את <code>cap-evolve-core</code> כתלות וקורא ל-<code>reduce_run()</code>. ה-core אף פעם לא מייבא את ה-dashboard, הוא רק מפעיל אותו כ-subprocess.</li>
+      <li>ה-telemetry מממש את פרוטוקול <code>Observer</code> בלי לייבא אותו. Harbor מתרגם תוצאות של Harbor ל-<code>Rollout</code> ו-<code>Score</code>.</li>
+    </ul>
+    <p>ה-<code>skills</code> שבתוך ה-plugin הוא symlink לתיקיית <code>skills/</code> האמיתית.</p>
+  </aside>
+</section>
+
+<!-- 6 ═══ The core package ═══ -->
+<section class="slide">
+  <h2>The core package · <code>core/pyproject.toml</code></h2>
+  <div class="row">
+    <div class="col">
+      <table class="tight">
+        <tr><th>Key</th><th>Value</th></tr>
+        <tr><td>name</td><td><code>cap-evolve-core</code> 0.1.0</td></tr>
+        <tr><td>python</td><td><code>&gt;=3.10</code></td></tr>
+        <tr><td>dependencies</td><td><code>[]</code> · pure stdlib by design</td></tr>
+        <tr><td>script</td><td><code>cap-evolve = cap_evolve.cli:main</code></td></tr>
+        <tr><td>extras</td><td><code>dev</code>: pytest, openpyxl, pandas<br><code>judge</code>, <code>dashboard</code>: empty</td></tr>
+        <tr><td>package-data</td><td><code>demo_session/*</code> for <code>replay --demo</code></td></tr>
+        <tr><td>build</td><td>setuptools ≥61</td></tr>
+      </table>
+    </div>
+    <div class="col">
+      <pre class="sm"><span class="c"># development install</span>
+git clone \
+  https://github.com/skillberry-ai/cap-evolve.git
+cd cap-evolve
+python3 -m venv .venv &amp;&amp; . .venv/bin/activate
+pip install -e <span class="s">"./core[dev]"</span>
+cap-evolve version
+python -m pytest core/tests -q   <span class="c"># zero API cost</span>
+python -m compileall core skills
+<span class="c"># without pip: skills still find core</span>
+export CAPEVOLVE_CORE=$PWD/core</pre>
+      <p class="small muted">Source: core/pyproject.toml, CONTRIBUTING.md, docs/INSTALL.md</p>
+    </div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[5:00–6:10]</span> The core package is called <code>cap-evolve-core</code>. It needs Python 3.10 or newer. Its dependency list is empty on purpose. CONTRIBUTING calls this a house rule: zero runtime dependencies in core, and optional features go behind extras. That is why core has its own tolerant YAML reader in <code>specfile.py</code>. It uses PyYAML only if it is already present.</p>
+    <p>The only console script is <code>cap-evolve</code>, which calls <code>cap_evolve.cli:main</code>. The <code>dev</code> extra brings pytest, plus openpyxl and pandas for the SpreadsheetBench tests. Without them, those tests skip in silence. The <code>judge</code> and <code>dashboard</code> extras are empty placeholders. The package also ships a small synthetic demo session, so <code>cap-evolve replay --demo</code> works with no API key.</p>
+    <p>For development, use an editable install with the dev extra, then run the unit tests and <code>compileall</code>, as CONTRIBUTING asks.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[5:00–6:10]</span> ה-package של ה-core נקרא <code>cap-evolve-core</code>. הוא דורש Python 3.10 ומעלה. רשימת התלויות שלו ריקה בכוונה. ב-CONTRIBUTING זה כלל של הבית: אפס תלויות runtime ב-core, ופיצ'רים אופציונליים נכנסים מאחורי extras. בגלל זה ל-core יש קורא YAML סלחני משלו ב-<code>specfile.py</code>, שמשתמש ב-PyYAML רק אם הוא כבר מותקן.</p>
+    <p>ה-console script היחיד הוא <code>cap-evolve</code>, שקורא ל-<code>cap_evolve.cli:main</code>. ה-extra בשם <code>dev</code> מביא pytest, וגם openpyxl ו-pandas בשביל הבדיקות של SpreadsheetBench; בלעדיהם הבדיקות האלה מדלגות בשקט. ה-extras בשם <code>judge</code> ו-<code>dashboard</code> הם placeholders ריקים. ה-package גם כולל demo session סינתטי קטן, כך ש-<code>cap-evolve replay --demo</code> עובד בלי מפתח API.</p>
+    <p>לפיתוח, מתקינים editable עם ה-extra של dev, ואז מריצים את בדיקות היחידה ו-<code>compileall</code>, כמו ש-CONTRIBUTING מבקש.</p>
+  </aside>
+</section>
+
+<!-- 7 ═══ Module map overview ═══ -->
+<section class="slide">
+  <h2>Module map of <code>core/cap_evolve</code> · 8 layers</h2>
+  <div class="grid-4">
+    <div class="card blue layer"><h3>CLI &amp; UX</h3><div class="meta">6 files · 3.3k lines</div><p><code>cli.py</code> 1.9k, <code>branding.py</code>, <code>check.py</code>, <code>diffview.py</code></p></div>
+    <div class="card blue layer"><h3>Orchestration</h3><div class="meta">12 files · 7.5k lines</div><p><code>harness.py</code> 5.4k, <code>loop.py</code>, <code>specfile.py</code>, <code>intervention.py</code></p></div>
+    <div class="card violet layer"><h3>Evaluation</h3><div class="meta">12 files · 3.5k lines</div><p><code>adapter.py</code>, <code>types.py</code>, <code>evaluator.py</code>, <code>trials.py</code></p></div>
+    <div class="card amber layer"><h3>Stats &amp; gating</h3><div class="meta">13 files · 2.7k lines</div><p><code>gate.py</code>, <code>stats.py</code>, <code>splits.py</code>, <code>integrity.py</code></p></div>
+    <div class="card green layer"><h3>Algorithms</h3><div class="meta">6 files · 2.9k lines</div><p><code>hc2.py</code> 1.1k, <code>gepa.py</code> 0.9k, <code>skillopt.py</code>, <code>selection.py</code></p></div>
+    <div class="card layer"><h3>Storage &amp; events</h3><div class="meta">10 files · 2.2k lines</div><p><code>rundir.py</code>, <code>store.py</code>, <code>eventstream.py</code>, <code>graph.py</code></p></div>
+    <div class="card red layer"><h3>Dashboard &amp; TUI</h3><div class="meta">4 files · 6.1k lines</div><p><code>dashboard.py</code> 4.3k, <code>tui.py</code> 1.5k, <code>dashboard_launch.py</code></p></div>
+    <div class="card layer"><h3>Helpers</h3><div class="meta">4 files · 0.4k lines</div><p><code>_bootstrap.py</code>, <code>skillcheck.py</code>, <code>observer.py</code></p></div>
+  </div>
+  <div class="callout mt"><b>67 modules · 28.6k lines.</b> Two files hold one third of it: <code>harness.py</code> (5,448) and <code>dashboard.py</code> (4,302).</div>
+  <p class="small muted mt">Layer grouping is ours, for orientation. Line counts: wc -l core/cap_evolve/*.py</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[6:10–7:20]</span> Core is flat. All 67 modules sit in one folder with no sub-packages. To make it easier to read, I grouped them into eight layers. This grouping is mine. It is not in the code. The numbers are real line counts.</p>
+    <p>Two files are very large. <code>harness.py</code> has about 5,400 lines. It holds the shared mechanics that the phase and algorithm skills call. <code>dashboard.py</code> has about 4,300 lines. It folds the event log into one state object and renders reports. <code>cli.py</code> is third, with about 1,900 lines. When you search for a behaviour, start in these three files. Then follow the imports into the smaller modules. For example, a gate decision starts in <code>harness.py</code> and ends in <code>gate.py</code>. The next three slides walk through each layer.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[6:10–7:20]</span> ה-core שטוח. כל 67 המודולים יושבים בתיקייה אחת, בלי sub-packages. כדי שיהיה קל לקרוא, חילקתי אותם לשמונה שכבות. החלוקה הזו שלי, היא לא כתובה בקוד. המספרים הם ספירות שורות אמיתיות.</p>
+    <p>שני קבצים גדולים מאוד. ב-<code>harness.py</code> יש בערך 5,400 שורות, והוא מכיל את המנגנונים המשותפים שה-skills של ה-phases וה-algorithms קוראים להם. ב-<code>dashboard.py</code> יש בערך 4,300 שורות; הוא מקפל את יומן האירועים לאובייקט state אחד ומרנדר דוחות. <code>cli.py</code> שלישי, עם בערך 1,900 שורות. כשמחפשים התנהגות, מתחילים בשלושת הקבצים האלה ואז עוקבים אחרי ה-imports למודולים הקטנים. למשל, החלטת gate מתחילה ב-<code>harness.py</code> ומסתיימת ב-<code>gate.py</code>. שלושת השקפים הבאים עוברים על כל שכבה.</p>
+  </aside>
+</section>
+
+<!-- 8 ═══ Layer: CLI + orchestration ═══ -->
+<section class="slide">
+  <h2>Layers 1–2 · CLI &amp; UX, orchestration</h2>
+  <table class="tight">
+    <tr><th>File</th><th>Lines</th><th>Role</th></tr>
+    <tr><td><code>cli.py</code></td><td>1938</td><td>The <code>cap-evolve</code> CLI. A thin sequencer: finds skills through the manifest, runs their <code>scripts/run.py</code>. 14 commands in <code>COMMANDS</code></td></tr>
+    <tr><td><code>__main__.py</code></td><td>62</td><td><code>python -m cap_evolve</code>: small JSON-over-stdout surface for any host</td></tr>
+    <tr><td><code>branding.py</code> · <code>diffview.py</code></td><td>529 · 454</td><td>Home screen and per-command help · terminal diff of two candidate snapshots</td></tr>
+    <tr><td><code>check.py</code></td><td>236</td><td><code>cap-evolve check</code>: the hard gate on the adapter before any budget is spent</td></tr>
+    <tr><td><code>harness.py</code></td><td>5448</td><td>Shared mechanics: <code>ensure_splits</code>, <code>baseline</code>, <code>evaluate_candidate</code>, <code>run_step</code>, <code>hill_climb_loop</code>, <code>finalize</code></td></tr>
+    <tr><td><code>loop.py</code> · <code>specfile.py</code></td><td>255 · 258</td><td><code>SplitResult</code>, <code>aggregate_scores</code>, <code>select_parent</code> · tolerant YAML reader</td></tr>
+    <tr><td><code>intervention.py</code> · <code>optimizer_config.py</code> · <code>model_routing.py</code></td><td>small</td><td>Spec switches: how a candidate reaches the model, optimizer ablations, model per step</td></tr>
+    <tr><td><code>constraints.py</code> · <code>convergence.py</code> · <code>hypotheses.py</code></td><td>small</td><td>Free-text <code>stop_condition</code> to predicates, plateau handling, edit size rules</td></tr>
+  </table>
+  <p class="small muted mt">Also here: optimizer_cost.py, evaluation_plan.py, target_profile.py, pricing.py. Chapter 5 follows these calls in order.</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[7:20–8:30]</span> The first layer is what the user touches. <code>cli.py</code> is a thin sequencer. It holds no pipeline logic. It finds each skill through the registry manifest and runs that skill's <code>run.py</code> in the order the spec asks. The <code>COMMANDS</code> table in <code>cli.py</code> has 14 entries, from <code>init</code> and <code>doctor</code> to <code>run</code>, <code>watch</code> and <code>replay</code>. <code>__main__.py</code> is a second, smaller entry for hosts that cannot import the package. <code>check.py</code> is the hard gate: no budget is spent until it passes.</p>
+    <p>The second layer is orchestration. <code>harness.py</code> is the big one. Its function names tell the story: <code>ensure_splits</code>, <code>baseline</code>, <code>evaluate_candidate</code>, <code>run_step</code>, <code>hill_climb_loop</code>, <code>finalize</code>. Around it sit small modules that read one part of the spec each. For example, <code>constraints.py</code> turns a free-text stop condition like "stop after 40 dollars" into a predicate the loop can check again and again.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[7:20–8:30]</span> השכבה הראשונה היא מה שהמשתמש נוגע בו. <code>cli.py</code> הוא sequencer דק, בלי לוגיקה של pipeline. הוא מוצא כל skill דרך ה-manifest של ה-registry ומריץ את ה-<code>run.py</code> שלו בסדר שה-spec מבקש. בטבלת <code>COMMANDS</code> שב-<code>cli.py</code> יש 14 פקודות, מ-<code>init</code> ו-<code>doctor</code> ועד <code>run</code>, <code>watch</code> ו-<code>replay</code>. <code>__main__.py</code> הוא כניסה שנייה וקטנה יותר ל-hosts שלא יכולים לייבא את ה-package. <code>check.py</code> הוא ה-gate הקשיח: לא מוציאים תקציב עד שהוא עובר.</p>
+    <p>השכבה השנייה היא orchestration. <code>harness.py</code> הוא הגדול. שמות הפונקציות שלו מספרים את הסיפור: <code>ensure_splits</code>, <code>baseline</code>, <code>evaluate_candidate</code>, <code>run_step</code>, <code>hill_climb_loop</code>, <code>finalize</code>. סביבו יש מודולים קטנים שכל אחד קורא חלק אחד של ה-spec. למשל, <code>constraints.py</code> הופך stop condition בטקסט חופשי, כמו "תעצור אחרי 40 דולר", ל-predicate שהלולאה יכולה לבדוק שוב ושוב.</p>
+  </aside>
+</section>
+
+<!-- 9 ═══ Layer: evaluation + stats ═══ -->
+<section class="slide">
+  <h2>Layers 3–4 · evaluation, statistics &amp; gating</h2>
+  <div class="grid-2">
+    <div class="card violet mini">
+      <h3>Evaluation · run and score the agent</h3>
+      <ul>
+        <li><code>adapter.py</code> — <code>CapabilityAdapter</code>: 3 required methods</li>
+        <li><code>types.py</code> — <code>Task</code>, <code>Rollout</code>, <code>Score</code> dataclasses</li>
+        <li><code>trials.py</code> — concurrent multi-trial helper</li>
+        <li><code>evaluator.py</code> (748) — the shared P2 "SH-C" scheduler</li>
+        <li><code>cache.py</code> · <code>eval_index.py</code> — reuse rollouts by content hash</li>
+        <li><code>subsample.py</code> · <code>footprint.py</code> · <code>helper_smoke.py</code> — cheap screens</li>
+      </ul>
+    </div>
+    <div class="card amber mini">
+      <h3>Statistics &amp; gating · decide honestly</h3>
+      <ul>
+        <li><code>stats.py</code> — the only place rewards are aggregated</li>
+        <li><code>gate.py</code> (597) — accept rule; <code>paired</code> is the default</li>
+        <li><code>gatecfg.py</code> — opt-in v2 switches: env &gt; spec &gt; default</li>
+        <li><code>splits.py</code> — seeded splits, sealed test</li>
+        <li><code>integrity.py</code> — tamper check on protected paths</li>
+        <li><code>racing.py</code> · <code>posterior.py</code> · <code>sched.py</code> · <code>promotion.py</code> · <code>objectives.py</code></li>
+      </ul>
+    </div>
+  </div>
+  <div class="flow mt">
+    <div class="step violet"><b>adapter.py</b><span>run_target · score</span></div><div class="arrow">→</div>
+    <div class="step violet"><b>trials.py</b><span>N trials per task</span></div><div class="arrow">→</div>
+    <div class="step amber"><b>stats.py</b><span>mean, SE, pass^k</span></div><div class="arrow">→</div>
+    <div class="step amber"><b>gate.py</b><span>accept / reject</span></div>
+  </div>
+  <p class="small muted mt">Chapter 4 covers the types and adapter; chapter 6 covers every statistics module.</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[8:30–9:30]</span> Layer three measures a candidate. A candidate is one version of the files the optimizer may edit. <code>adapter.py</code> defines the contract a benchmark implements. <code>types.py</code> defines the shared dataclasses. <code>trials.py</code> runs several trials per task in parallel. <code>evaluator.py</code> is one scheduler shared by two algorithms. The cache and the eval index skip a rollout when the same files were already scored on the same task.</p>
+    <p>Layer four decides. <code>stats.py</code> is the only place where rewards are averaged. That keeps the math in one spot. <code>gate.py</code> holds the accept rule. <code>splits.py</code> makes the train, val and test splits from a seed and keeps test sealed. <code>integrity.py</code> detects if an optimizer edited protected files, like the scorer. The flow at the bottom is the short version of one evaluation. Chapter 6 explains each rule and why it exists.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[8:30–9:30]</span> השכבה השלישית מודדת candidate. Candidate הוא גרסה אחת של הקבצים שה-optimizer מורשה לערוך. <code>adapter.py</code> מגדיר את החוזה ש-benchmark מממש. <code>types.py</code> מגדיר את ה-dataclasses המשותפים. <code>trials.py</code> מריץ כמה trials לכל משימה במקביל. <code>evaluator.py</code> הוא scheduler אחד ששני algorithms חולקים. ה-cache וה-eval index מדלגים על rollout כשאותם קבצים כבר קיבלו ציון על אותה משימה.</p>
+    <p>השכבה הרביעית מחליטה. <code>stats.py</code> הוא המקום היחיד שבו ממצעים rewards, וכך המתמטיקה נשארת במקום אחד. <code>gate.py</code> מחזיק את כלל הקבלה. <code>splits.py</code> בונה את ה-splits של train, val ו-test מ-seed ושומר את test חתום. <code>integrity.py</code> מזהה אם optimizer ערך קבצים מוגנים, כמו ה-scorer. ה-flow למטה הוא הגרסה הקצרה של הערכה אחת. בפרק 6 נסביר כל כלל ולמה הוא קיים.</p>
+  </aside>
+</section>
+
+<!-- 10 ═══ Layer: algorithms, storage, dashboard, helpers ═══ -->
+<section class="slide">
+  <h2>Layers 5–8 · algorithms, storage, views, helpers</h2>
+  <div class="grid-4">
+    <div class="card green mini"><h3>Algorithms</h3><ul>
+      <li><code>hill_climb_loop</code> in harness.py</li>
+      <li><code>gepa.py</code> · <code>gepa_loop</code></li>
+      <li><code>skillopt.py</code> · <code>skillopt_loop</code></li>
+      <li><code>hc2.py</code> · K proposals per round</li>
+      <li><code>selection.py</code> · parent pickers</li>
+    </ul></div>
+    <div class="card mini"><h3>Storage &amp; events</h3><ul>
+      <li><code>rundir.py</code> · <code>RunDir</code>, layout</li>
+      <li><code>store.py</code> · git / copy / command</li>
+      <li><code>eventstream.py</code> · read <code>events.jsonl</code></li>
+      <li><code>graph.py</code> · <code>lineage.py</code> · DAG</li>
+      <li><code>memory.py</code> · <code>schema_v2.py</code></li>
+    </ul></div>
+    <div class="card red mini"><h3>Dashboard &amp; TUI</h3><ul>
+      <li><code>dashboard.py</code> · <code>reduce_run</code></li>
+      <li><code>render_html</code> · <code>render_ansi</code></li>
+      <li><code>dashboard_launch.py</code> · spawns the web server</li>
+      <li><code>tui.py</code> · live terminal view</li>
+    </ul></div>
+    <div class="card mini"><h3>Helpers</h3><ul>
+      <li><code>_bootstrap.py</code> · find core</li>
+      <li><code>skillcheck.py</code> · shared <code>check.py</code> harness</li>
+      <li><code>observer.py</code> · telemetry protocol</li>
+      <li><code>__init__.py</code> · faulthandler, logging</li>
+    </ul></div>
+  </div>
+  <div class="callout amber mt">Algorithm <b>skills</b> stay thin. Their <code>run.py</code> calls the loop code that lives here, in core.</div>
+  <p class="small muted mt">Source: module docstrings in core/cap_evolve; chapter 7 covers the algorithms, chapter 4 the run dir.</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[9:30–10:40]</span> The last four layers. First, the algorithms. An algorithm is the search strategy across iterations. The plain hill-climb loop is a function inside <code>harness.py</code>. GEPA and SkillOpt each have their own module. <code>hc2.py</code> is a hill-climb that makes K proposals per round. <code>selection.py</code> is one registry of parent pickers, so algorithms do not each write their own. Note the pattern: the skill folder for an algorithm is thin, and the real loop is in core.</p>
+    <p>Storage and events: <code>rundir.py</code> owns the on-disk run directory. <code>store.py</code> saves every iteration, with git as the default backend. <code>eventstream.py</code> is the one reader for <code>events.jsonl</code>. Then views: <code>dashboard.py</code> and <code>tui.py</code>. Both are pure renderers of the state that <code>reduce_run</code> builds. Helpers are small. <code>__init__.py</code> even turns on faulthandler, so a crash in a C extension leaves a traceback.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[9:30–10:40]</span> ארבע השכבות האחרונות. קודם ה-algorithms. Algorithm הוא אסטרטגיית החיפוש לאורך האיטרציות. לולאת ה-hill-climb הפשוטה היא פונקציה בתוך <code>harness.py</code>. ל-GEPA ול-SkillOpt יש מודול משלהם. <code>hc2.py</code> הוא hill-climb שמייצר K הצעות בכל סבב. <code>selection.py</code> הוא registry אחד של בוחרי parent, כדי שכל algorithm לא יכתוב אחד משלו. שימו לב לדפוס: תיקיית ה-skill של algorithm דקה, והלולאה האמיתית נמצאת ב-core.</p>
+    <p>אחסון ואירועים: <code>rundir.py</code> אחראי על תיקיית הריצה בדיסק. <code>store.py</code> שומר כל איטרציה, ו-git הוא ה-backend ברירת המחדל. <code>eventstream.py</code> הוא הקורא היחיד של <code>events.jsonl</code>. אחר כך התצוגות: <code>dashboard.py</code> ו-<code>tui.py</code>; שניהם renderers טהורים של ה-state ש-<code>reduce_run</code> בונה. ה-helpers קטנים. <code>__init__.py</code> אפילו מפעיל faulthandler, כדי שקריסה ב-C extension תשאיר traceback.</p>
+  </aside>
+</section>
+
+<!-- 11 ═══ Skills library layout ═══ -->
+<section class="slide">
+  <h2>The skills library · <code>skills/&lt;component&gt;/&lt;name&gt;/</code></h2>
+  <div class="row">
+    <div class="col" style="flex:1.35">
+      <div class="tree sm"><span class="d">skills/</span>
+├── <span class="d">_registry/</span>      <span class="c"># build + lint + manifest.json</span>
+├── <span class="d">phases/</span>       <span class="h">8</span>  <span class="c"># intake … baseline … report</span>
+├── <span class="d">capabilities/</span> <span class="h">4</span>  <span class="c"># tools mcp-tool system-prompt</span>
+│                    <span class="c">#   skill-package</span>
+├── <span class="d">algorithms/</span>   <span class="h">5</span>  <span class="c"># hill-climb gepa skillopt</span>
+│                    <span class="c">#   agent-optimize evograph</span>
+├── <span class="d">optimizers/</span>   <span class="h">1</span>  <span class="c"># run-optimizer + registry.yaml</span>
+├── <span class="d">orchestrate/</span>  <span class="h">2</span>  <span class="c"># orchestrate using-cap-evolve</span>
+├── <span class="d">interventions/</span> <span class="h">1</span> <span class="c"># llm-proxies/blackbox</span>
+└── <span class="d">memory/</span>       <span class="h">1</span>  <span class="c"># wiki</span>
+                 <span class="h">22</span> skills in total</div>
+    </div>
+    <div class="col">
+      <div class="tree sm"><span class="d">capabilities/tools/</span>
+├── SKILL.md      <span class="c"># frontmatter + doc</span>
+├── meta.yaml     <span class="c"># wiring, source of truth</span>
+├── <span class="d">references/</span>   <span class="c"># *.md, one level</span>
+└── <span class="d">scripts/</span>
+    ├── <span class="h">run.py</span>    <span class="c"># one JSON on stdout</span>
+    ├── check.py  <span class="c"># behaviour test</span>
+    ├── abstract.py
+    └── _bootstrap.py</div>
+      <p class="small mt">Optional, only with real content: <code>prompt/PROMPT.md</code>, <code>inputs/INPUTS.md</code>.</p>
+    </div>
+  </div>
+  <p class="small muted">Source: find skills -name SKILL.md; CONTRIBUTING.md; benchmarks/_scaffold/skill</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[10:40–11:50]</span> The skills library has one folder per component type, and one folder per skill inside it. The folder names are plural, like <code>phases</code>. The <code>component</code> field in <code>meta.yaml</code> is singular, like <code>phase</code>. There are 22 skills: eight phases, four capabilities, five algorithms, one optimizer runner, two orchestrate skills, one intervention and one memory scheme. Note that interventions group their skill one level deeper, under <code>llm-proxies/blackbox</code>.</p>
+    <p>On the right is one real skill. <code>SKILL.md</code> is what an agent reads. <code>meta.yaml</code> is the wiring that tools read. <code>scripts/run.py</code> is the entry. Its contract is strict: print exactly one JSON object on stdout, and send everything else to stderr. <code>check.py</code> is a behaviour test, not just an import. To start a new skill, copy <code>benchmarks/_scaffold/skill</code>. Keep the optional folders only when they have real content.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[10:40–11:50]</span> לספריית ה-skills יש תיקייה לכל סוג component, ובתוכה תיקייה לכל skill. שמות התיקיות ברבים, כמו <code>phases</code>, אבל השדה <code>component</code> ב-<code>meta.yaml</code> ביחיד, כמו <code>phase</code>. יש 22 skills: שמונה phases, ארבעה capabilities, חמישה algorithms, optimizer runner אחד, שני skills של orchestrate, intervention אחד ו-memory scheme אחד. שימו לב שה-interventions מקננים את ה-skill שלהם רמה אחת עמוק יותר, תחת <code>llm-proxies/blackbox</code>.</p>
+    <p>מימין רואים skill אמיתי אחד. <code>SKILL.md</code> הוא מה שסוכן קורא. <code>meta.yaml</code> הוא החיווט שכלים קוראים. <code>scripts/run.py</code> הוא נקודת הכניסה, והחוזה שלו קפדני: להדפיס בדיוק אובייקט JSON אחד ל-stdout, וכל השאר ל-stderr. <code>check.py</code> הוא בדיקת התנהגות, לא רק import. כדי להתחיל skill חדש מעתיקים את <code>benchmarks/_scaffold/skill</code>, ומשאירים את התיקיות האופציונליות רק אם יש בהן תוכן אמיתי.</p>
+  </aside>
+</section>
+
+<!-- 12 ═══ Registry and count tests ═══ -->
+<section class="slide">
+  <h2>The registry and the count guards</h2>
+  <div class="flow">
+    <div class="step violet"><b>meta.yaml + SKILL.md</b><span>one per skill</span></div><div class="arrow">→</div>
+    <div class="step blue"><b>build_manifest.py</b><span>validate, fail loudly</span></div><div class="arrow">→</div>
+    <div class="step"><b>manifest.json</b><span>22 skills · errors: []</span></div><div class="arrow">→</div>
+    <div class="step green"><b>cli.py</b><span>finds each run.py</span></div>
+  </div>
+  <div class="row mt">
+    <div class="col" style="flex:0.8">
+      <pre class="sm"><span class="c"># skills/capabilities/tools/meta.yaml</span>
+<span class="k">component</span>: capability
+<span class="k">name</span>: tools
+<span class="k">entry</span>: scripts/run.py
+<span class="k">check</span>: scripts/check.py
+<span class="k">needs</span>: []
+<span class="k">provides</span>: [candidate]
+<span class="k">compatible_with</span>:
+  <span class="k">optimizers</span>: [<span class="s">"*"</span>]</pre>
+    </div>
+    <div class="col">
+      <div class="term"><span class="name">build_manifest.py</span><span class="kind">validator</span><div class="def">Known <code>component</code>, known <code>needs</code>/<code>provides</code> tokens, files exist, frontmatter agrees.</div></div>
+      <div class="term violet mt"><span class="name">lint_skills.py</span><span class="kind">blocking CI job</span><div class="def">The <code>skill-package</code> authoring lint, pointed at our own skills.</div></div>
+      <div class="term amber mt"><span class="name">test_advertised_counts.py</span><span class="kind">pytest</span><div class="def">README, llms.txt, ARCHITECTURE, site must say 22 skills · 5 algorithms (3 + 2) · 14 backends.</div></div>
+    </div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[11:50–13:00]</span> The registry turns skill folders into one JSON file. <code>build_manifest.py</code> walks every <code>meta.yaml</code>. It checks that the component name is known, that every <code>needs</code> and <code>provides</code> token is in the fixed vocabulary, that the entry files exist, and that the <code>SKILL.md</code> frontmatter agrees. Any error fails the build. The result is <code>manifest.json</code>, which the CLI uses to find skills. Run it after you add a skill.</p>
+    <p><code>lint_skills.py</code> applies the same authoring rules that the <code>skill-package</code> capability applies to user skills. It blocks CI, and the tree is clean today. Last, <code>test_advertised_counts.py</code> counts the skills on the filesystem, not in the manifest. It checks that every doc and site page shows the right numbers: 22 skills, 5 algorithms, of which 3 run under <code>cap-evolve run</code> and 2 are agent-mode only, and 14 optimizer backends in <code>registry.yaml</code>. It also fails if the committed manifest is stale.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[11:50–13:00]</span> ה-registry הופך את תיקיות ה-skills לקובץ JSON אחד. <code>build_manifest.py</code> עובר על כל <code>meta.yaml</code>. הוא בודק ששם ה-component מוכר, שכל token ב-<code>needs</code> וב-<code>provides</code> נמצא באוצר המילים הקבוע, שקבצי הכניסה קיימים, ושה-frontmatter של <code>SKILL.md</code> מסכים. כל שגיאה מכשילה את ה-build. התוצאה היא <code>manifest.json</code>, שה-CLI משתמש בו כדי למצוא skills. מריצים אותו אחרי שמוסיפים skill.</p>
+    <p><code>lint_skills.py</code> מפעיל על ה-skills שלנו את אותם כללי כתיבה שה-capability בשם <code>skill-package</code> מפעיל על skills של משתמשים. הוא חוסם ב-CI, והעץ נקי היום. ולבסוף, <code>test_advertised_counts.py</code> סופר את ה-skills במערכת הקבצים, לא ב-manifest. הוא בודק שכל מסמך ודף באתר מציגים את המספרים הנכונים: 22 skills, חמישה algorithms, מהם שלושה רצים תחת <code>cap-evolve run</code> ושניים הם agent-mode בלבד, ו-14 optimizer backends ב-<code>registry.yaml</code>. הוא גם נכשל אם ה-manifest שב-commit לא מעודכן.</p>
+  </aside>
+</section>
+
+<!-- 13 ═══ Benchmarks ═══ -->
+<section class="slide">
+  <h2><code>benchmarks/</code> · adapters, templates, examples</h2>
+  <div class="row">
+    <div class="col" style="flex:1.3">
+      <div class="tree sm"><span class="d">benchmarks/</span>
+├── ADDING_A_BENCHMARK.md
+├── <span class="d">_scaffold/project/</span>  <span class="c"># adapter.py capevolve.yaml optimizer/</span>
+├── <span class="d">_scaffold/skill/</span>    <span class="c"># template for a new skill</span>
+├── <span class="d">_shared/</span>            <span class="c"># model_config.py</span>
+├── <span class="d">generic/</span>    <span class="c"># jsonl_litellm huggingface_litellm harbor</span>
+├── <span class="d">toy/examples/</span>       <span class="c"># calc, skill (zero API)</span>
+├── <span class="d">tau2/</span>        <span class="c"># template + airline, sierra_airline</span>
+├── <span class="d">skillsbench/</span> <span class="c"># template + shared_skills</span>
+├── <span class="d">swe_bench/ spreadsheetbench/ rfe_creator/</span>
+│                <span class="c"># template/ only</span>
+└── <span class="d">appworld/ parsec/</span>  <span class="c"># examples/ only</span></div>
+    </div>
+    <div class="col">
+      <div class="card blue mini"><h3><code>template/</code></h3><ul><li>Copy and run: config, not code</li><li><code>adapter.py</code>, <code>capevolve.yaml</code>, seed capability</li></ul></div>
+      <div class="card amber mini mt"><h3><code>examples/&lt;variant&gt;/</code></h3><ul><li>A full worked run with real infra</li><li><code>setup.sh</code> · <code>run.sh</code> · <code>tests/</code></li></ul></div>
+      <div class="card mini mt"><h3>The adapter</h3><ul><li><code>tasks(split)</code> · <code>run_target(task, ctx, *, seed)</code> · <code>score(task, rollout)</code></li></ul></div>
+    </div>
+  </div>
+  <p class="small muted mt">Source: benchmarks/ADDING_A_BENCHMARK.md; chapter 4 covers the full adapter contract.</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[13:00–14:00]</span> Each benchmark gets one folder. ADDING_A_BENCHMARK describes two shapes. A <code>template/</code> is a minimal copy-and-run adapter that you point at data with environment variables. An <code>examples/&lt;variant&gt;/</code> folder is a full worked run against the real benchmark, with its own setup and run scripts. For example, tau2 ships both: a generic template and two airline examples.</p>
+    <p><code>_scaffold/project</code> is what you copy to start your own project. The toy calculator example even uses its <code>capevolve.yaml</code> directly. <code>_shared/model_config.py</code> gives provider-agnostic model wiring, so templates do not handle credentials by hand. Before you add a new folder, check the three generic templates. They may already cover your task format. Every adapter implements three required methods. Chapter 4 explains the full contract and the optional hooks.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[13:00–14:00]</span> לכל benchmark יש תיקייה אחת. ADDING_A_BENCHMARK מתאר שתי צורות. <code>template/</code> הוא adapter מינימלי של העתק-והרץ, שמכוונים אותו לנתונים דרך משתני סביבה. תיקיית <code>examples/&lt;variant&gt;/</code> היא ריצה מלאה מול ה-benchmark האמיתי, עם סקריפטי setup ו-run משלה. למשל, tau2 כולל את שניהם: template גנרי ושתי דוגמאות airline.</p>
+    <p><code>_scaffold/project</code> הוא מה שמעתיקים כדי להתחיל פרויקט משלכם; דוגמת המחשבון אפילו משתמשת ישירות ב-<code>capevolve.yaml</code> שלו. <code>_shared/model_config.py</code> נותן חיווט מודלים שלא תלוי בספק, כדי שה-templates לא יטפלו ב-credentials ביד. לפני שמוסיפים תיקייה חדשה, בודקים את שלושת ה-templates הגנריים; ייתכן שהם כבר מכסים את פורמט המשימה. כל adapter מממש שלוש מתודות חובה. בפרק 4 נסביר את החוזה המלא ואת ה-hooks האופציונליים.</p>
+  </aside>
+</section>
+
+<!-- 14 ═══ Dashboard ═══ -->
+<section class="slide">
+  <h2>The dashboard · one reducer, three outputs</h2>
+  <svg class="diagram" viewBox="0 0 1136 360">
+    <defs><marker id="ar14" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8b98a9"/></marker></defs>
+    <rect class="box" x="10" y="135" width="190" height="90" rx="12"/>
+    <text class="title" x="105" y="170" text-anchor="middle">run dir</text>
+    <text class="label mono" x="105" y="196" text-anchor="middle">events.jsonl</text>
+    <text class="label mono" x="105" y="214" text-anchor="middle">rollouts/ · git</text>
+    <rect class="box blue" x="260" y="135" width="250" height="90" rx="12"/>
+    <text class="title" x="385" y="170" text-anchor="middle">cap_evolve.dashboard</text>
+    <text class="label mono" x="385" y="198" text-anchor="middle">reduce_run(run_dir)</text>
+    <rect class="box amber" x="600" y="10" width="526" height="96" rx="12"/>
+    <text class="title" x="620" y="42">Static report · core only</text>
+    <text class="label mono" x="620" y="68">render_html() → dashboard.html</text>
+    <text class="label" x="620" y="90">written by the report skill · opens from file://</text>
+    <rect class="box green" x="600" y="132" width="526" height="96" rx="12"/>
+    <text class="title" x="620" y="164">Live dashboard · capevolve_dashboard</text>
+    <text class="label mono" x="620" y="190">FastAPI app.py · server.py · port 7878</text>
+    <text class="label" x="620" y="212">serves frontend/dist · stream.py tails events (SSE)</text>
+    <rect class="box violet" x="600" y="254" width="526" height="96" rx="12"/>
+    <text class="title" x="620" y="286">Static snapshot · export_static.py</text>
+    <text class="label mono" x="620" y="312">data/&lt;slug&gt;.json + VITE_STATIC=1 build</text>
+    <text class="label" x="620" y="334">used by benchmarks.yml for the Pages run history</text>
+    <path class="line" d="M200,180 L260,180" marker-end="url(#ar14)"/>
+    <path class="line" d="M510,170 L600,60" marker-end="url(#ar14)"/>
+    <path class="line" d="M510,180 L600,180" marker-end="url(#ar14)"/>
+    <path class="line" d="M510,190 L600,300" marker-end="url(#ar14)"/>
+  </svg>
+  <pre class="sm mt">cd dashboard/frontend &amp;&amp; npm ci &amp;&amp; npm run build   <span class="c"># tsc -b &amp;&amp; vite build → dist/ (committed)</span>
+pip install -e <span class="s">"./dashboard/backend[dev]"</span>           <span class="c"># fastapi, uvicorn, cap-evolve-core</span>
+cap-evolve dashboard --base .capevolve --port 7878</pre>
+  <aside class="notes" lang="en">
+    <p><span class="time">[14:00–15:20]</span> All dashboard views start from one function: <code>reduce_run</code> in core. It folds <code>events.jsonl</code>, the rollouts and the git store into one structure. Then there are three outputs.</p>
+    <ul>
+      <li>The static report. <code>render_html</code> writes a self-contained <code>dashboard.html</code> with inline CSS and SVG and no CDN. The report skill writes it on every run. It needs only core.</li>
+      <li>The live dashboard. This is the separate <code>capevolve-dashboard</code> package. It is a read-only FastAPI service on port 7878. It serves the React app from <code>frontend/dist</code>. The frontend uses React 19, Vite, Tailwind, React Query and Recharts. The built <code>dist/</code> is committed, so users do not need Node.</li>
+      <li>The static snapshot. <code>export_static.py</code> writes the same API answers as JSON files. A build with <code>VITE_STATIC=1</code> reads them with no backend. CI uses this for the benchmark history on the website.</li>
+    </ul>
+    <p>If you change the frontend source, rebuild and commit <code>dist/</code>.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[14:00–15:20]</span> כל התצוגות של ה-dashboard מתחילות מפונקציה אחת: <code>reduce_run</code> שב-core. היא מקפלת את <code>events.jsonl</code>, את ה-rollouts ואת ה-git store למבנה אחד. משם יש שלושה פלטים.</p>
+    <ul>
+      <li>הדוח הסטטי. <code>render_html</code> כותב <code>dashboard.html</code> עצמאי, עם CSS ו-SVG בתוך הקובץ ובלי CDN. ה-report skill כותב אותו בכל ריצה, והוא צריך רק את ה-core.</li>
+      <li>ה-dashboard החי. זה ה-package הנפרד <code>capevolve-dashboard</code>: שירות FastAPI לקריאה בלבד על פורט 7878. הוא מגיש את אפליקציית ה-React מ-<code>frontend/dist</code>. ה-frontend משתמש ב-React 19, Vite, Tailwind, React Query ו-Recharts. ה-<code>dist/</code> הבנוי נמצא ב-commit, כך שמשתמשים לא צריכים Node.</li>
+      <li>ה-snapshot הסטטי. <code>export_static.py</code> כותב את אותן תשובות API כקבצי JSON, ו-build עם <code>VITE_STATIC=1</code> קורא אותן בלי backend. ה-CI משתמש בזה בשביל היסטוריית ה-benchmarks באתר.</li>
+    </ul>
+    <p>אם משנים את קוד ה-frontend, צריך לבנות מחדש ולעשות commit ל-<code>dist/</code>.</p>
+  </aside>
+</section>
+
+<!-- 15 ═══ Plugin and install.sh ═══ -->
+<section class="slide">
+  <h2>Getting skills into a host · plugin and <code>install.sh</code></h2>
+  <div class="row">
+    <div class="col">
+      <div class="tree sm"><span class="d">plugins/cap-evolve/</span>
+├── .claude-plugin/plugin.json
+├── skills → ../../skills  <span class="c"># symlink</span>
+├── <span class="d">agents/</span>  <span class="c"># diagnoser, proposer</span>
+└── <span class="d">hooks/</span>   <span class="c"># hooks.json</span>
+    ├── deny_sealed_edits.py   <span class="c"># PreToolUse</span>
+    ├── goal_reminder.py       <span class="c"># PostToolUse</span>
+    ├── require_green_check.py <span class="c"># Stop</span>
+    └── inject_router.py       <span class="c"># SessionStart</span></div>
+      <pre class="sm mt">claude --plugin-dir ./plugins/cap-evolve</pre>
+      <p class="small">Each skill becomes a <code>/cap-evolve:&lt;skill&gt;</code> command.</p>
+    </div>
+    <div class="col">
+      <table class="tight">
+        <tr><th><code>--host</code></th><th>Destination</th></tr>
+        <tr><td>claude</td><td><code>~/.claude/skills</code></td></tr>
+        <tr><td>codex</td><td><code>~/.agents/skills</code></td></tr>
+        <tr><td>gemini</td><td><code>~/.gemini/extensions/cap-evolve/skills</code></td></tr>
+        <tr><td>opencode</td><td><code>~/.config/opencode/skills</code></td></tr>
+        <tr><td>cursor</td><td><code>./.cursor/skills</code></td></tr>
+        <tr><td>bob</td><td><code>~/.bob/skills</code></td></tr>
+        <tr><td colspan="2" class="muted">+ openclaw, droid, copilot, kimi, pi, antigravity</td></tr>
+      </table>
+      <p class="small mt">Copies each skill flat, plus <code>optimizers/registry.yaml</code>. Rebuilds the manifest. Exits 1 if a file is missing. Does <b>not</b> pip-install core.</p>
+    </div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[15:20–16:30]</span> There are two ways to put the skills into an agent host. A host is the coding agent that reads the skills, like Claude Code or Codex. For Claude Code, use the plugin. Its <code>skills</code> entry is a symlink, so the plugin always matches the repo. It adds two subagents and four hooks. The hooks enforce honesty in code, not in prose. For example, <code>deny_sealed_edits.py</code> exits with code 2 to block any edit to the sealed test split. <code>require_green_check.py</code> blocks the agent from stopping while <code>cap-evolve check</code> is red. There is no separate commands folder. Each skill is exposed as a command.</p>
+    <p>For all other hosts, use <code>install.sh</code>. It maps a host name to that host's skills folder. It copies every folder that holds a <code>meta.yaml</code>, copies the optimizer registry file, rebuilds the manifest in both places, and then verifies the result. It does not install the Python package. You still run <code>pip install ./core</code>.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[15:20–16:30]</span> יש שתי דרכים להכניס את ה-skills ל-host. Host הוא סוכן הקוד שקורא את ה-skills, כמו Claude Code או Codex. ל-Claude Code משתמשים ב-plugin. ה-<code>skills</code> שלו הוא symlink, כך שה-plugin תמיד תואם ל-repo. הוא מוסיף שני subagents וארבעה hooks. ה-hooks אוכפים כנות בקוד, לא בטקסט. למשל, <code>deny_sealed_edits.py</code> יוצא עם קוד 2 כדי לחסום כל עריכה של ה-test split החתום, ו-<code>require_green_check.py</code> לא נותן לסוכן לסיים כל עוד <code>cap-evolve check</code> אדום. אין תיקיית commands נפרדת; כל skill נחשף כפקודה.</p>
+    <p>לכל שאר ה-hosts משתמשים ב-<code>install.sh</code>. הוא ממפה שם של host לתיקיית ה-skills של אותו host. הוא מעתיק כל תיקייה שיש בה <code>meta.yaml</code>, מעתיק את קובץ ה-registry של ה-optimizers, בונה מחדש את ה-manifest בשני המקומות, ואז מאמת את התוצאה. הוא לא מתקין את ה-package של Python, את זה עדיין עושים עם <code>pip install ./core</code>.</p>
+  </aside>
+</section>
+
+<!-- 16 ═══ Harbor, telemetry, OpenShift ═══ -->
+<section class="slide">
+  <h2>Satellite packages · Harbor, telemetry, OpenShift</h2>
+  <div class="flow">
+    <div class="step"><b>cap-evolve tasks</b><span>from an adapter</span></div><div class="arrow">→</div>
+    <div class="step amber"><b>package_dataset()</b><span>Harbor task dirs</span></div><div class="arrow">→</div>
+    <div class="step amber"><b>harbor_run()</b><span>harbor run, sandboxed</span></div><div class="arrow">→</div>
+    <div class="step amber"><b>parse_job_dir()</b><span>trial results</span></div><div class="arrow">→</div>
+    <div class="step blue"><b>Rollout / Score</b><span>back into core</span></div>
+  </div>
+  <div class="grid-3 mt">
+    <div class="card amber mini"><h3><code>capevolve_harbor</code></h3><ul><li>Package <code>capevolve-harbor</code>, no deps</li><li>Runs benchmarks in Harbor sandboxes: Docker, OpenShift, cloud</li><li>Used by <code>benchmarks/generic/harbor</code></li></ul></div>
+    <div class="card mini"><h3><code>capevolve_telemetry</code></h3><ul><li>MLflow and OTel observers</li><li>Extras <code>[mlflow]</code>, <code>[otel]</code>, <code>[all]</code></li><li><code>observers:</code> in capevolve.yaml; gets every <code>log_event()</code></li></ul></div>
+    <div class="card green mini"><h3><code>openshift/</code></h3><ul><li><code>vllm-serving.yaml</code>: agent model on GPU</li><li>Runner job / deployment on CPU</li><li><code>images/cap-evolve-runner/Dockerfile</code></li></ul></div>
+  </div>
+  <p class="small muted mt">Source: capevolve_harbor/__init__.py, capevolve_telemetry/README.md, openshift/README.md, site/harbor.html</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[16:30–17:20]</span> Three optional pieces live next to core. Harbor is an external tool for running benchmark tasks in sandboxes. The <code>capevolve_harbor</code> package is the glue. An adapter calls <code>package_dataset</code> to write cap-evolve tasks as Harbor task folders. Then <code>harbor_run</code> calls the <code>harbor run</code> CLI as a subprocess, with timeouts and signal forwarding. Then <code>parse_job_dir</code> turns the results back into cap-evolve rollouts and scores. The generic Harbor template uses this.</p>
+    <p><code>capevolve_telemetry</code> forwards every run event to MLflow or OpenTelemetry when you add an <code>observers:</code> list to the spec. When it is not configured, nothing changes. <code>openshift/</code> deploys the stack on a cluster. vLLM serves the agent model on GPU nodes, and the runner pod runs the loop on CPU. The optimizer is still an external coding-agent CLI.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[16:30–17:20]</span> שלושה חלקים אופציונליים יושבים ליד ה-core. Harbor הוא כלי חיצוני שמריץ משימות benchmark בתוך sandboxes. ה-package <code>capevolve_harbor</code> הוא הדבק. Adapter קורא ל-<code>package_dataset</code> כדי לכתוב משימות של cap-evolve כתיקיות משימה של Harbor. אחר כך <code>harbor_run</code> מפעיל את ה-CLI של <code>harbor run</code> כ-subprocess, עם timeouts והעברת signals. ואז <code>parse_job_dir</code> מחזיר את התוצאות ל-rollouts ו-scores של cap-evolve. ה-template הגנרי של Harbor משתמש בזה.</p>
+    <p><code>capevolve_telemetry</code> מעביר כל אירוע של הריצה ל-MLflow או ל-OpenTelemetry, כשמוסיפים רשימת <code>observers:</code> ל-spec. בלי הגדרה, שום דבר לא משתנה. <code>openshift/</code> פורס את המערכת על cluster: vLLM מגיש את מודל הסוכן על nodes עם GPU, וה-pod של ה-runner מריץ את הלולאה על CPU. ה-optimizer עדיין CLI חיצוני של סוכן קוד.</p>
+  </aside>
+</section>
+
+<!-- 17 ═══ CI and site ═══ -->
+<section class="slide">
+  <h2>CI, workflows and the website</h2>
+  <table class="tight">
+    <tr><th>Workflow</th><th>Trigger</th><th>What it does</th></tr>
+    <tr><td><code>ci.yml</code></td><td>push, PR</td><td>8 jobs: core + backend pytest, CI-lib tests, frontend build + vitest, toy_calc, install smoke, link + CLI check, skill lint, spellcheck</td></tr>
+    <tr><td><code>codeql.yml</code></td><td>push, PR, weekly</td><td>Code scanning</td></tr>
+    <tr><td><code>pages.yml</code></td><td>site/** on main</td><td>Deploys <code>site/</code> to GitHub Pages (benchmark results live on the skillberry-runs dashboard)</td></tr>
+    <tr><td><code>benchmarks.yml</code> · <code>integration-tests.yml</code></td><td>manual</td><td>Real runs on the self-hosted <code>ibm-vpc</code> runner; publish results</td></tr>
+    <tr><td><code>sync-model-lists.yml</code></td><td>cron, manual</td><td>Keeps model pickers in line with what the gateway serves</td></tr>
+    <tr><td><code>label-*</code> · <code>*-with-bob*</code></td><td>issues, PRs, reviews</td><td>Labeling and IBM Bob automation, from shared <code>skillberry-common</code> workflows</td></tr>
+  </table>
+  <p class="small mt"><code>ci/</code>: <code>check_cli_subcommands.py</code>, <code>e2e_all_algorithms.sh</code>, <code>ci/benchmarks/</code> (lib, runner, per-benchmark legs, <code>model_catalog.txt</code>). DCO is checked by the <code>probot/dco</code> app.</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[17:20–18:20]</span> There are 15 workflow files. The one you meet on every PR is <code>ci.yml</code>. It has eight jobs. It runs the core and dashboard backend tests, builds the frontend, runs the zero-API toy calculator and checks that it reaches a test reward of 1.0. It also runs <code>install.sh</code> and then a run from the installed tree, checks links and CLI commands named in docs, lints skills, and spellchecks. Note that the header comment in <code>ci.yml</code> lists only six jobs. The file has eight.</p>
+    <p>Benchmark and integration runs are manual, because they cost money. They run on a self-hosted runner inside the IBM VPC, so they can reach the model gateways. The site is plain HTML in <code>site/</code>. <code>pages.yml</code> deploys it and folds in the benchmark history. The Bob and label workflows call shared workflows from <code>skillberry-common</code>. Chapter 8 goes deep on tests and CI tiers.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[17:20–18:20]</span> יש 15 קבצי workflow. זה שתפגשו בכל PR הוא <code>ci.yml</code>, ויש בו שמונה jobs. הוא מריץ את הבדיקות של ה-core ושל ה-backend של ה-dashboard, בונה את ה-frontend, מריץ את מחשבון הצעצוע בלי API ובודק שהוא מגיע ל-test reward של 1.0. הוא גם מריץ את <code>install.sh</code> ואחר כך ריצה מהעץ המותקן, בודק קישורים ופקודות CLI שמופיעות במסמכים, מריץ lint על ה-skills ובודק איות. שימו לב שההערה בראש <code>ci.yml</code> מונה רק שישה jobs, אבל בקובץ יש שמונה.</p>
+    <p>ריצות benchmark ו-integration הן ידניות, כי הן עולות כסף. הן רצות על runner פרטי בתוך ה-VPC של IBM, כדי להגיע ל-gateways של המודלים. האתר הוא HTML פשוט ב-<code>site/</code>; <code>pages.yml</code> פורס אותו ומוסיף את היסטוריית ה-benchmarks. ה-workflows של Bob ושל ה-labels קוראים ל-workflows משותפים מ-<code>skillberry-common</code>. בפרק 8 נעמיק בבדיקות וב-tiers של CI.</p>
+  </aside>
+</section>
+
+<!-- 18 ═══ Developer workflow ═══ -->
+<section class="slide">
+  <h2>How we work · <code>.claude/skills</code> and DCO</h2>
+  <div class="flow">
+    <div class="step blue"><b>open-pr</b><span>worktree, identity, pick track</span></div><div class="arrow">→</div>
+    <div class="step" style="flex:1.4"><b>testing · dashboard-change · docs-change</b><span>unit + real run · screenshots · link check</span></div><div class="arrow">→</div>
+    <div class="step violet"><b>review-cycles</b><span>3 rounds × 2 reviewers</span></div><div class="arrow">→</div>
+    <div class="step green"><b>PR</b><span>template checklist</span></div>
+  </div>
+  <div class="row mt">
+    <div class="col">
+      <pre class="sm"><span class="c"># every commit needs Signed-off-by</span>
+git commit -s -m <span class="s">"fix: ..."</span>
+<span class="c"># repair a branch that failed DCO</span>
+git rebase --exec \
+  <span class="s">'git commit --amend --no-edit -s'</span> &lt;base&gt;
+git push --force-with-lease</pre>
+    </div>
+    <div class="col">
+      <div class="card mini"><h3>House rules · CONTRIBUTING.md</h3><ul>
+        <li>Honesty lives only in <code>core/cap_evolve</code></li>
+        <li>Skills stay host-agnostic; <code>run.py</code> prints one JSON</li>
+        <li>stdout is parsed, stderr is relayed</li>
+        <li>Zero runtime deps in core</li>
+        <li>A test for every core change</li>
+      </ul></div>
+    </div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[18:20–19:20]</span> The repo describes its own development process as skills in <code>.claude/skills</code>. CLAUDE.md says every task starts with <code>open-pr</code>. It branches from a fresh main in a separate worktree, checks the git identity, and picks a track by the file list. Code changes go to <code>testing</code>: the unit tier always, and a real end-to-end run when the change can affect one. Frontend-only changes go to <code>dashboard-change</code>, with before and after screenshots. Docs-only changes go to <code>docs-change</code>, which is only a link check. Then <code>review-cycles</code> runs three rounds with two independent reviewers each.</p>
+    <p>One hard rule from CLAUDE.md: the DCO check fails any PR with a commit that has no <code>Signed-off-by</code> line. Always commit with <code>-s</code>. If you forgot, fix the branch with the rebase command shown here and force-push. On the right are the house rules from CONTRIBUTING.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[18:20–19:20]</span> ה-repo מתאר את תהליך הפיתוח שלו כ-skills בתוך <code>.claude/skills</code>. לפי CLAUDE.md, כל משימה מתחילה ב-<code>open-pr</code>. הוא יוצר branch מ-main עדכני ב-worktree נפרד, בודק את זהות ה-git, ובוחר track לפי רשימת הקבצים. שינויי קוד הולכים ל-<code>testing</code>: תמיד ה-unit tier, וריצה end-to-end אמיתית כשהשינוי יכול להשפיע עליה. שינויים רק ב-frontend הולכים ל-<code>dashboard-change</code>, עם צילומי מסך של לפני ואחרי. שינויי docs בלבד הולכים ל-<code>docs-change</code>, שזה רק בדיקת קישורים. ואז <code>review-cycles</code> מריץ שלושה סבבים, ובכל סבב שני reviewers בלתי תלויים.</p>
+    <p>כלל קשיח אחד מ-CLAUDE.md: בדיקת ה-DCO מכשילה כל PR שיש בו commit בלי שורת <code>Signed-off-by</code>. תמיד עושים commit עם <code>-s</code>. אם שכחתם, מתקנים את ה-branch עם פקודת ה-rebase שעל השקף ועושים force-push. מימין, כללי הבית מ-CONTRIBUTING.</p>
+  </aside>
+</section>
+
+<!-- 19 ═══ Takeaways ═══ -->
+<section class="slide">
+  <h2>Key takeaways</h2>
+  <div class="grid-2">
+    <div class="card blue"><h3>Core is small in deps, big in code</h3><p>Pure stdlib, 67 flat modules. Start in <code>harness.py</code>, <code>dashboard.py</code>, <code>cli.py</code>.</p></div>
+    <div class="card violet"><h3>Skills are folders with a contract</h3><p><code>meta.yaml</code> + <code>SKILL.md</code> + <code>run.py</code> that prints one JSON. Rebuild the manifest after changes.</p></div>
+    <div class="card amber"><h3>Everything else points at core</h3><p>Dashboard, telemetry, Harbor, adapters and the plugin depend on core. Never the reverse.</p></div>
+    <div class="card green"><h3>Work through the dev skills</h3><p><code>open-pr</code> → track skill → <code>review-cycles</code>. Sign off every commit.</p></div>
+  </div>
+  <div class="callout mt"><b>Next · Chapter 4, Object model:</b> <code>types.py</code>, the adapter contract, the run dir on disk, <code>events.jsonl</code> and <code>reduce_run</code>.</div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[19:20–20:00]</span> Four things to remember. Core has no dependencies but a lot of code, and three files are the best place to start reading. A skill is a folder with a strict contract, and the registry and tests keep the folders and the docs in sync. All other packages depend on core, never the other way. And work goes through the development skills, with every commit signed off. In chapter 4 we open the objects themselves: the dataclasses, the adapter contract, and the files a run writes to disk.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[19:20–20:00]</span> ארבעה דברים לזכור. ל-core אין תלויות אבל יש בו הרבה קוד, ושלושה קבצים הם המקום הכי טוב להתחיל לקרוא. Skill הוא תיקייה עם חוזה קפדני, וה-registry והבדיקות שומרים שהתיקיות והמסמכים יהיו מסונכרנים. כל ה-packages האחרים תלויים ב-core, אף פעם לא להפך. והעבודה עוברת דרך ה-skills של הפיתוח, וכל commit חתום. בפרק 4 נפתח את האובייקטים עצמם: ה-dataclasses, חוזה ה-adapter, והקבצים שריצה כותבת לדיסק.</p>
+  </aside>
+</section>
+
+</div></div>
+<script src="assets/deck.js"></script>
+</body>
+</html>

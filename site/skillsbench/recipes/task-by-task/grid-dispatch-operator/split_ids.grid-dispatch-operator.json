@@ -1,5 +1,0 @@
-{
-  "train": ["grid-dispatch-operator"],
-  "val": ["grid-dispatch-operator"],
-  "test": ["grid-dispatch-operator"]
-}

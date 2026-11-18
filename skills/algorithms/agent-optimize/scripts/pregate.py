@@ -423,24 +423,17 @@ def _smoke_and_replay(cand, parent, factory_spec, fixtures, traces, tool_dirs, s
 
 def helper_checks(cand: Path, parent: Path | None, cfg: dict, traces=(), strict=False,
                   seed: Path | None = None) -> list[dict]:
-    """The three v2 helper checks for a resolved ``cap_evolve.helpers`` config (empty when off)."""
-    from cap_evolve import helper_smoke, helpers
-    if not cfg or not cfg.get("enabled"):
+    """The helper gate's checks (``cap_evolve.helper_gate``) for a resolved ``cap_evolve.helpers`` config, each
+    under this pregate's own guard (an infra error fails open unless ``strict``). Empty when the gate is off.
+
+    The rules are the shared gate's, so this pregate, the conductor and every other caller refuse the same
+    candidates. A config error (``GateConfigError``) is not guarded: the caller checks the config before the round."""
+    from cap_evolve import helper_gate
+    if not helper_gate.active(cfg):
         return []
-    out = [_guard("helper_surface", lambda: (lambda p: _check("helper_surface", not p, "; ".join(p)))(
-        helpers.surface_problems(cand, cfg, seed)), strict)]
-    if cfg.get("lint", True):
-        def lint():
-            r = helpers.lint_candidate(cand, cfg, parent)
-            return _check("helper_lint", r["ok"], "; ".join(r["findings"][:8]), files=r["files"])
-        out.append(_guard("helper_lint", lint, strict))
-    if cfg.get("smoke", True):
-        def smoke():
-            rows = helper_smoke.load_fixtures(Path(cfg["fixtures"]) if cfg.get("fixtures") else None, traces)
-            r = helper_smoke.run_smoke(cand, cfg, parent=parent, fixtures=rows)
-            return _check("helper_smoke", r["ok"], r["detail"], skipped=r["skipped"], runs=r["runs"])
-        out.append(_guard("helper_smoke", smoke, strict))
-    return out
+    return [_guard(name, lambda name=name: helper_gate.run_check(name, cand, cfg, parent=parent, seed=seed,
+                                                                 traces=traces), strict)
+            for name in helper_gate.enabled_checks(cfg)]
 
 
 def run(cand: Path, parent: Path | None = None, *, fixtures: Path | None = None,
