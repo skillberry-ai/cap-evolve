@@ -19,6 +19,7 @@ run dir  --metrics.py-->  metrics.jsonl + steps.jsonl
                                     |
           records/<run_id>__<tier>-<bench>.json   in skillberry-runs/dashboard   (step 5)
           ci_ui/<run_id>__<tier>-<bench>/          in the benchmark's repo         (optional)
+          ci_runs/<run_id>__<tier>-<bench>/        in the benchmark's repo         (optional, run_folder.py)
                                     |
              the dashboard deploys on that push and renders benchmarks.json from records/
 ```
@@ -138,6 +139,26 @@ PYTHONPATH=dashboard/backend python3 -m capevolve_dashboard.export_static \
 ```
 
 Only the data is needed: the dashboard has one shared viewer for every run.
+
+- **section G** adds the run's folder (README, report, metrics, the optimized capability, the recipe),
+  in the same layout CI uses. Build it with `run_folder.py`, copy it to
+  `<benchmark repo>/ci_runs/<run_id>__<tier>-<bench>/`, mask it like the Open UI data, and set the
+  record's `report_url` to its README page (rebuild the record with `--report-url`):
+
+```bash
+# /tmp/pub/out holds runmeta.json, metrics.jsonl, steps.jsonl, report.md (and optimized/ if you have it);
+# --project is the run's .capevolve/project, --run-dir its run dir (for final.json)
+python3 ci/benchmarks/lib/run_folder.py /tmp/pub/out /tmp/pub/ci_runs/30987147147__pilot-spreadsheetbench \
+  --project /tmp/pub/project --run-dir /tmp/pub/run_suite --tier-dir ci/benchmarks/spreadsheetbench/pilot \
+  --repo spreadsheetbench --has-ui
+python3 ci/benchmarks/lib/record.py build /tmp/pub/metrics.jsonl --runmeta /tmp/pub/runmeta.json \
+  --steps /tmp/pub/steps.jsonl --has-ui \
+  --report-url https://skillberry-runs.github.io/dashboard/spreadsheetbench/ci_runs/30987147147__pilot-spreadsheetbench/README.html \
+  > /tmp/pub/30987147147__pilot-spreadsheetbench.json
+```
+
+With a token that can push to skillberry-runs, `ci/benchmarks/lib/publish_results.sh <out_dir> <run_id>
+<tier>-<bench>` does all of this (run folder, Open UI data, record) in one go, exactly as CI does.
 
 ## Repairing a record that is already published
 

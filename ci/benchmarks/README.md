@@ -411,12 +411,14 @@ skillberry-runs`, [`lib/publish_results.sh`](lib/publish_results.sh)), with plai
 |---|---|---|
 | one record per `(run × tier × bench)` | `skillberry-runs/dashboard`: `records/<run_id>__<tier>-<bench>.json` | the push deploys the dashboard, which renders `benchmarks.json` from `records/` (never committed) |
 | the run's "Open UI" data (`export_static` output) | the benchmark's repo: `ci_ui/<run_id>__<tier>-<bench>/` | data only; one shared viewer on the dashboard opens it. Masked first with the dashboard's `scripts/mask_secrets.py` |
+| the run's folder ([`lib/run_folder.py`](lib/run_folder.py)): README, `report.md`, `runmeta.json`, `metrics.jsonl`, `steps.jsonl`, `final.json`, `capability.diff`, `optimized_capability/`, `recipe/` (`capevolve.yaml`, `split_ids.json`, the tier's `overrides.env`) | the benchmark's repo: `ci_runs/<run_id>__<tier>-<bench>/`, in the same commit as the Open UI data | the record's `report_url` links its README, rendered on the dashboard (the row's **Report ↗**). SkillsBench gets a diffstat instead of the licensed skill content; anything over 20 MB is left out |
 
 Which repo holds which bench is the dashboard's [`sections.json`](https://github.com/skillberry-runs/dashboard/blob/main/sections.json)
-(`benches`). A bench that isn't listed still gets its record, and a `::warning::` says its Open UI
-data was not published: add it there to keep future runs' data. Records are validated with the
-dashboard's `scripts/check_records.py` before anything is pushed. The Open UI data goes first and the
-record says `has_ui` only if that push succeeded; legs that publish at the same moment retry on a
+(`benches`). A bench that isn't listed still gets its record, and a `::warning::` says its run folder
+and Open UI data were not published: add it there to keep future runs' data. Records are validated with
+the dashboard's `scripts/check_records.py` before anything is pushed. The benchmark repo's commit (run
+folder + Open UI data) goes first, and the record says `has_ui` and carries `report_url` only if it
+was pushed; legs that publish at the same moment retry on a
 fresh clone (each adds only its own files, so a retry never conflicts).
 
 Until 2026-11-18 a separate GitHub-hosted `aggregate` job published from the bench jobs' uploaded

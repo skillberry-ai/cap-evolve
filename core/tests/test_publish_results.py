@@ -10,9 +10,12 @@ published. The bench job now publishes with plain git, which those runs showed s
 
 WHAT THIS PINS (against local bare repos standing in for skillberry-runs/dashboard and tau)
 
-1. A leg's Open UI data lands at <bench repo>/ci_ui/<run_id>__<slug>/, masked; its record at
-   dashboard/records/<run_id>__<slug>.json with has_ui true; both committed by skillberry-bot.
-2. A bench with no repo in sections.json still gets its record (has_ui false) and a warning.
+1. A leg's run folder (ci_runs/<run_id>__<slug>/, run_folder.py) and its Open UI data
+   (ci_ui/<run_id>__<slug>/, masked) land in <bench repo> in one commit; its record at
+   dashboard/records/<run_id>__<slug>.json with has_ui true and report_url -> the folder's
+   README page; all committed by skillberry-bot. A repo with "site": false links GitHub instead.
+2. A bench with no repo in sections.json still gets its record (has_ui false, no report_url) and
+   a warning.
 3. Republishing the same leg is a no-op, not a failure or a duplicate commit.
 4. Legs publishing at the same moment all land (push races retry on a fresh clone).
 5. Only the run's own ci_ui/<name> is checked out, never the repo's whole ci_ui/ (GBs).
@@ -42,6 +45,8 @@ pytestmark = pytest.mark.skipif(not shutil.which("git"), reason="needs git")
 SECTIONS = [
     {"repo": "tau", "title": "tau2", "benches": ["tau2", "tau2_sierra"]},
     {"repo": "spreadsheetbench", "title": "SpreadsheetBench"},
+    {"repo": "skillsbench", "title": "SkillsBench"},
+    {"repo": "rfe", "title": "RFE Creator", "benches": ["rfe-creator"], "site": False},
 ]
 
 # Minimal stand-ins for the dashboard's scripts (the real ones live in skillberry-runs/dashboard):
@@ -104,7 +109,10 @@ def org(tmp_path):
         "records/.keep": "",
     })
     # an existing run's data, which a publish must never check out
-    _bare(remotes, "tau", {"README.md": "tau\n", "ci_ui/111__smoke-tau2/big.json": "{}"})
+    _bare(remotes, "tau", {"README.md": "tau\n", "ci_ui/111__smoke-tau2/big.json": "{}",
+                           "ci_runs/111__smoke-tau2/README.md": "old\n"})
+    _bare(remotes, "skillsbench", {"README.md": "sb\n"})
+    _bare(remotes, "rfe", {"README.md": "rfe\n"})
     return remotes
 
 
@@ -117,9 +125,24 @@ def _leg(tmp_path: Path, bench: str, tier: str = "canary", ui: bool = True) -> P
     }))
     (out / "metrics.jsonl").write_text(json.dumps({"task": "8", "reward_baseline": 0.0, "reward_opt": 1.0}) + "\n")
     (out / "steps.jsonl").write_text(json.dumps({"iter": 0, "eval_usd": 0.1}) + "\n")
+    (out / "report.md").write_text("## Canary suite\n| task | base | opt |\n")
+    opt = out / "optimized"
+    (opt / "optimized_capability" / "__pycache__").mkdir(parents=True)
+    (opt / "capability.diff").write_text("--- a/policy.md\n+++ b/policy.md\n+be careful\n")
+    (opt / "optimized_capability" / "policy.md").write_text("be careful\n")
+    (opt / "optimized_capability" / "__pycache__" / "x.pyc").write_bytes(b"\0")
     if ui:
         (out / "ui" / "data").mkdir(parents=True)
         (out / "ui" / "data" / "runs.json").write_text('[{"tool": "toolu_bdrk_01ABCDEFGHIJKLMNOPQRSTUV"}]')
+    # the project work dir run_suite.sh leaves next to it (<out>_proj)
+    proj = Path(f"{out}_proj") / ".capevolve"
+    (proj / "project" / "inputs").mkdir(parents=True)
+    (proj / "project" / "capevolve.yaml").write_text("algorithm: hill-climb\n")
+    (proj / "project" / "inputs" / "split_ids.json").write_text('{"train": ["8"], "val": ["8"], "test": ["8"]}')
+    (proj / "run_suite").mkdir()
+    (proj / "run_suite" / "final.json").write_text(json.dumps({
+        "test": {"reward": 1.0}, "test_baseline": {"reward": 0.0}, "test_delta": 1.0,
+        "best_id": "cand_0001", "train_equals_val": True}))
     return out
 
 
@@ -140,16 +163,31 @@ def _log(remotes, repo):
     return _git(f"--git-dir={remotes / f'{repo}.git'}", "log", "--format=%an <%ae>|%s", "main").splitlines()
 
 
-def test_leg_publishes_masked_ui_data_then_its_record(tmp_path, org):
+def _ls(remotes, repo, path):
+    return _git(f"--git-dir={remotes / f'{repo}.git'}", "ls-tree", "-r", "--name-only", "main", path).split()
+
+
+def test_leg_publishes_its_run_folder_and_masked_ui_data_then_its_record(tmp_path, org):
     r = _publish(tmp_path, org, _leg(tmp_path, "tau2"), "canary-tau2")
     assert r.returncode == 0, r.stdout + r.stderr
     name = f"{RUN_ID}__canary-tau2"
     ui = _show(org, "tau", f"ci_ui/{name}/runs.json")
     assert "toolu_masked_" in ui and "toolu_bdrk_" not in ui
+    folder = sorted(f[len(f"ci_runs/{name}/"):] for f in _ls(org, "tau", f"ci_runs/{name}"))
+    assert folder == ["README.md", "capability.diff", "final.json", "metrics.jsonl",
+                      "optimized_capability/policy.md", "recipe/capevolve.yaml", "recipe/split_ids.json",
+                      "report.md", "runmeta.json", "steps.jsonl"], folder
+    readme = _show(org, "tau", f"ci_runs/{name}/README.md")
+    assert readme.startswith(f"# canary / tau2 — run {RUN_ID}")
+    assert "Pipeline check only" in readme and "No held-out split" in readme
+    assert "**Sealed test:** 0.000 → 1.000" in readme
+    assert f"/tau/ci_ui/{name}" in readme.replace("%2F", "/")      # its Open UI link
     rec = json.loads(_show(org, "dashboard", f"records/{name}.json"))
     assert rec["has_ui"] is True and rec["bench"] == "tau2" and rec["suite"]["reward_opt"] == 1.0
+    assert rec["report_url"] == f"https://skillberry-runs.github.io/dashboard/tau/ci_runs/{name}/README.html"
     bot = "skillberry-bot <281869455+skillberry-bot@users.noreply.github.com>"
-    assert _log(org, "tau")[0].startswith(bot + "|ci_ui:")
+    assert _log(org, "tau")[0] == f"{bot}|run {RUN_ID} (canary-tau2): ci_runs/ folder and Open UI data"
+    assert len(_log(org, "tau")) == 2, "the run folder and its Open UI data are ONE commit"
     assert _log(org, "dashboard")[0].startswith(bot + "|records:")
     # the temp work dir (clones) is removed
     assert not list((tmp_path / "runner_temp").iterdir())
@@ -160,7 +198,25 @@ def test_bench_without_a_repo_gets_its_record_but_no_ui(tmp_path, org):
     assert r.returncode == 0, r.stdout + r.stderr
     assert "has no repo" in r.stdout
     rec = json.loads(_show(org, "dashboard", f"records/{RUN_ID}__canary-madeupbench.json"))
-    assert rec["has_ui"] is False
+    assert rec["has_ui"] is False and "report_url" not in rec
+
+
+def test_a_repo_without_section_pages_links_the_folder_on_github(tmp_path, org):
+    r = _publish(tmp_path, org, _leg(tmp_path, "rfe-creator"), "smoke-rfe-creator")
+    assert r.returncode == 0, r.stdout + r.stderr
+    rec = json.loads(_show(org, "dashboard", f"records/{RUN_ID}__smoke-rfe-creator.json"))
+    assert rec["report_url"] == f"https://github.com/skillberry-runs/rfe/tree/main/ci_runs/{RUN_ID}__smoke-rfe-creator"
+
+
+def test_skillsbench_never_publishes_the_licensed_skill_content(tmp_path, org):
+    out = _leg(tmp_path, "skillsbench")
+    (out / "optimized" / "capability.diff").unlink()          # run_suite.sh writes a diffstat instead
+    (out / "optimized" / "capability.diffstat.txt").write_text(" docx/SKILL.md | 2 +-\n")
+    r = _publish(tmp_path, org, out, "canary-skillsbench")
+    assert r.returncode == 0, r.stdout + r.stderr
+    files = _ls(org, "skillsbench", "ci_runs")
+    assert any(f.endswith("capability.diffstat.txt") for f in files)
+    assert not any("optimized_capability" in f or f.endswith("capability.diff") for f in files), files
 
 
 def test_republishing_a_leg_is_a_no_op(tmp_path, org):
@@ -199,6 +255,7 @@ def test_only_the_runs_own_ci_ui_folder_is_checked_out(tmp_path, org):
     clone = work / "r_tau"
     assert (clone / "ci_ui" / f"{RUN_ID}__canary-tau2" / "runs.json").exists()
     assert not (clone / "ci_ui" / "111__smoke-tau2").exists(), "the repo's other runs were checked out"
+    assert not (clone / "ci_runs" / "111__smoke-tau2").exists(), "the repo's other runs were checked out"
 
 
 def test_ui_push_failure_still_publishes_the_record_without_ui_and_fails(tmp_path, org):
@@ -206,7 +263,7 @@ def test_ui_push_failure_still_publishes_the_record_without_ui_and_fails(tmp_pat
     r = _publish(tmp_path, org, _leg(tmp_path, "tau2"), "canary-tau2", ATTEMPTS="1")
     assert r.returncode == 1
     rec = json.loads(_show(org, "dashboard", f"records/{RUN_ID}__canary-tau2.json"))
-    assert rec["has_ui"] is False
+    assert rec["has_ui"] is False and "report_url" not in rec
 
 
 def test_no_runmeta_publishes_nothing(tmp_path, org):
