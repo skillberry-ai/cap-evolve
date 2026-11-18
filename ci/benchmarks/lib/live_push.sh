@@ -97,13 +97,21 @@ push_live() {
   for attempt in $(seq 1 "$ATTEMPTS"); do
     if [ -z "$src" ]; then
       # Delete. A branch that is already gone (never pushed, or swept) is success, not an error.
-      git_bounded ls-remote --exit-code --heads "$(remote_url)" "$branch" >/dev/null 2>&1
+      # Run from a fresh empty repo, NEVER the caller's cwd: in CI that is the cap-evolve checkout,
+      # whose actions/checkout config sends `http.https://github.com/.extraheader: AUTHORIZATION
+      # basic <cap-evolve GITHUB_TOKEN>` on every github.com request -- overriding the live token in
+      # the URL, so the push is refused (the 2026-11-18 smoke run left its branch behind that way).
+      rm -rf "$work"
+      git_bounded init -q "$work"
+      git_bounded -C "$work" ls-remote --exit-code --heads "$(remote_url)" "$branch" >/dev/null 2>&1
       local lrc=$?
-      [ "$lrc" -eq 2 ] && return 0
-      if [ "$lrc" -eq 0 ] && git_bounded push -q "$(remote_url)" --delete "$branch" 2>/dev/null; then
+      if [ "$lrc" -eq 2 ]; then rm -rf "$work"; return 0; fi
+      if [ "$lrc" -eq 0 ] && git_bounded -C "$work" push -q "$(remote_url)" --delete "$branch"; then
+        rm -rf "$work"
         return 0
       fi
-      echo "live_push: delete attempt $attempt failed"
+      rm -rf "$work"
+      echo "live_push: delete attempt $attempt failed (ls-remote rc=$lrc)"
     else
       rm -rf "$work"
       mkdir -p "$work/data"

@@ -393,3 +393,22 @@ def test_a_snapshot_push_keeps_exactly_one_commit_on_the_runs_branch(tmp_path):
     assert count == "1", f"the run's branch has {count} commits after 3 snapshots; it must have 1"
     assert '"v": 3' in latest, f"the branch does not hold the latest snapshot: {latest!r}"
     assert _branches(origin, genv) == {SLUG_DIR, "99__other-bench"}, "another run's branch was touched"
+
+
+def test_network_git_calls_never_run_in_the_callers_checkout(tmp_path):
+    """In CI the cleanup step's cwd is the cap-evolve checkout, and actions/checkout configures it
+    with `http.https://github.com/.extraheader` carrying cap-evolve's own GITHUB_TOKEN. Any git call
+    made there sends THAT token instead of the live token in the URL, so the live repo refuses the
+    delete (the 2026-11-18 smoke run left its branch behind exactly that way). Every network call
+    (ls-remote, push) must run with `-C <a fresh dir>`."""
+    log = tmp_path / "git.log"
+    bindir = tmp_path / "bin"
+    _stub_git(bindir, f'echo "$@" >> {log}\nexit 0\n')
+    pidfile = tmp_path / "live_push.pid"
+    pidfile.write_text(f"{_dead_pid()}\n", encoding="utf-8")
+    proc, _ = _run_cleanup(tmp_path, pidfile=pidfile, path=f"{bindir}:/usr/bin:/bin")
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    calls = [l for l in log.read_text().splitlines() if "ls-remote" in l or "push" in l]
+    assert calls, f"cleanup made no network git call:\n{log.read_text()}"
+    bad = [l for l in calls if not l.startswith("-C ")]
+    assert not bad, f"network git calls ran in the caller's cwd (would use its extraheader): {bad}"
