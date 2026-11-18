@@ -12,6 +12,7 @@
   --tier-dir ci/benchmarks/<bench>/<tier>: its overrides.env, if any, goes into recipe/
   --repo    the skillberry-runs repo the folder is published in (for the README's links)
   --has-ui  the run's Open UI data is published next to it (ci_ui/<name>/)
+  --provenance  how the folder came to be (default: published by its CI job)
 
 Layout (published to skillberry-runs/<repo>/ci_runs/<name>/ by publish_results.sh; a run
 published by hand uses the same layout, see ci/benchmarks/PUBLISHING.md):
@@ -47,6 +48,7 @@ MAX_BYTES = 20 * 1024 * 1024
 DASHBOARD = "https://skillberry-runs.github.io/dashboard"
 CAP_EVOLVE = "https://github.com/skillberry-ai/cap-evolve"
 IGNORE = shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store")
+PROVENANCE_CI = "published automatically by its CI job (`ci/benchmarks/lib/publish_results.sh`)"
 
 FILES = [  # (path, description); listed in the README only if present
     ("report.md", "the run's metrics report (also its PR comment)"),
@@ -90,12 +92,12 @@ def _fmt(x, d=3) -> str:
     return f"{x:.{d}f}" if isinstance(x, (int, float)) and not isinstance(x, bool) else "—"
 
 
-def readme(meta: dict, dest: Path, name: str, repo: str | None, has_ui: bool, skipped: list[str]) -> str:
+def readme(meta: dict, dest: Path, name: str, repo: str | None, has_ui: bool, skipped: list[str],
+           provenance: str = PROVENANCE_CI) -> str:
     bench, tier, run_id = meta.get("bench", "?"), meta.get("tier", "?"), meta.get("run_id", "?")
     sha = meta.get("sha") or ""
     L = [f"# {tier} / {bench} — run {run_id}", ""]
-    L.append("A cap-evolve benchmark run, published automatically by its CI job "
-             "(`ci/benchmarks/lib/publish_results.sh`). Its row is on the "
+    L.append(f"A cap-evolve benchmark run, {provenance}. Its row is on the "
              f"[benchmark-runs dashboard]({DASHBOARD}/).")
     L.append("")
     if tier == "canary":
@@ -181,7 +183,7 @@ def readme(meta: dict, dest: Path, name: str, repo: str | None, has_ui: bool, sk
 
 
 def build(out: Path, dest: Path, project: Path | None, run_dir: Path | None, tier_dir: Path | None,
-          name: str | None, repo: str | None, has_ui: bool) -> Path:
+          name: str | None, repo: str | None, has_ui: bool, provenance: str = PROVENANCE_CI) -> Path:
     meta = json.loads((out / "runmeta.json").read_text(encoding="utf-8"))
     name = name or f"{meta['run_id']}__{meta.get('tier', 'smoke')}-{meta['bench']}"
     if dest.exists():
@@ -202,7 +204,7 @@ def build(out: Path, dest: Path, project: Path | None, run_dir: Path | None, tie
         _put(project / "inputs" / "split_ids.json", dest / "recipe" / "split_ids.json", skipped, "recipe/split_ids.json")
     if tier_dir:
         _put(tier_dir / "overrides.env", dest / "recipe" / "overrides.env", skipped, "recipe/overrides.env")
-    (dest / "README.md").write_text(readme(meta, dest, name, repo, has_ui, skipped), encoding="utf-8")
+    (dest / "README.md").write_text(readme(meta, dest, name, repo, has_ui, skipped, provenance), encoding="utf-8")
     return dest
 
 
@@ -216,11 +218,14 @@ def main() -> int:
     ap.add_argument("--name")
     ap.add_argument("--repo")
     ap.add_argument("--has-ui", action="store_true")
+    ap.add_argument("--provenance", default=PROVENANCE_CI,
+                    help="how the folder came to be, completing 'A cap-evolve benchmark run, ...' "
+                         "(default: published by its CI job; e.g. 'published by hand by <who>')")
     a = ap.parse_args()
     if not (a.out / "runmeta.json").is_file():
         print(f"run_folder: no runmeta.json in {a.out}", file=sys.stderr)
         return 1
-    d = build(a.out, a.dest, a.project, a.run_dir, a.tier_dir, a.name, a.repo, a.has_ui)
+    d = build(a.out, a.dest, a.project, a.run_dir, a.tier_dir, a.name, a.repo, a.has_ui, a.provenance)
     print(f"run_folder: wrote {d} ({sum(1 for f in d.rglob('*') if f.is_file())} files)")
     return 0
 

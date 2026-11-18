@@ -62,3 +62,13 @@ def test_a_failed_run_says_it_has_no_result(tmp_path):
     assert "No suite result: the run did not finish successfully" in readme
     assert "**Reward:**" not in readme
     assert "[Open UI](https://skillberry-runs.github.io/dashboard/viewer/index.html?dataBase=" in readme
+
+
+def test_provenance_says_how_the_folder_came_to_be(tmp_path):
+    """A backfilled or hand-published folder must not claim CI published it."""
+    out = _out(tmp_path)
+    d = run_folder.build(out, tmp_path / "a", None, None, None, None, "tau", False)
+    assert "A cap-evolve benchmark run, published automatically by its CI job" in (d / "README.md").read_text()
+    d = run_folder.build(out, tmp_path / "b", None, None, None, None, "tau", False,
+                         provenance="backfilled from its CI artifact")
+    assert "A cap-evolve benchmark run, backfilled from its CI artifact. Its row" in (d / "README.md").read_text()
