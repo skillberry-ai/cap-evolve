@@ -25,7 +25,10 @@ INSTR="$PROJECT/optimizer/INSTRUCTIONS.md"
 sed -e "s|{AW_REFERENCE}|$AW_EVAL/reference|g" -e "s|{AW_LINT_CACHE}|$LINT_CACHE|g" \
     -e "s|{AW_PY}|$PY|g" -e "s|{AW_LINTS}|$EX/adapters/lints.py|g" \
     "$EX/optimizer/INSTRUCTIONS.template.md" > "$INSTR"
-sed -e "s|@OPT_MODEL@|$OPT_MODEL|" -e "s|@INSTRUCTIONS@|$INSTR|" -e "s|@AW_EVAL@|$AW_EVAL|g" "$EX/capevolve.yaml" > "$PROJECT/capevolve.yaml"
+for spec in capevolve.yaml capevolve.fix10.yaml; do   # fix10: the 10-task comparison spec
+  sed -e "s|@OPT_MODEL@|$OPT_MODEL|" -e "s|@INSTRUCTIONS@|$INSTR|" -e "s|@AW_EVAL@|$AW_EVAL|g" "$EX/$spec" > "$PROJECT/$spec"
+done
+cp "$EX/fix10_split.json" "$PROJECT/"
 mkdir -p "$PROJECT/sandbox"
 for t in optimizer-permissions optimizer-sandbox; do
   sed -e "s|@AW_EVAL@|$AW_EVAL|g" -e "s|@AW_SECRETS_FILE@|${AW_SECRETS_FILE:-$REPO/.env}|g" \

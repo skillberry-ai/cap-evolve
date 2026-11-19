@@ -65,7 +65,7 @@ cp "$EX/adapters/adapter.py" "$EX/adapters/aw_bb_agent.py" \
 # ... plus the direct approach's episode harness and leak checks, which they reuse unchanged.
 cp "$DIRECT/adapters/aw_agent.py" "$DIRECT/adapters/lints.py" "$PROJECT/adapters/"
 cp "$REFERENCE/api_index.md" "$REFERENCE/react_agent_notes.md" "$PROJECT/reference/"
-cp "$EX/smoke_split.json" "$PROJECT/"
+cp "$EX/smoke_split.json" "$EX/fix10_split.json" "$PROJECT/"
 # train = val = AppWorld's official train + dev; test stays empty (the final window scores test_normal).
 "$PY" "$DIRECT/scripts/make_splits.py" "$PROJECT/split_ids.json" >/dev/null || die "make_splits.py failed"
 echo "  project at $PROJECT"
@@ -79,6 +79,7 @@ say "4/5  Render the optimizer instructions, the run specs and the isolation set
 render "$EX/optimizer/INSTRUCTIONS.template.md" "$INSTR"
 render "$EX/capevolve.yaml"       "$PROJECT/capevolve.yaml"
 render "$EX/capevolve.smoke.yaml" "$PROJECT/capevolve.smoke.yaml"
+render "$EX/capevolve.fix10.yaml" "$PROJECT/capevolve.fix10.yaml"   # the 10-task comparison spec
 render "$EX/PROJECT.template.md"  "$PROJECT/PROJECT.md"
 # The optimizer runs isolated exactly as in the direct approach (../README.md, Isolation).
 render "$DIRECT/sandbox/optimizer-permissions.template.json" "$PROJECT/sandbox/optimizer-permissions.json"
