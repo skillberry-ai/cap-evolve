@@ -240,7 +240,8 @@ def _per_task_from_rollouts(run_dir, tag: str, split: str = "val"):
     """
     try:
         from . import harness
-        sr = harness.split_result_from_rollouts(run_dir, tag, split)
+        # warn=False: a viewer must not write a spec_unreadable event into the run
+        sr = harness.split_result_from_rollouts(run_dir, tag, split, warn=False)
     except Exception:  # noqa: BLE001 — degrade: a missing/odd rollout shouldn't crash the report
         return {}, {}, {}
     rows = sr.to_dict().get("per_task", [])
@@ -584,7 +585,8 @@ def _algorithm_from_spec(root: Path) -> str | None:
                     val = line.split(":", 1)[1].split("#", 1)[0].strip().strip("'\"")
                     if val:
                         return val
-        except OSError:
+        except (OSError, UnicodeDecodeError):
+            # unreadable or not UTF-8: treat it like a missing spec, never crash
             continue
     return None
 
@@ -669,7 +671,8 @@ def _objectives_from_run(run_dir, root: Path) -> list[dict] | None:
     field silently read the wrong (generic) file.
     """
     from . import specfile
-    spec = specfile.spec_for_run(run_dir, _find_project_dir(root))
+    # warn=False: a viewer must not write a spec_unreadable event into the run
+    spec = specfile.spec_for_run(run_dir, _find_project_dir(root), warn=False)
     objs = spec.get("objectives")
     if isinstance(objs, list) and objs:
         parsed = [{"name": o["name"], "direction": o.get("direction", "maximize")}
@@ -693,7 +696,8 @@ def _orchestration_mode(root: Path) -> str | None:
                     val = line.split(":", 1)[1].split("#", 1)[0].strip().strip("'\"")
                     if val:
                         return val
-        except OSError:
+        except (OSError, UnicodeDecodeError):
+            # unreadable or not UTF-8: treat it like a missing spec, never crash
             continue
     return None
 
@@ -1216,15 +1220,28 @@ def _read_config(run_dir) -> dict:
     from . import specfile
     spec_file = specfile.resolve_spec_path(run_dir, project_dir)
     spec = {}
+    spec_error = None
     if spec_file is not None:
+        # A bad spec must never crash the reducer or hide the run (same rule as
+        # ``specfile.spec_for_run``): show the run with an empty spec and record why.
         try:
-            spec = specfile.read_yaml(spec_file.read_text(encoding="utf-8")) or {}
-        except OSError:
+            spec = specfile.read_yaml(spec_file.read_text(encoding="utf-8"),
+                                      source=str(spec_file), strict=True) or {}
+        except OSError as e:
+            spec = {}
+            spec_error = f"could not read {spec_file}: {e}"
+        except Exception as e:  # noqa: BLE001 - SpecError or any other parse failure
+            spec = {}
+            spec_error = str(e)
+        if not isinstance(spec, dict):
+            spec_error = spec_error or f"{spec_file} is not a YAML mapping"
             spec = {}
     groups: dict[str, list] = {}
     # `intervention` absent means direct, so render that rather than nothing: two runs of one
     # capability can differ only in how it was delivered.
-    for k, v in {"intervention": "direct", **spec}.items():
+    # When the spec could not be read, show no rows at all: a default `direct` row would
+    # look like the spec's value when the real spec may say otherwise.
+    for k, v in ({} if spec_error else {"intervention": "direct", **spec}).items():
         groups.setdefault(_CONFIG_KEY_GROUPS.get(k, "Other"), []).append({"key": k, "value": v})
     spec_groups = [{"group": g, "items": groups[g]} for g in _CONFIG_GROUP_ORDER if g in groups]
 
@@ -1238,7 +1255,7 @@ def _read_config(run_dir) -> dict:
 
     skip = {"PROJECT.md"} | ({spec_file.name} if spec_file is not None else {"capevolve.yaml"})
     files = _read_project_files(project_dir, skip)
-    if not spec_groups and not project_md and not files:
+    if not spec_groups and not project_md and not files and not spec_error:
         return {}
     return {
         "project_dir": str(project_dir),
@@ -1246,6 +1263,10 @@ def _read_config(run_dir) -> dict:
         # --spec nor project/capevolve.yaml). The section says so and still lists the
         # artifacts that ARE there, instead of disappearing without explanation.
         "spec_missing": spec_file is None,
+        # The spec file exists but could not be read/parsed (e.g. a YAML syntax error):
+        # the message names the file and line, so the panel can say so instead of
+        # showing a quietly empty spec. ``None`` when the spec read fine.
+        "spec_error": spec_error,
         "spec_groups": spec_groups,
         "project_md": project_md,
         "files": files,
@@ -4033,6 +4054,10 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
   if(CFG.spec_missing)s.append($('div',{class:'banner',style:'margin:0 0 12px',
     text:'No capevolve.yaml found in this project dir, so there is no parsed spec to show. '+
          'Everything else the project contains is listed below.'}));
+  // The spec exists but could not be read (e.g. a YAML syntax error): say why, with the
+  // file and line, instead of showing a quietly empty spec.
+  if(CFG.spec_error)s.append($('div',{class:'banner bad',style:'margin:0 0 12px',
+    text:'The spec could not be read, so no spec values are shown: '+CFG.spec_error}));
   const h3=(t)=>$('h2',{style:'margin:16px 0 6px;text-transform:none;letter-spacing:0;'+
     'font-size:13px;color:var(--text)',text:t});
   (CFG.spec_groups||[]).forEach(g=>{
