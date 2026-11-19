@@ -57,7 +57,7 @@ Everything heavy lives under `$AW_EVAL` (default `/tmp/aw_eval`).
    exported: each episode worker reads only the key named by `AW_KEY_ENV` and the endpoint URL
    (`RITS_URL`/`MODEL_SERVER_URL`) from it and ignores every other line. Model endpoint: `AW_MODEL_NAME`, `AW_MODEL_URL`,
    `AW_KEY_HEADER`, `AW_KEY_ENV` (see `adapters/aw_agent.py`).
-4. `bash scripts/setup_project.sh $AW_EVAL/runs/cape_hc_s0` scaffolds the cap-evolve project
+4. `bash scripts/setup_project.sh` (base folder `$AW_EVAL/.capevolve` by default) scaffolds the cap-evolve project
    (intake), writes `split_ids.json` (train = val = train ∪ dev, test = []), renders the spec and
    settings, and runs `cap-evolve check`.
 
@@ -172,11 +172,19 @@ one iteration the gate usually rejects the edit; that is a pass.
 
 ```
 bash scripts/check_optimizer_isolation.sh sandbox            # must PASS (or namespace, with AW_ISOLATION=namespace)
-bash scripts/launch_cape_hc.sh $AW_EVAL/runs/cape_hc_s0       # cape-hc search (~5 h)
+bash scripts/launch_cape_hc.sh                               # cape-hc search (~5 h)
 python scripts/scan_isolation.py
 python scripts/final_window.py freeze && python scripts/final_window.py run
 python scripts/analyze.py
 ```
+
+Like the tau2 examples' `.capevolve`, one base folder (default `$AW_EVAL/.capevolve`) holds the
+project and every run: `project/` and one `run_<YYYYMMDD_HHMMSS>` per launch, named by its start time.
+It must be under `$AW_EVAL`, because the optimizer's isolation only binds a working dir inside it.
+`scan_isolation.py`, `final_window.py`, `analyze.py` and `status.py` use the newest run there, or the
+one named by `AW_CAPE_RUN=<YYYYMMDD_HHMMSS>`. Resume a run with
+`AW_RUN_TS=<YYYYMMDD_HHMMSS> bash scripts/launch_cape_hc.sh "" --resume`. `itest.sh` keeps its own
+base, `$AW_EVAL/.capevolve-itest`, with the fixed run `run_itest`.
 
 `python scripts/status.py --every 300` keeps `$AW_EVAL/progress/PROGRESS.md` current. Offline tests:
 `python -m pytest benchmarks/appworld/examples/react_agent/tests`.
