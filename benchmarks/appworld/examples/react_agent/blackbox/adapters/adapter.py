@@ -156,13 +156,28 @@ def _native_dir(ctx: Path, task_ids: list[str]) -> Path | None:
     return ctx.parent.parent / "native_sims" / ctx.name / _split_of(ctx, task_ids)
 
 
-def _write_native(path: Path, record: dict) -> None:
-    """Native traces are a convenience: never let writing one break the eval."""
+def _write_native(path: Path, record: dict) -> Path | None:
+    """Write one episode's record, never over an earlier one; returns the file written.
+
+    The same ``<tag>/<split>/<task>__t<trial>`` can be scored twice in one run: when a task is in
+    both val and test, the final test resolves to the same split as the baseline (ties go to val).
+    The second record then gets ``__2``, the third ``__3``, and so on. Native traces are a
+    convenience: never let writing one break the eval.
+    """
+    text = json.dumps(record, indent=1, ensure_ascii=False)
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(record, indent=1, ensure_ascii=False), encoding="utf-8")
+        for n in range(1, 1000):
+            p = path if n == 1 else path.with_name(f"{path.stem}__{n}{path.suffix}")
+            try:
+                with open(p, "x", encoding="utf-8") as f:   # "x": fails if it exists, so nothing is replaced
+                    f.write(text)
+                return p
+            except FileExistsError:
+                continue
     except OSError:
         pass
+    return None
 
 
 class Adapter(CapabilityAdapter):

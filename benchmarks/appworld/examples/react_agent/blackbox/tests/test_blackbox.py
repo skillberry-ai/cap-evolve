@@ -256,6 +256,14 @@ class TestNativeSims(unittest.TestCase):
             self.assertIsNone(self.bb._native_dir(self.run / "work" / "cand_0001", ["a"]))
         self.assertIsNone(self.bb._native_dir(self.run / "elsewhere", ["a"]))
 
+    def test_a_second_record_never_replaces_the_first(self):
+        dest = self.run / "native_sims" / "seed" / "val" / "a__t0.json"
+        first = self.bb._write_native(dest, {"phase": "baseline"})
+        second = self.bb._write_native(dest, {"phase": "final"})
+        self.assertEqual((first, second), (dest, dest.with_name("a__t0__2.json")))
+        self.assertEqual(json.loads(dest.read_text())["phase"], "baseline")
+        self.assertEqual(json.loads(second.read_text())["phase"], "final")
+
     def test_episode_writes_messages_to_native_sims_not_the_rollout(self):
         native_msgs = [{"role": "user", "content": "stock prompt"}, {"role": "assistant", "content": "code"}]
 
