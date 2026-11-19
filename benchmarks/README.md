@@ -19,7 +19,7 @@ to onboard one that isn't here yet.
 | [`swe_bench`](swe_bench/template) | yes ([SWE-bench / Lite](https://github.com/swe-bench/SWE-bench)) | — | Coding-agent prompt | HuggingFace + Docker harness |
 | [`spreadsheetbench`](spreadsheetbench/template) | yes ([SpreadsheetBench](https://github.com/RUCKBReasoning/SpreadsheetBench)) | — | Spreadsheet-agent system prompt | Fetched dataset + Docker/Jupyter harness |
 | [`rfe_creator`](rfe_creator/template) | yes ([RFE-Creator](https://github.com/opendatahub-io/rfe-creator)) | — | 7 Claude Code skills (RFE create/review/split/submit pipeline) | Fetched dataset + [agent-eval-harness](https://github.com/opendatahub-io/agent-eval-harness) |
-| [`appworld`](appworld/examples/react_agent) | — | [`react_agent`](appworld/examples/react_agent) ([AppWorld](https://appworld.dev)) | Agent prompt + REPL helpers + API notes | AppWorld's own task suite |
+| [`appworld`](appworld/examples/react_agent) | — | [`react_agent`](appworld/examples/react_agent) ([AppWorld](https://appworld.dev)) (direct + [blackbox](appworld/examples/react_agent/blackbox) delivery arms; one-command [`setup.sh`](appworld/examples/react_agent/setup.sh)) | Agent prompt + REPL helpers + API notes (direct); the system prompt as a Skillberry Store skill (blackbox) | AppWorld's own task suite |
 | [`parsec`](parsec/examples/rca_prompts) | — | [`rca_prompts`](parsec/examples/rca_prompts) | Multi-agent RCA system prompts | Authored RCA scenarios (external runtime) |
 | [`toy`](toy/examples) | — | [`calc`](toy/examples/calc), [`skill`](toy/examples/skill) | Nothing real — zero-API proof of the loop | Mocked |
 

@@ -88,8 +88,11 @@ The proxy's upstream model comes from the same variables the direct approach use
 
 ## Setup
 
+**One command:** `bash ../setup.sh --blackbox` does both steps below, and skips what is already in
+place, so it is safe to re-run.
+
 1. The direct approach's Setup steps 1-2 (`../README.md`): the patched AppWorld and
-   `venv-aw` under `$AW_EVAL`, `root_full`, `root_opt`, the lint cache and the reference docs.
+   `$AW_EVAL/.venv` (or `AW_VENV`), `root_full`, `root_opt`, the lint cache and the reference docs.
 2. `bash scripts/setup_project.sh` (base folder `$AW_EVAL/.capevolve-blackbox` by default): scaffolds the project, writes the
    seed `SKILL.md` and `$AW_EVAL/app_descriptions.json`, provisions the store and proxy at the
    pinned commits in the repo's shared `vendor/`, and runs
