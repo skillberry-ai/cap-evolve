@@ -33,10 +33,10 @@ case "$AW_ISOLATION" in
   namespace) SETTINGS="$P/sandbox/optimizer-permissions.json" ;;
   *) echo "AW_ISOLATION must be sandbox or namespace" >&2; exit 1 ;;
 esac
-"$AW_EVAL/venv-aw/bin/python" "$EX/scripts/isolation_gate.py" "$AW_EVAL" "$AW_ISOLATION" "$SETTINGS" \
+"${AW_VENV:-$AW_EVAL/.venv}/bin/python" "$EX/scripts/isolation_gate.py" "$AW_EVAL" "$AW_ISOLATION" "$SETTINGS" \
   || { echo "run: bash $EX/scripts/check_optimizer_isolation.sh $AW_ISOLATION (it must PASS)" >&2; exit 1; }
 export PATH="$EX/sandbox:$PATH" AW_ISOLATION AW_CLAUDE_SETTINGS="$SETTINGS"
 export AW_NS_TRANSCRIPTS="$AW_EVAL/runs/optimizer_transcripts/$TS"
 # AW_SPEC: a spec file in the project other than capevolve.yaml (scripts/itest.sh uses capevolve.itest.yaml)
-exec "$AW_EVAL/venv-aw/bin/cap-evolve" run --spec "$P/${AW_SPEC:-capevolve.yaml}" --project "$P" --run-ts "$TS" \
+exec "${AW_VENV:-$AW_EVAL/.venv}/bin/cap-evolve" run --spec "$P/${AW_SPEC:-capevolve.yaml}" --project "$P" --run-ts "$TS" \
   --dashboard off --follow "$@" >> "$AW_EVAL/progress/$TS.out" 2>&1

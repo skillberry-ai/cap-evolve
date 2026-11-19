@@ -26,7 +26,7 @@ REPO="$(cd "$EX/../../../../.." && pwd)"
 AW_EVAL="${AW_EVAL:-/tmp/aw_eval}"
 BASE="${1:-$AW_EVAL/.capevolve-blackbox}"                   # the project + all its runs
 PROJECT="$BASE/project"
-PY="$AW_EVAL/venv-aw/bin/python"
+PY="${AW_VENV:-$AW_EVAL/.venv}/bin/python"
 LINT_CACHE="$AW_EVAL/lint_cache.json"
 REFERENCE="$AW_EVAL/reference"
 CLIENT_PROMPT="$AW_EVAL/appworld/experiments/prompts/react_code_agent/instructions.txt"
@@ -88,7 +88,7 @@ echo "  optimizer model $OPT_MODEL; instructions at $INSTR"
 say "5/5  Store + proxy at the pinned commits (vendor/), then the hard gate (cap-evolve check)"
 "$PY" "$EX/scripts/provision_stack.py" || die "store/proxy not at the pinned commits (see the message above)"
 ( cd "$PROJECT" && PYTHONPATH="$PROJECT/adapters" APPWORLD_ROOT="$AW_EVAL/root_opt" \
-    "$AW_EVAL/venv-aw/bin/cap-evolve" check "$PROJECT" ) || die "cap-evolve check did not pass"
+    "${AW_VENV:-$AW_EVAL/.venv}/bin/cap-evolve" check "$PROJECT" ) || die "cap-evolve check did not pass"
 echo "  cap-evolve check passed"
 
 printf '\n\033[1;32mREADY.\033[0m  Next (each run lands in %s/run_<YYYYMMDD_HHMMSS>):\n  AW_SPEC=capevolve.smoke.yaml bash %s/scripts/launch.sh %s   # 1 task, 1 trial, 1 iteration\n  bash %s/scripts/launch.sh %s                                # the full run\n' \

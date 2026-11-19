@@ -1,6 +1,6 @@
 """Write the blackbox seed skill: SKILL.md = AppWorld's stock ReAct prompt, up to the real task turn.
 
-    $AW_EVAL/venv-aw/bin/python make_seed_skill.py STOCK_INSTRUCTIONS_TXT OUT_SKILL_DIR APP_DESCRIPTIONS_JSON
+    $AW_EVAL/.venv/bin/python make_seed_skill.py STOCK_INSTRUCTIONS_TXT OUT_SKILL_DIR APP_DESCRIPTIONS_JSON
 
 - Body: the stock prompt from its first line through the "**Key instructions**" turn, byte for byte:
   everything before the final "USER:\\nUsing these APIs, now generate code to solve the actual task:"
@@ -41,7 +41,7 @@ def build(stock_text: str, app_descriptions: str) -> str:
 
 def render_app_descriptions() -> str:
     """As SimplifiedReActCodeAgent.initialize renders it, for the apps every task gets."""
-    from appworld.apps import get_all_apps, get_app_to_description  # needs AppWorld (venv-aw)
+    from appworld.apps import get_all_apps, get_app_to_description  # needs AppWorld ($AW_EVAL/.venv)
 
     descriptions = get_app_to_description()
     apps = get_all_apps(skip_admin=True)  # Task.load: allowed_apps

@@ -7,7 +7,7 @@
 #                  see adapters/aw_agent.py). Key from AW_SECRETS_FILE (default <repo>/.env).
 #   - optimizer  : claude-code @ OPT_MODEL (default aws/claude-sonnet-5-5), through sandbox/claude
 #                  with AW_ISOLATION (default sandbox). It authenticates on its own.
-#   - data       : $AW_EVAL as built by README Setup (venv-aw, root_opt, lint cache, reference).
+#   - data       : $AW_EVAL as built by README Setup (.venv, root_opt, lint cache, reference).
 #
 #   bash scripts/itest.sh             # the real run; exit code is the test result (0 = pass)
 #   bash scripts/itest.sh --dry-run   # everything up to the first model call: preflight, project,
@@ -16,8 +16,8 @@ set -euo pipefail
 EX="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REPO="$(cd "$EX/../../../.." && pwd)"
 AW_EVAL="${AW_EVAL:-/tmp/aw_eval}"
-PY="$AW_EVAL/venv-aw/bin/python"
-CAPE="$AW_EVAL/venv-aw/bin/cap-evolve"
+PY="${AW_VENV:-$AW_EVAL/.venv}/bin/python"
+CAPE="${AW_VENV:-$AW_EVAL/.venv}/bin/cap-evolve"
 RUN_NAME="${AW_ITEST_NAME:-itest}"
 # Its own base, so a regression run never mixes with real runs in $AW_EVAL/.capevolve; a fixed
 # run name (run_itest) so the assertions know where to look.
@@ -32,8 +32,8 @@ say(){ printf '\n\033[1;36m== %s ==\033[0m\n' "$*"; }
 die(){ printf '\n\033[1;31mITEST FAILED: %s\033[0m\n' "$*" >&2; exit 1; }
 
 say "1/4  Preflight (README Setup)"
-[ -x "$PY" ] || die "no $PY: build venv-aw (README Setup step 1)"
-"$PY" -c "import appworld, appworld_agents, cap_evolve" 2>/dev/null || die "venv-aw lacks appworld / appworld_agents / cap_evolve"
+[ -x "$PY" ] || die "no $PY: build $AW_EVAL/.venv (README Setup step 1, or setup.sh)"
+"$PY" -c "import appworld, appworld_agents, cap_evolve" 2>/dev/null || die "$PY lacks appworld / appworld_agents / cap_evolve"
 for f in root_opt/data/tasks/82e2fac_1/specs.json lint_cache.json reference/api_index.md; do
   [ -e "$AW_EVAL/$f" ] || die "missing $AW_EVAL/$f (README Setup step 2)"
 done

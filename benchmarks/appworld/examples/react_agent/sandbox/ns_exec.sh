@@ -19,7 +19,7 @@ WORK="$(pwd -P)"
 # Read-only allowlist inside $AW (relative paths). Only AppWorld's src/ and experiments/ are needed by
 # the venv's editable installs; NOT the whole clone: appworld/generate holds the task generators,
 # i.e. the solution and evaluation logic of every train/dev scenario (README: Isolation).
-ALLOW_RO="${AW_NS_ALLOW_RO:-venv-aw appworld/src appworld/experiments reference lint_cache.json}"
+ALLOW_RO="${AW_NS_ALLOW_RO:-.venv venv-aw appworld/src appworld/experiments reference lint_cache.json}"
 REPO="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../../../../.." && pwd)"
 HIDE="${AW_NS_HIDE:-}"                                                     # extra dirs to cover (space-separated)
 HIDE_FILES="${AW_NS_HIDE_FILES:-${AW_SECRETS_FILE:-$REPO/.env}}"          # covered with an empty file

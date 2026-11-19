@@ -8,7 +8,7 @@ set -euo pipefail
 EX="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REPO="$(cd "$EX/../../../.." && pwd)"
 AW_EVAL="${AW_EVAL:-/tmp/aw_eval}"
-PY="$AW_EVAL/venv-aw/bin/python"
+PY="${AW_VENV:-$AW_EVAL/.venv}/bin/python"
 BASE="${1:-$AW_EVAL/.capevolve}"
 OPT_MODEL="${OPT_MODEL:-aws/claude-sonnet-5-5}"
 PROJECT="$BASE/project"
@@ -44,4 +44,4 @@ Example: benchmarks/appworld/examples/react_agent/README.md (repo $REPO). Resolv
 MD
 cd "$PROJECT"
 PYTHONPATH="$PROJECT/adapters" CAPEVOLVE_SKILLS_DIR="$REPO/skills" APPWORLD_ROOT="$AW_EVAL/root_opt" \
-  "$AW_EVAL/venv-aw/bin/cap-evolve" check "$PROJECT"
+  "${AW_VENV:-$AW_EVAL/.venv}/bin/cap-evolve" check "$PROJECT"

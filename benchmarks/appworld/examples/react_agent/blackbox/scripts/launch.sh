@@ -23,7 +23,7 @@ BASE="${BASE:-$AW_EVAL/.capevolve-blackbox}"
 P="$BASE/project"
 TS="${AW_RUN_TS:-$(date +%Y%m%d_%H%M%S)}"
 SPEC="${AW_SPEC:-capevolve.yaml}"
-PY="$AW_EVAL/venv-aw/bin/python"
+PY="${AW_VENV:-$AW_EVAL/.venv}/bin/python"
 OUT_LOG="$AW_EVAL/progress/$TS.out"
 
 say(){ printf '\n\033[1;36m== %s ==\033[0m\n' "$*"; }
@@ -74,5 +74,5 @@ export PATH="$DIRECT/sandbox:$PATH" AW_ISOLATION AW_CLAUDE_SETTINGS="$SETTINGS"
 export AW_NS_TRANSCRIPTS="$AW_EVAL/runs/optimizer_transcripts/$TS"
 echo "  run: $BASE/run_$TS"
 echo "  log: $OUT_LOG"
-exec "$AW_EVAL/venv-aw/bin/cap-evolve" run --spec "$P/$SPEC" --project "$P" --run-ts "$TS" \
+exec "${AW_VENV:-$AW_EVAL/.venv}/bin/cap-evolve" run --spec "$P/$SPEC" --project "$P" --run-ts "$TS" \
   --dashboard off --follow "$@" >> "$OUT_LOG" 2>&1
