@@ -10,6 +10,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+import pytest
+
 REPO = Path(__file__).resolve().parents[2]
 CORE = REPO / "core"
 sys.path.insert(0, str(CORE))
@@ -816,3 +818,100 @@ def test_config_section_survives_a_project_dir_with_no_spec(tmp_path):
     cfg = reduce_run(rd)["summary"]["config"]
     assert cfg["spec_missing"] is True
     assert [f["path"] for f in cfg["files"]] == ["adapters/adapter.py"]
+
+
+def test_broken_project_spec_does_not_crash_reduce_or_export(tmp_path, capsys):
+    """A YAML syntax error in the project's capevolve.yaml must not crash the reducer
+    or `dashboard --export` (which would leave the run with no dashboard and drop it
+    from the hub). The spec is shown empty and the error is recorded with file + line."""
+    from cap_evolve import cli, dashboard
+    proj = _mk_project(tmp_path)
+    spec = proj / "capevolve.yaml"
+    spec.write_text('max_usd: "5\nsplits: [a, b\n', encoding="utf-8")
+    rd = _mk_run(tmp_path, events=_BASE_EVENTS, baseline=_BASELINE)
+
+    r = dashboard.reduce_run(rd)
+    cfg = r["summary"]["config"]
+    assert cfg["project_dir"] == str(proj)
+    assert cfg["spec_missing"] is False
+    assert cfg["spec_error"] and str(spec) in cfg["spec_error"]
+    assert "line" in cfg["spec_error"]
+    # no spec values leaked in from a lenient re-read, and no default `intervention: direct`
+    # row that would look like the spec's own value
+    assert cfg["spec_groups"] == []
+    page = dashboard.render_html(r, rd)
+    _parse_html(page)
+    assert "CFG.spec_error" in page  # the static export shows the error too
+
+    rc = cli.main(["dashboard", "--export", str(rd.root)])
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert "Traceback" not in captured.err
+    out = json.loads(captured.out.strip().splitlines()[-1])
+    assert Path(out["dashboard_html"]).exists()
+
+
+@pytest.mark.parametrize("events", [
+    [{"kind": "intake", "note": "started"}],
+    [{"kind": "run_config", "algorithm": "agent-optimize"}, {"kind": "intake", "note": "started"}],
+], ids=["no-algorithm-label", "algorithm-label"])
+def test_non_utf8_project_spec_does_not_crash_reduce(tmp_path, events):
+    """A capevolve.yaml that is not UTF-8 must not crash the reducer (which would
+    hide the run from the web list and show a stack trace elsewhere). The spec is
+    treated as unreadable, just like a missing one."""
+    from cap_evolve import dashboard
+    proj = tmp_path / "project"
+    proj.mkdir()
+    (proj / "capevolve.yaml").write_bytes(b"\xff\xfe")
+    rd = _mk_run(tmp_path, events=events)
+    r = dashboard.reduce_run(rd)
+    assert r["summary"] is not None
+    assert dashboard._algorithm_from_spec(rd.root) is None
+    assert dashboard._orchestration_mode(rd.root) is None
+
+
+def test_good_project_spec_has_no_spec_error(tmp_path):
+    from cap_evolve import dashboard
+    _mk_project(tmp_path)
+    rd = _mk_run(tmp_path, events=_BASE_EVENTS, baseline=_BASELINE)
+    assert dashboard.reduce_run(rd)["summary"]["config"]["spec_error"] is None
+
+
+def test_reduce_run_never_writes_into_a_run_with_a_broken_spec(tmp_path, monkeypatch, capsys):
+    """reduce_run (every dashboard view, and --export) reads the run's spec through
+    split_result_from_rollouts -> resolve_errored_policy. As a viewer it must not write a
+    spec_unreadable event into the run, nor print the run's warning."""
+    from cap_evolve import cli, dashboard, harness
+    monkeypatch.delenv(harness.ERRORED_POLICY_ENV, raising=False)
+    proj = _mk_project(tmp_path)
+    spec = proj / "capevolve.yaml"
+    spec.write_text('split_mode: pooled\nrun_name: "oops\n', encoding="utf-8")
+    rd = _mk_run(tmp_path, events=_BASE_EVENTS + [{"kind": "spec_resolved", "spec": str(spec)}],
+                 baseline=_BASELINE)
+    before = rd.events_path.read_bytes()
+    dashboard.reduce_run(rd)
+    assert cli.main(["dashboard", "--export", str(rd.root)]) == 0
+    assert rd.events_path.read_bytes() == before
+    assert "cannot be read strictly" not in capsys.readouterr().err
+    # control: a run step (warn=True, the default) on the same run does warn and log
+    harness.split_result_from_rollouts(rd, "seed", "val")
+    assert b"spec_unreadable" in rd.events_path.read_bytes()
+
+
+def test_cli_export_missing_run_dir_is_a_clean_error(tmp_path, capsys):
+    from cap_evolve import cli
+    missing = tmp_path / "nonexistent"
+    rc = cli.main(["dashboard", "--export", str(missing)])
+    err = capsys.readouterr().err
+    assert rc == 2
+    assert f"no run state at {missing}" in err
+    assert "Traceback" not in err
+
+
+def test_cli_export_writes_dashboard_for_a_real_run(tmp_path, capsys):
+    from cap_evolve import cli
+    rd = _mk_run(tmp_path, events=[])
+    rc = cli.main(["dashboard", "--export", str(rd.root)])
+    assert rc == 0
+    out = json.loads(capsys.readouterr().out.strip().splitlines()[-1])
+    assert Path(out["dashboard_html"]).exists()

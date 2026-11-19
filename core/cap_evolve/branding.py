@@ -196,7 +196,9 @@ COMMANDS: dict[str, dict] = {
         "long": ("Creates the project layout the rest of the pipeline expects: an adapter\n"
                  "stub, a capevolve.yaml spec, and PROJECT.md. Prompts for the few choices\n"
                  "that matter (capability path, algorithm, optimizer) and defaults the rest.\n"
-                 "Nothing is overwritten unless you pass --force."),
+                 "Files that already exist are kept. --force resets only capevolve.yaml\n"
+                 "to the template; the adapter, PROJECT.md and instructions are never\n"
+                 "overwritten."),
         "examples": ["cap-evolve init",
                      "cap-evolve init --algorithm gepa --optimizer claude-code --yes",
                      "cap-evolve init --project ./my/.capevolve/project"],

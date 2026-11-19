@@ -183,6 +183,68 @@ class Spent:
                    float(d.get("usersim_usd") or 0.0))
 
 
+def reuse_baseline_error(path: Path):
+    """Why ``path`` cannot be used for --reuse-baseline, or None when it can.
+
+    Shared by ``cap-evolve run`` and the baseline phase script, so both fail the
+    same way (and before any run dir exists) on a bad prior-run path.
+    """
+    path = Path(path)
+    if not path.is_dir():
+        return f"--reuse-baseline: {path} is not a run dir (no such directory)"
+    for name in ("splits.json", "baseline.json"):
+        if not (path / name).is_file():
+            return f"--reuse-baseline: {path} is not a run dir (no {name})"
+    return None
+
+
+def missing_resume_error(base: Path, ts: str):
+    """Why ``--resume`` cannot reopen ``run_<ts>`` under ``base``, or None when it can.
+
+    A mistyped --run-ts must not quietly start a brand-new run (new split, paid
+    baseline, full budget), so callers stop on this message instead.
+    """
+    base = Path(base)
+    # A dir with no state.json is a torn create (the process stopped between mkdir and
+    # writing state.json). RunDir.create(exist_ok=True) initializes a fresh state into
+    # it on purpose, so --resume may continue it; only a missing dir is an error.
+    if (base / f"run_{ts}").is_dir():
+        return None
+    existing = sorted(p.name for p in base.glob("run_*") if (p / "state.json").is_file())
+    hint = (f"; existing runs: {', '.join(existing)}" if existing
+            else "; no run_* exists there yet")
+    return f"--resume: no run named run_{ts} under {base}{hint}"
+
+
+def existing_run_error(base: Path, ts):
+    """Why a fresh run cannot use ``run_<ts>`` under ``base``, or None when it can.
+
+    Without --resume, ``RunDir.create`` would raise FileExistsError on a run dir that
+    is already there; callers stop on this plain message instead of a traceback.
+    """
+    if not ts:
+        return None
+    base = Path(base)
+    run = base / f"run_{ts}"
+    if run.is_dir() and not (run / "state.json").is_file():
+        return (f"run_{ts} exists under {base} but has no state.json (a run that stopped "
+                f"while it was being created); pass --resume to start it fresh in that "
+                f"dir, delete it, or pick another --run-ts")
+    if run.exists():
+        return (f"run_{ts} already exists under {base}; pass --resume to continue it, "
+                f"or pick another --run-ts")
+    return None
+
+
+def baseline_already_ran(base: Path, ts) -> bool:
+    """True when ``run_<ts>`` under ``base`` already has its baseline (baseline.json).
+
+    On --resume such a run skips the baseline step and never reads reuse_baseline,
+    so the reuse check must not block it (the prior run dir may be gone by now).
+    """
+    return bool(ts) and (Path(base) / f"run_{ts}" / "baseline.json").is_file()
+
+
 def _allow_test_rescore() -> bool:
     """Deliberate, disclosed override for the re-score guard in ``reserve_test``.
 

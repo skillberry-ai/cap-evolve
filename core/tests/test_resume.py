@@ -24,6 +24,7 @@ REPO = Path(__file__).resolve().parents[2]
 CORE = REPO / "core"
 EXAMPLE = REPO / "benchmarks" / "toy" / "examples" / "calc"
 MOCK_RUN = REPO / "skills" / "optimizers" / "run-optimizer" / "scripts" / "run.py"
+GEPA_RUN = REPO / "skills" / "algorithms" / "gepa" / "scripts" / "run.py"
 BASELINE_RUN = REPO / "skills" / "phases" / "baseline" / "scripts" / "run.py"
 
 sys.path.insert(0, str(CORE))
@@ -210,3 +211,191 @@ def test_baseline_materializes_guidance_for_every_declared_capability(tmp_path):
     run_dir = Path(json.loads(r.stdout)["run_dir"])
     assert (run_dir / "guidance" / "system-prompt" / "SKILL.md").exists()
     assert (run_dir / "guidance" / "diagnose" / "SKILL.md").exists()
+
+
+# ---- --resume with a --run-ts that does not exist -------------------------
+
+def _baseline_project(tmp_path):
+    project = tmp_path / ".capevolve" / "project"
+    (project / "adapters").mkdir(parents=True)
+    shutil.copy(EXAMPLE / "adapter.py", project / "adapters" / "adapter.py")
+    seed = tmp_path / "seed_capability"
+    shutil.copytree(EXAMPLE / "capability", seed)
+    return project, seed
+
+
+def test_baseline_resume_unknown_run_ts_fails_without_creating_a_run(tmp_path):
+    project, seed = _baseline_project(tmp_path)
+    base = tmp_path / ".capevolve"
+    env = {**os.environ, "PYTHONPATH": str(CORE)}
+    r = subprocess.run([sys.executable, str(BASELINE_RUN), "--base", str(base),
+                        "--project", str(project), "--capability", str(seed),
+                        "--run-ts", "nosuch", "--resume"],
+                       capture_output=True, text=True, env=env)
+    assert r.returncode == 1
+    err = json.loads(r.stderr.strip().splitlines()[-1])
+    assert err["step"] == "resume" and "run_nosuch" in err["error"]
+    assert not (base / "run_nosuch").exists()
+
+
+def test_cli_resume_unknown_run_ts_fails_and_names_existing_runs(tmp_path, capsys):
+    from cap_evolve import cli
+    os.environ["CAPEVOLVE_SKILLS_DIR"] = str(REPO / "skills")
+    project, _seed = _baseline_project(tmp_path)
+    spec = project / "capevolve.yaml"
+    spec.write_text((REPO / "benchmarks" / "_scaffold" / "project" / "capevolve.yaml")
+                    .read_text(encoding="utf-8"), encoding="utf-8")
+    base = tmp_path / ".capevolve"
+    from cap_evolve import Budget, RunDir
+    RunDir.create(base, ts="real1", budget=Budget(max_iterations=1))
+    rc = cli.main(["run", "--spec", str(spec), "--project", str(project), "--dashboard", "off",
+                   "--run-ts", "nosuch", "--resume"])
+    assert rc == 1
+    out = capsys.readouterr().out
+    err = json.loads(out.strip().splitlines()[-1])
+    assert err["step"] == "resume"
+    assert "run_nosuch" in err["error"] and str(base) in err["error"]
+    assert "run_real1" in err["error"]
+    assert not (base / "run_nosuch").exists()
+
+
+# ---- a --run-ts that already exists, without --resume ---------------------
+
+def test_baseline_existing_run_ts_without_resume_fails_plainly(tmp_path):
+    project, seed = _baseline_project(tmp_path)
+    base = tmp_path / ".capevolve"
+    env = {**os.environ, "PYTHONPATH": str(CORE)}
+    common = [sys.executable, str(BASELINE_RUN), "--base", str(base),
+              "--project", str(project), "--capability", str(seed), "--run-ts", "dup1"]
+    r1 = subprocess.run(common, capture_output=True, text=True, env=env)
+    assert r1.returncode == 0, r1.stderr
+    r2 = subprocess.run(common, capture_output=True, text=True, env=env)
+    assert r2.returncode != 0
+    assert "Traceback" not in r2.stderr and "FileExistsError" not in r2.stderr
+    err = json.loads(r2.stderr.strip().splitlines()[-1])
+    assert "run_dup1 already exists" in err["error"] and str(base) in err["error"]
+    assert "--resume" in err["error"]
+    # --resume on the same run still reopens it.
+    r3 = subprocess.run([*common, "--resume"], capture_output=True, text=True, env=env)
+    assert r3.returncode == 0, r3.stderr
+    assert json.loads(r3.stdout)["resumed"] is True
+
+
+def test_cli_existing_run_ts_without_resume_fails_plainly(tmp_path, capsys):
+    from cap_evolve import cli
+    os.environ["CAPEVOLVE_SKILLS_DIR"] = str(REPO / "skills")
+    project, _seed = _baseline_project(tmp_path)
+    spec = project / "capevolve.yaml"
+    spec.write_text((REPO / "benchmarks" / "_scaffold" / "project" / "capevolve.yaml")
+                    .read_text(encoding="utf-8"), encoding="utf-8")
+    base = tmp_path / ".capevolve"
+    from cap_evolve import Budget, RunDir
+    RunDir.create(base, ts="dup2", budget=Budget(max_iterations=1))
+    rc = cli.main(["run", "--spec", str(spec), "--project", str(project), "--dashboard", "off",
+                   "--run-ts", "dup2"])
+    assert rc != 0
+    cap = capsys.readouterr()
+    assert "Traceback" not in cap.out + cap.err
+    err = json.loads(cap.out.strip().splitlines()[-1])
+    assert "run_dup2 already exists" in err["error"] and str(base) in err["error"]
+    assert "--resume" in err["error"]
+
+
+def test_existing_run_error_helper(tmp_path):
+    from cap_evolve.rundir import existing_run_error
+    assert existing_run_error(tmp_path, None) is None
+    assert existing_run_error(tmp_path, "x") is None
+    (tmp_path / "run_x").mkdir()
+    (tmp_path / "run_x" / "state.json").write_text("{}", encoding="utf-8")
+    assert "run_x already exists" in existing_run_error(tmp_path, "x")
+
+
+# ---- a torn run dir (run_<ts>/ exists, no state.json) ---------------------
+
+def test_torn_run_dir_helpers_agree_with_create_exist_ok(tmp_path):
+    from cap_evolve import RunDir
+    from cap_evolve.rundir import existing_run_error, missing_resume_error
+    (tmp_path / "run_torn").mkdir()
+    # --resume may continue it: RunDir.create(exist_ok=True) starts a fresh state there
+    assert missing_resume_error(tmp_path, "torn") is None
+    msg = existing_run_error(tmp_path, "torn")
+    assert "no state.json" in msg and "--resume" in msg and "already exists" not in msg
+    RunDir.create(tmp_path, ts="torn", exist_ok=True)
+    assert (tmp_path / "run_torn" / "state.json").is_file()
+    # a dir that is not there at all is still refused
+    assert "no run named run_gone" in missing_resume_error(tmp_path, "gone")
+
+
+def test_baseline_torn_run_dir_fresh_refused_resume_continues(tmp_path):
+    project, seed = _baseline_project(tmp_path)
+    base = tmp_path / ".capevolve"
+    (base / "run_torn").mkdir(parents=True)
+    env = {**os.environ, "PYTHONPATH": str(CORE)}
+    common = [sys.executable, str(BASELINE_RUN), "--base", str(base),
+              "--project", str(project), "--capability", str(seed), "--run-ts", "torn"]
+    r1 = subprocess.run(common, capture_output=True, text=True, env=env)
+    assert r1.returncode == 1 and "Traceback" not in r1.stderr
+    err = json.loads(r1.stderr.strip().splitlines()[-1])
+    assert "no state.json" in err["error"] and "--resume" in err["error"]
+    r2 = subprocess.run([*common, "--resume"], capture_output=True, text=True, env=env)
+    assert r2.returncode == 0, r2.stderr
+    assert json.loads(r2.stdout)["run_dir"].endswith("run_torn")
+    assert (base / "run_torn" / "state.json").is_file()
+    assert (base / "run_torn" / "baseline.json").is_file()
+
+
+def test_cli_torn_run_dir_without_resume_points_at_resume(tmp_path, capsys):
+    from cap_evolve import cli
+    os.environ["CAPEVOLVE_SKILLS_DIR"] = str(REPO / "skills")
+    project, _seed = _baseline_project(tmp_path)
+    spec = project / "capevolve.yaml"
+    spec.write_text((REPO / "benchmarks" / "_scaffold" / "project" / "capevolve.yaml")
+                    .read_text(encoding="utf-8"), encoding="utf-8")
+    base = tmp_path / ".capevolve"
+    (base / "run_torn2").mkdir(parents=True)
+    rc = cli.main(["run", "--spec", str(spec), "--project", str(project), "--dashboard", "off",
+                   "--run-ts", "torn2"])
+    assert rc == 1
+    err = json.loads(capsys.readouterr().out.strip().splitlines()[-1])
+    assert "no state.json" in err["error"] and "--resume" in err["error"]
+
+
+# ---- gepa --resume on a corrupt gepa_state.json ---------------------------
+
+_BAD_GEPA_STATES = {"truncated": '{"lineage":', "not_an_object": "[]",
+                    "not_utf8": b"\xff\xfe{}"}
+
+
+@pytest.mark.parametrize("kind", sorted(_BAD_GEPA_STATES))
+def test_gepa_resume_corrupt_state_stops_with_clear_error(tmp_path, kind):
+    run_dir, _ = _gepa_run(tmp_path, "grbad", max_metric_calls=200, max_iterations=2)
+    state = run_dir.root / "gepa_state.json"
+    bad = _BAD_GEPA_STATES[kind]
+    state.write_bytes(bad if isinstance(bad, bytes) else bad.encode())
+
+    # In-process: a plain GepaStateError naming the file and the way out, never a
+    # silent seed-only pool (that would drop the saved lineage without a word). It
+    # is a normal exception, not SystemExit, so in-process callers can catch it.
+    from cap_evolve.gepa import GepaStateError
+    with pytest.raises(GepaStateError) as ei:
+        _gepa_run(tmp_path, "grbad", resume=True, max_metric_calls=200, max_iterations=4)
+    assert isinstance(ei.value, Exception)
+    assert not isinstance(ei.value, SystemExit)
+    msg = str(ei.value)
+    assert str(state) in msg and "--resume" in msg
+    assert "delete" in msg or "restore" in msg
+
+    # As a process (the gepa skill's run.py): exit 1, the message, no traceback.
+    project = tmp_path / "proj"
+    (project / "adapters").mkdir(parents=True)
+    shutil.copy(EXAMPLE / "adapter.py", project / "adapters" / "adapter.py")
+    optimizer = (f"python3 {MOCK_RUN} --name mock --workdir {{workdir}} "
+                 f"--prompt {{prompt}}")
+    proc = subprocess.run(
+        [sys.executable, str(GEPA_RUN), "--run-dir", str(run_dir.root),
+         "--project", str(project), "--optimizer", optimizer, "--resume",
+         "--max-iterations", "2", "--max-merges", "0"],
+        capture_output=True, text=True, timeout=120)
+    assert proc.returncode == 1
+    assert "Traceback" not in proc.stderr
+    assert str(state) in proc.stderr and "Restore that file" in proc.stderr

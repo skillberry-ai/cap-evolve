@@ -77,9 +77,11 @@ class EvalCache:
         self._data: dict = {}
         if self.path.exists():
             try:
-                self._data = json.loads(self.path.read_text(encoding="utf-8")) or {}
-            except (json.JSONDecodeError, OSError):
-                self._data = {}
+                loaded = json.loads(self.path.read_text(encoding="utf-8"))
+            except (ValueError, OSError):  # ValueError covers JSONDecodeError and UnicodeDecodeError
+                loaded = {}
+            # Anything that is not a JSON object (e.g. `[1]`) is treated as an empty cache.
+            self._data = loaded if isinstance(loaded, dict) else {}
 
     @staticmethod
     def _key(candidate_hash: str, task_id: str) -> str:

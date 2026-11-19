@@ -44,4 +44,18 @@ describe('ConfigPanel', () => {
     render(<ConfigPanel summary={summaryWithSpec([{ key: 'metric_primary', value: 'reward' }])} />)
     expect(screen.queryByText('Objectives')).not.toBeInTheDocument()
   })
+
+  it('shows the spec error (file + line) when the spec could not be read', () => {
+    const s = summaryWithSpec([])
+    s.config = { ...s.config!, spec_groups: [], spec_error: 'invalid YAML in /p/capevolve.yaml, line 3: unclosed quote' }
+    render(<ConfigPanel summary={s} />)
+    expect(screen.getByRole('alert')).toHaveTextContent('The spec could not be read')
+    expect(screen.getByText(/capevolve\.yaml, line 3/)).toBeInTheDocument()
+    expect(screen.queryByText('intervention')).not.toBeInTheDocument()
+  })
+
+  it('shows no spec error card when the spec read fine', () => {
+    render(<ConfigPanel summary={summaryWithSpec([{ key: 'intervention', value: 'direct' }])} />)
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
 })

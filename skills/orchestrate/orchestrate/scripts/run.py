@@ -20,7 +20,7 @@ from pathlib import Path
 
 import _bootstrap  # noqa: F401
 
-from cap_evolve.specfile import read_yaml
+from cap_evolve.specfile import SpecError, read_spec_file
 
 # Tokens not produced by any skill — supplied by intake / the project adapter.
 EXTERNAL_TOKENS = {"project", "tasks"}
@@ -89,7 +89,15 @@ def main(argv=None) -> int:
     p.add_argument("--execute", action="store_true", help="run the plan via `cap-evolve run`")
     args = p.parse_args(argv)
 
-    spec = read_yaml(Path(args.spec).read_text()) if Path(args.spec).exists() else {}
+    spec_path = Path(args.spec)
+    spec = {}
+    if spec_path.exists():
+        try:
+            # UTF-8 always (not the locale's encoding); not UTF-8 or unreadable is a SpecError
+            spec = read_spec_file(spec_path)
+        except SpecError as e:
+            print(f"orchestrate: {e}", file=sys.stderr)
+            return 1
     skills_dir = _skills_dir()
     manifest = _load_manifest(skills_dir) if skills_dir else {}
 
