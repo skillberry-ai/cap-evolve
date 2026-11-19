@@ -580,6 +580,54 @@ def test_no_target_profile_event_leaves_summary_none():
 
 # ---- SPA + shipped bundles: offline/air-gapped (no CDN) -------------------
 
+def _shipped_bundle_dirs(root):
+    """Every ``dist/`` and ``ui/`` folder under ``root`` that cap-evolve ships."""
+    out = []
+    for pat in ("**/dist", "**/ui"):
+        for p in root.glob(pat):
+            if not p.is_dir() or "node_modules" in p.parts:
+                continue
+            top = p.relative_to(root).parts[0]
+            if top in ("site", "vendor"):   # site/ is issue #123; vendor/ = third-party clones
+                continue
+            # Hidden top-level folders (.claude/, .symcc/, .git/...) hold local
+            # worktree copies of the whole repo (review-cycles reviewer checkouts,
+            # symcc task copies) — scanning them re-audits site/ and fails on noise.
+            if top.startswith("."):
+                continue
+            out.append(p)
+    return sorted(out)
+
+
+def test_bundle_discovery_skips_hidden_top_level_worktree_folders(tmp_path):
+    """A reviewer checkout under .claude/worktrees/ (or a symcc copy under .symcc/)
+    carries its own site/.../ui with external scripts; discovery must not see it."""
+    bad = '<script src="https://example.com/a.js"></script>'
+    for hidden in (".claude", ".symcc"):
+        f = tmp_path / hidden / "worktrees" / "x" / "site" / "foo" / "ui" / "a.html"
+        f.parent.mkdir(parents=True)
+        f.write_text(bad)
+        d = tmp_path / hidden / "worktrees" / "x" / "dashboard" / "dist"
+        d.mkdir(parents=True)
+        (d / "b.js").write_text(bad)
+    kept = tmp_path / "benchmarks" / "b" / "ui"
+    kept.mkdir(parents=True)
+    assert _shipped_bundle_dirs(tmp_path) == [kept]
+
+
+def test_bundle_discovery_still_skips_site_vendor_and_node_modules(tmp_path):
+    for rel in ("site/a/ui", "vendor/clone/dist", "pkg/node_modules/x/dist"):
+        (tmp_path / rel).mkdir(parents=True)
+    (tmp_path / "dashboard" / "frontend" / "dist").mkdir(parents=True)
+    (tmp_path / "notadir").mkdir()
+    (tmp_path / "notadir" / "ui").write_text("a file named ui, not a bundle dir")
+    assert _shipped_bundle_dirs(tmp_path) == [tmp_path / "dashboard" / "frontend" / "dist"]
+
+
+def test_bundle_discovery_on_empty_tree_finds_nothing(tmp_path):
+    assert _shipped_bundle_dirs(tmp_path) == []
+
+
 def test_shipped_spa_bundles_have_no_external_cdn_reference():
     """The self-contained dashboard.html is guarded above; the React SPA and the
     committed prebuilt bundles served at runtime need the same guarantee, or the
@@ -600,12 +648,7 @@ def test_shipped_spa_bundles_have_no_external_cdn_reference():
     """
     exts = {".css", ".js", ".jsx", ".ts", ".tsx", ".html"}
     # Every shipped/served bundle dir, discovered — not enumerated.
-    bundles = sorted(
-        p for pat in ("**/dist", "**/ui") for p in REPO.glob(pat)
-        if p.is_dir() and "node_modules" not in p.parts
-        and p.relative_to(REPO).parts[0] != "site"      # site/ is issue #123
-        and p.relative_to(REPO).parts[0] != "vendor"    # third-party clones, see below
-    )
+    bundles = _shipped_bundle_dirs(REPO)
     # Glob alone can't notice a bundle that MOVED (it just stops finding it), so the
     # known served bundles are also named and asserted to exist. Glob = new coverage,
     # this list = no silent loss of coverage.

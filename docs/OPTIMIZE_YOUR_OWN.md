@@ -80,11 +80,11 @@ you want intake to ask):
 - source:     <the benchmark's own verifier  OR  your score() function in adapter.py>
 - feedback:   must be GENERAL and gold-SAFE — it is the learning signal; never leak the gold answer
 - objective:  maximize mean reward on the VAL split
-- metrics_display:   <optional names to also SHOW, e.g. [accuracy, latency_ms]; empty = just the primary reward>
-- metric_primary:    <which name GATES accept/reject; blank = the reward scalar itself>
-- metric_directions: <parallel to metrics_display: higher | lower per metric>
-                      # secondaries are display-only (dashboard/results JSON); ONLY the primary (= reward) gates.
-                      # your score() returns them via Score.metrics — see docs/ADAPTER_CONTRACT.md
+- gate metric: the adapter's `primary` score (the scalar reward score() returns). Multi-objective gate modes (`pareto`, `epsilon_constraint`, `reward_gated`) also use cost; extra `Score.metrics` numbers and the reserved `metric_*` keys never gate.
+                      # extra numbers go in Score.metrics and are shown only — see docs/ADAPTER_CONTRACT.md
+- metrics_display / metric_primary / metric_directions:
+                      # RESERVED, NOT USED YET: these spec keys have no effect today (no code reads
+                      # them; `cap-evolve doctor` warns if you set them). Leave them blank.
 
 # 5. OPTIMIZER  (proposes the edits) + MODEL + CREDENTIALS
 - optimizer:   <claude-code | codex | gemini-cli | opencode | cursor | droid | copilot | kimi | pi | antigravity | openclaw | ibm-bob | generic | mock>

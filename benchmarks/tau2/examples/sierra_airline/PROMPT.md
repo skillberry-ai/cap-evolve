@@ -231,7 +231,7 @@ Here is everything intake needs:
                 `gh auth status` step; ignore its pointer to an example's setup.sh. Its ONE
                 "confirm before scaffolding" echo of the resolved spec stays (R6). Values:
                   orchestration_mode: deterministic     memory_skill: md-files
-                  github_integration: false             metric_primary: ""   (the reward)
+                  github_integration: false             metric_primary: ""   (reserved)
                   target_model: <the GATEWAY agent model, bare (no `openai/` prefix) — on BOTH
                                  arms; on blackbox it is the model behind SPA_MODEL_NAME, never
                                  the sentinel>
