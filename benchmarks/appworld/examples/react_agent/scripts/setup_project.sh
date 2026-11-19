@@ -1,18 +1,21 @@
 #!/usr/bin/env bash
 # Scaffold the cape-hc cap-evolve project (README: cap-evolve arm) and run the hard gate.
-#   bash setup_project.sh RUN_DIR     e.g. /tmp/aw_eval/runs/cape_hc_s0
+#   bash setup_project.sh [BASE]      BASE default: $AW_EVAL/.capevolve
+# Laid out like the tau2 examples' .capevolve: the project in BASE/project, and one run folder
+# BASE/run_<YYYYMMDD_HHMMSS> per launch beside it (launch_cape_hc.sh). BASE must be under $AW_EVAL:
+# the optimizer's isolation only binds a working dir inside it.
 set -euo pipefail
 EX="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REPO="$(cd "$EX/../../../.." && pwd)"
 AW_EVAL="${AW_EVAL:-/tmp/aw_eval}"
 PY="$AW_EVAL/venv-aw/bin/python"
-RUN_DIR="${1:?run dir}"
+BASE="${1:-$AW_EVAL/.capevolve}"
 OPT_MODEL="${OPT_MODEL:-aws/claude-sonnet-5-5}"
-PROJECT="$RUN_DIR/.capevolve/project"
+PROJECT="$BASE/project"
 LINT_CACHE="$AW_EVAL/lint_cache.json"
 [ -f "$LINT_CACHE" ] || { echo "missing $LINT_CACHE: run scripts/make_roots.py first" >&2; exit 1; }
 
-"$PY" "$REPO/skills/phases/intake/scripts/run.py" --base "$RUN_DIR/.capevolve" --workdir "$EX" --force >/dev/null
+"$PY" "$REPO/skills/phases/intake/scripts/run.py" --base "$BASE" --workdir "$EX" --force >/dev/null
 mkdir -p "$PROJECT/adapters" "$PROJECT/optimizer" "$PROJECT/reference"
 cp "$EX/adapters/adapter.py" "$EX/adapters/aw_agent.py" "$EX/adapters/lints.py" "$PROJECT/adapters/"
 rm -rf "$PROJECT/seed_capability"; cp -R "$EX/seed_capability" "$PROJECT/seed_capability"

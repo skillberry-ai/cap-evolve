@@ -19,8 +19,10 @@ AW_EVAL="${AW_EVAL:-/tmp/aw_eval}"
 PY="$AW_EVAL/venv-aw/bin/python"
 CAPE="$AW_EVAL/venv-aw/bin/cap-evolve"
 RUN_NAME="${AW_ITEST_NAME:-itest}"
-RUN_DIR="$AW_EVAL/runs/$RUN_NAME"
-P="$RUN_DIR/.capevolve/project"
+# Its own base, so a regression run never mixes with real runs in $AW_EVAL/.capevolve; a fixed
+# run name (run_itest) so the assertions know where to look.
+BASE="${AW_ITEST_BASE:-$AW_EVAL/.capevolve-itest}"
+P="$BASE/project"
 OPT_MODEL="${OPT_MODEL:-aws/claude-sonnet-5-5}"
 AW_ISOLATION="${AW_ISOLATION:-sandbox}"
 SECRETS="${AW_SECRETS_FILE:-$REPO/.env}"
@@ -42,8 +44,8 @@ fi
 command -v claude >/dev/null || die "claude CLI not on PATH (the optimizer)"
 
 say "2/4  Wire the project (same as setup_project.sh) + the one-task spec + hard gate"
-rm -rf "$RUN_DIR"
-AW_SECRETS_FILE="$SECRETS" OPT_MODEL="$OPT_MODEL" bash "$EX/scripts/setup_project.sh" "$RUN_DIR" >/dev/null \
+rm -rf "$BASE"
+AW_SECRETS_FILE="$SECRETS" OPT_MODEL="$OPT_MODEL" bash "$EX/scripts/setup_project.sh" "$BASE" >/dev/null \
   || die "setup_project.sh (cap-evolve check) did not pass"
 cp "$EX/itest_split.json" "$P/"
 sed -e "s|@OPT_MODEL@|$OPT_MODEL|" -e "s|@INSTRUCTIONS@|$P/optimizer/INSTRUCTIONS.md|" -e "s|@AW_EVAL@|$AW_EVAL|g" \
@@ -76,6 +78,6 @@ if [ "$DRY" = 1 ]; then
   exit 0
 fi
 # launch_cape_hc.sh is the real launch path: PATH shim, isolation gate, env, secrets handling.
-AW_SPEC=capevolve.itest.yaml bash "$EX/scripts/launch_cape_hc.sh" "$RUN_DIR" || die "cap-evolve run failed (see $AW_EVAL/progress/$RUN_NAME.out)"
-"$PY" "$EX/scripts/assert_itest.py" "$RUN_DIR/.capevolve/run_$RUN_NAME" || die "regression assertions failed"
+AW_SPEC=capevolve.itest.yaml bash "$EX/scripts/launch_cape_hc.sh" "$BASE" || die "cap-evolve run failed (see $AW_EVAL/progress/$RUN_NAME.out)"
+"$PY" "$EX/scripts/assert_itest.py" "$BASE/run_$RUN_NAME" || die "regression assertions failed"
 printf '\n\033[1;32mITEST PASSED.\033[0m\n'

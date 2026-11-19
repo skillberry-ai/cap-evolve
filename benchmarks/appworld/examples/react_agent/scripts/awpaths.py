@@ -14,9 +14,19 @@ ROOT_OPT = EVAL / "root_opt"
 RUNS = EVAL / "runs"
 PROGRESS = EVAL / "progress"
 MANIFEST = RUNS / "manifest.json"
-# The cap-evolve arm's run: runs/<name>/.capevolve/run_<name> (scripts/launch_cape_hc.sh uses the dir name).
-CAPE_NAME = os.environ.get("AW_CAPE_RUN", "cape_hc_s0")
-CAPE_RUN = RUNS / CAPE_NAME / ".capevolve" / f"run_{CAPE_NAME}"
+# The cap-evolve arm's runs: CAPE_BASE/run_<YYYYMMDD_HHMMSS>, one per scripts/launch_cape_hc.sh launch.
+# AW_CAPE_RUN names the search run the final window and the analysis use (its timestamp, e.g.
+# 20261118_171500); unset, the newest run in CAPE_BASE.
+CAPE_BASE = Path(os.environ.get("AW_CAPE_BASE", str(EVAL / ".capevolve")))
+
+
+def _newest_run_name() -> str:
+    runs = sorted(CAPE_BASE.glob("run_*"), key=lambda p: p.stat().st_mtime) if CAPE_BASE.is_dir() else []
+    return runs[-1].name[len("run_"):] if runs else ""
+
+
+CAPE_NAME = os.environ.get("AW_CAPE_RUN") or _newest_run_name()
+CAPE_RUN = CAPE_BASE / f"run_{CAPE_NAME}"
 OPT_TRANSCRIPTS = RUNS / "optimizer_transcripts"
 # The final window's dir (runs/<AW_FINAL>); a re-run uses a new one so an earlier window stays intact.
 FINAL = RUNS / os.environ.get("AW_FINAL", "final")
