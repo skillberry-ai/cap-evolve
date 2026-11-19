@@ -50,6 +50,7 @@ import time
 from pathlib import Path
 from typing import Callable
 
+from . import feedback_digest
 from . import gate as gate_mod
 from . import integrity
 from . import selection
@@ -229,13 +230,18 @@ def _sum_reward(result: SplitResult) -> float:
 
 # ---- reflective dataset + focus (files in the optimizer workdir) ----------
 
-def _write_reflection(workdir: Path, parent_mb: SplitResult) -> str:
+def _write_reflection(workdir: Path, parent_mb: SplitResult, *, run_dir=None, optimizer=None,
+                      budget: "feedback_digest.Budget | None" = None) -> str:
     """Write ``REFLECTION.md`` — GEPA's reflective dataset for the FAILING minibatch.
 
     Each failing task contributes its input, the agent's output/compacted
     trajectory, and the scorer's feedback. Agents read a file far better than a
     giant inlined prompt, so the rich dataset goes to disk and the prompt points at
     it. Returns a short prompt-side summary.
+
+    The tasks' feedback takes HALF of what is left of this iteration's feedback ``budget``
+    (``feedback_digest.fit``); the prompt's failure index gets the rest. A condensed entry's
+    full text is linked, and the linked files are copied into ``workdir``.
     """
     per = parent_mb.per_task
     failing = [pt for pt in per if (pt.get("reward", 0) or 0) < 1.0]
@@ -260,8 +266,13 @@ def _write_reflection(workdir: Path, parent_mb: SplitResult) -> str:
             "Environment noise (a flaky/aborted run), not a capability problem: " + ids,
             "",
         ]
+    fd = feedback_digest
+    budget = budget if budget is not None else fd.Budget()
+    got = fd.fit(actionable, budget.left // 2, head=lambda pt: "- Feedback: ", run_dir=run_dir,
+                 optimizer=optimizer)
+    budget.spend(got.used)
     lines.append(f"## {len(actionable)} actionable failing task(s)")
-    for pt in actionable[:12]:
+    for pt in got.shown:
         raw = pt.get("raw") or {}
         lines += [
             f"### task {pt.get('task_id')}",
@@ -269,11 +280,15 @@ def _write_reflection(workdir: Path, parent_mb: SplitResult) -> str:
         ]
         if raw.get("trace"):
             lines.append(f"- Trajectory: {str(raw.get('trace'))[:800]}")
-        lines.append(f"- Feedback: {str(pt.get('feedback', ''))[:800]}")
+        lines.append(got.entries[str(pt.get("task_id"))])
         lines.append("")
+    if got.rest:
+        lines += [got.rest_line, ""]
     if not actionable:
         lines.append("- (no actionable failures sampled; pursue robustness/generalization)")
-    (workdir / "REFLECTION.md").write_text("\n".join(lines), encoding="utf-8")
+    text = "\n".join(lines)
+    (workdir / "REFLECTION.md").write_text(text, encoding="utf-8")
+    fd.provide_linked(text, workdir, run_dir)
     return (f"{len(actionable)} actionable failing minibatch task(s); "
             "full reflective dataset in REFLECTION.md")
 
@@ -604,14 +619,20 @@ def gepa_loop(
         # frontier member, not the run's best, so the untruncated traces behind
         # REFLECTION.md are the ones to hand over.
         ctx.inject(adapter, run_dir, workdir, split="train", tag=f"mb_p_{n:04d}")
-        refl_summary = _write_reflection(workdir, parent_mb)
+        budget = feedback_digest.Budget()      # ONE feedback budget: reflection + failure index
+        refl_summary = _write_reflection(workdir, parent_mb, run_dir=run_dir, optimizer=optimizer,
+                                         budget=budget)
         focus_label = _write_focus(workdir, comps, focus)
         instructions = ctx.instructions(
             parent_mb, mb, f"GEPA minibatch of {len(mb)} train tasks, component focus "
                            f"{focus_label}",
             algorithm="gepa", parent_dir=parent_dir,
-            extra=_instructions(refl_summary, focus_label, mb))
+            extra=_instructions(refl_summary, focus_label, mb), run_dir=run_dir,
+            optimizer=optimizer, feedback_budget=budget)
         instructions = ctx.augment_instructions(instructions, workdir, run_dir)
+        # The ./feedback_full/ files the prompt links to: written BEFORE the seal below, so
+        # the framework's own files never read as tampering.
+        feedback_digest.provide_linked(instructions, workdir, run_dir)
 
         # Seal the eval surface for this child. GEPA runs the optimizer itself rather
         # than via ``harness.run_step``, so it needs the same two calls. None = off.

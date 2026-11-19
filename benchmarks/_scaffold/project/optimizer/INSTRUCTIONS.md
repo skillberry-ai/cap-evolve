@@ -27,7 +27,7 @@ The intake for this optimization defines an *objective score* function that shou
   `./guidance/sources/` for the data models/types so your code is correct.)
 - `./guidance/diagnose/SKILL.md` — the failure-clustering method. Use it.
 - `./trajectories/` — the FULL traces of the current best candidate (the step you build
-  on). The `{{FAILURES}}` block below summarizes them with argument-level feedback — read
+  on). The failure index ("ALWAYS-failing" / "FLAKY" sections) below summarizes them with argument-level feedback — read
   the actual traces for the clusters you'll fix, don't rely on the summary alone.
 - `./LEDGER.md` — FACTS (read-only): every prior iteration's outcome + the exact tasks it
   broke/fixed. Start here: don't re-introduce a change that broke a task.

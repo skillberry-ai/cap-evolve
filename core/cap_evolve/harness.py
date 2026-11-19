@@ -36,13 +36,14 @@ from . import stats
 from .cache import hash_candidate_dir
 from .memory import MemorySkill
 from . import eval_index
+from . import feedback_digest
 from .loop import SplitResult, aggregate_scores, has_valid_trials, pool_split_results
 from . import coverage as coverage_mod
 from . import gatecfg
 from .rundir import BudgetExhausted, RunDir, _atomic_write
 from .splits import Splits, make_pooled_partition, make_splits
 from .trials import candidate_scope, run_trials_pool
-from .types import Rollout, Score, Task
+from .types import NON_CAPABILITY_DIRS, Rollout, Score, Task
 
 # How many rollouts may be generated concurrently when a caller does not say.
 # 1 = fully serial, byte-identical to a single-threaded run; parallelism is strictly
@@ -342,6 +343,10 @@ def _live(adapter, candidate_dir: Path):
 
 # ---- evaluation -----------------------------------------------------------
 
+#: A rollout file is ``<task>__<tag>__t<k>.json``; every tag cap-evolve writes is this charset.
+_ROLLOUT_TAG_RE = re.compile(r"[A-Za-z0-9_.-]+")
+
+
 def _aggregate_metrics(per_trial_metrics: list, reduced_reward: float) -> list:
     """Reduce per-trial metric catalogs into one display catalog for the reduced Score.
 
@@ -614,7 +619,7 @@ def _evaluate_candidate(
 
     # collect per-task trial rewards (+ last rollout/score) across trials
     per_task_trials: dict[str, list[float]] = {t.id: [] for t in tasks}
-    per_task_feedback: dict[str, str] = {t.id: "" for t in tasks}
+    per_task_feedback: dict[str, list] = {t.id: [] for t in tasks}  # [(trial, reward, text)]
     per_task_metrics: dict[str, list] = {t.id: [] for t in tasks}  # per-trial metric catalogs
     per_task_errored: dict[str, bool] = {t.id: False for t in tasks}  # any trial an infra error?
     per_task_errored_trials: dict[str, int] = {t.id: 0 for t in tasks}  # how many trials errored
@@ -721,7 +726,8 @@ def _evaluate_candidate(
             if not errored:
                 per_task_trials[tid].append(0.0 if cand_fail else sc.reward)
                 per_task_metrics[tid].append([] if cand_fail else sc.metrics)
-            per_task_feedback[tid] = sc.feedback or per_task_feedback[tid]
+            per_task_feedback[tid].append((trial_offset + k, None if errored else (0.0 if cand_fail else sc.reward),
+                                           sc.feedback or ""))
             # #589: per-task/per-trial detail, opt-in via CAPEVOLVE_LOG_LEVEL=DEBUG
             # (see cap_evolve/__init__.py) — a no-op call when logging isn't enabled.
             logger.debug("split=%s tag=%s task=%s trial=%s reward=%s errored=%s",
@@ -830,7 +836,7 @@ def _evaluate_candidate(
         # task produced no measurement at all and must be excluded from the split
         # mean and from paired deltas rather than counted as a 0.0.
         scores.append(Score(
-            task_id=tid, reward=mean(tr), feedback=per_task_feedback[tid],
+            task_id=tid, reward=mean(tr), feedback=feedback_digest.join_trial_feedback(per_task_feedback[tid]),
             n=n_trials, stderr=stderr(tr), trial_rewards=tr,
             raw={"errored": per_task_errored[tid],
                  "errored_trials": per_task_errored_trials[tid],
@@ -902,20 +908,29 @@ def split_result_from_rollouts(run_dir: RunDir, tag, split: str = "val", ks=(1, 
     from .stats import mean, stderr
     errored_policy = resolve_errored_policy(errored_policy, run_dir)
     tags = [tag] if isinstance(tag, str) else [str(t) for t in tag]
+    # A tag becomes part of a glob under the rollout dir: refuse one that is not a plain
+    # rollout-file tag (no path separators, no glob metacharacters, no "..").
+    for t in tags:
+        if not _ROLLOUT_TAG_RE.fullmatch(t) or ".." in t:
+            raise ValueError(f"not a rollout tag: {t!r}")
     vdir = run_dir.rollout_dir(split)
     by_task: dict[str, list[float]] = {}
-    feedback: dict[str, str] = {}
+    feedback: dict[str, list] = {}   # tid -> [(trial, reward, text)]
     raw: dict[str, dict] = {}
     metrics_by_task: dict[str, list] = {}
     cost_by_task: dict[str, list[float]] = {}  # #676: per-task cost, every trial counts
     if vdir.exists():
-        for f in sorted(g for t in tags for g in vdir.glob(f"*__{t}__t*.json")):
+        for f, ftag in sorted((g, t) for t in tags for g in vdir.glob(f"*__{t}__t*.json")):
             if min_trial and int(f.stem.rsplit("__t", 1)[1]) < min_trial:
                 continue   # not a fresh trial (see ``min_trial``)
             rec = _json.loads(f.read_text(encoding="utf-8"))
             sc = rec.get("score", {})
             tid = sc.get("task_id") or f.name.split("__")[0]
-            feedback[tid] = sc.get("feedback", feedback.get(tid, ""))
+            trial_k = int(f.stem.rsplit("__t", 1)[1])
+            # Pooled tags each number their trials from 0: name the tag so labels stay unique.
+            # The FULL tag, as globbed: round tags hold "__" themselves (r000__<cid>__rung1_0),
+            # so a split on "__" would give two rounds' tags the same label.
+            trial_label = trial_k if len(tags) == 1 else f"{ftag} {trial_k}"
             cost_by_task.setdefault(tid, []).append(
                 float((rec.get("rollout") or {}).get("cost_usd") or 0.0))
             # carry the structured infra flag + trial counts forward across resume.
@@ -940,6 +955,8 @@ def split_result_from_rollouts(run_dir: RunDir, tag, split: str = "val", ks=(1, 
             r0 = raw.setdefault(tid, {})
             r0["n_trials"] = int(r0.get("n_trials", 0)) + 1
             by_task.setdefault(tid, [])
+            feedback.setdefault(tid, []).append(
+                (trial_label, None if errored else float(sc.get("reward", 0.0)), sc.get("feedback") or ""))
             if errored:
                 r0["errored"] = True
                 r0["errored_trials"] = int(r0.get("errored_trials", 0)) + 1
@@ -951,7 +968,7 @@ def split_result_from_rollouts(run_dir: RunDir, tag, split: str = "val", ks=(1, 
     for tid, r0 in raw.items():
         r0["valid_trials"] = len(by_task.get(tid, []))
         r0["cost_usd"] = mean(cost_by_task[tid]) if cost_by_task.get(tid) else None
-    scores = [Score(task_id=t, reward=mean(r), feedback=feedback.get(t, ""),
+    scores = [Score(task_id=t, reward=mean(r), feedback=feedback_digest.join_trial_feedback(feedback.get(t, [])),
                     n=len(r), stderr=stderr(r), trial_rewards=r, raw=raw.get(t, {}),
                     metrics=_aggregate_metrics(metrics_by_task.get(t, []), mean(r)))
               for t, r in by_task.items()]
@@ -1228,6 +1245,9 @@ def optimizer_from_command(cmd_template: list[str]) -> OptimizerFn:
         if proc.stderr and proc.stderr.strip():
             report["stderr"] = proc.stderr
         return report or None
+    # The command names the agent CLI and model: the feedback-summary cache key, so a run that
+    # switches optimizer never reuses another optimizer's summaries.
+    _run.command = " ".join(cmd_template)  # type: ignore[attr-defined]
     return _run
 
 
@@ -1941,7 +1961,7 @@ def _capability_files(d: Path) -> dict[str, str]:
             continue
         rel = str(f.relative_to(d))
         top = rel.split("/", 1)[0]
-        if rel in _CAP_DIFF_SKIP or top in ("trajectories", "guidance", "prior_iterations"):
+        if rel in _CAP_DIFF_SKIP or top in NON_CAPABILITY_DIRS:
             continue
         try:
             out[rel] = f.read_text(encoding="utf-8")
@@ -3695,6 +3715,8 @@ def run_step(
     ctx.inject(adapter, run_dir, workdir, split=eval_split)
 
     instructions = ctx.augment_instructions(instructions, workdir, run_dir)
+    # The ./feedback_full/ files the prompt links to: written BEFORE the seal below.
+    feedback_digest.provide_linked(instructions, workdir, run_dir)
 
     # Seal the eval surface (hash manifest + best-effort read-only bits) AFTER the
     # context injection wrote its scratch files, so nothing we add ourselves reads as
@@ -4261,8 +4283,9 @@ def _classify(per):
     Uses the AGGREGATE reward (mean over trials), so a task that passes only some
     of the time is 'flaky' (0 < reward < 1) — a sometimes-good behavior to make
     CONSISTENT — distinct from an always-failing task (reward ~ 0) whose root cause
-    must be fixed. (Per-task feedback is from the last trial and can disagree with a
-    graded mean; the reward is the honest signal, so we classify by it.)
+    must be fixed. (Per-task feedback carries every trial's text, each under its own
+    reward, and judges disagree between trials; the mean reward is the honest signal, so
+    we classify by it.)
 
     The infra-IGNORE bucket is reserved for TRULY uncontrollable tasks
     (``_is_infra_ignore``: most trials errored AND mean ≈ 0). A task that merely had
@@ -4278,9 +4301,13 @@ def _classify(per):
     return errored, always_fail, flaky, solid
 
 
+def _fmt_head(pt) -> str:
+    return f"- {pt.get('task_id')} (reward {float(pt.get('reward', 0) or 0):.2f}): "
+
+
 def _fmt(pt) -> str:
-    return f"- {pt.get('task_id')} (reward {float(pt.get('reward', 0) or 0):.2f}): " \
-           f"{str(pt.get('feedback', '')).strip()[:400]}"
+    """One failure-index line with the task's feedback in full (``_failures_block`` bounds it)."""
+    return feedback_digest.render(_fmt_head(pt), str(pt.get("feedback", "")).strip())
 
 
 def _passing_block(solid, *, max_ids: int = 60) -> str:
@@ -4329,28 +4356,79 @@ _DEFAULT_INSTRUCTIONS_TEMPLATE = (
 # test_native_skills.test_snapshot_ignores_every_vendor_dir_the_registry_declares enforces that.
 # (Kept literal rather than read from the registry: an installed core has no skills/ tree
 # beside it, so the literal list has to be complete anyway.)
-_SNAPSHOT_IGNORE = ("trajectories", "guidance", "prior_iterations",
+# The dirs come from ``types.NON_CAPABILITY_DIRS`` (minus .git/__pycache__, which a snapshot
+# never had reason to drop), so a new read-context dir is added in ONE place.
+_SNAPSHOT_IGNORE = tuple(sorted(NON_CAPABILITY_DIRS - {".git", "__pycache__"})) + (
                     "LEDGER.md", "JOURNAL.md", "RUNMAP.md",
                     "INSIGHTS.md", "META_INSIGHTS.md", "FRAMEWORK_IMPROVEMENTS.md",
                     "FOCUS.md", "REFLECTION.md",
-                    ".claude", ".agents", ".gemini", ".opencode", ".bob", ".cursor",
                     "CLAUDE.md", "AGENTS.md", "GEMINI.md")
 
 
-def _failures_block(always_fail, flaky, errored) -> str:
-    """The per-iteration (a)/(b)/errored failure index for the prompt."""
+#: A template slot: ``{{NAME}}``. Optionally inside backticks, which marks a MENTION of the
+#: slot in prose ("the `{{FAILURES}}` block below"), not a place to fill.
+_SLOT_RE = re.compile(r"(`?)(\{\{[A-Z0-9_]+\}\})(`?)")
+
+
+def _fill_slots(text: str, repl: dict) -> str:
+    """Fill a template's ``{{NAME}}`` slots from ``repl`` in ONE pass.
+
+    A backtick-quoted ```{{NAME}}``` is prose naming the slot, so it renders as ```NAME```
+    instead of a second copy of the block — the default template's "The `{{FAILURES}}`
+    block below…" line used to inline the whole failure index there too, doubling a
+    460 KB prompt. One pass, so a filled value (judge feedback quoting
+    ``{{X}}`` text, say) is never itself re-expanded. An unquoted unknown slot is left as-is;
+    any backtick-quoted ```{{NAME}}``` renders as ```NAME```, known or not.
+    """
+    def sub(m: re.Match) -> str:
+        lq, slot, rq = m.groups()
+        if lq and rq:
+            return f"`{slot[2:-2]}`"
+        return lq + (repl[slot] if slot in repl else slot) + rq
+    return _SLOT_RE.sub(sub, text)
+
+
+def _failures_block(always_fail, flaky, errored, run_dir=None, optimizer=None,
+                    budget: "feedback_digest.Budget | None" = None) -> str:
+    """The per-iteration (a)/(b)/errored failure index for the prompt.
+
+    The always-failing tasks, then the flaky ones (each worst first), share what is left of
+    this prompt's feedback ``budget`` (``feedback_digest.fit``): all in full when they fit;
+    otherwise the longest entries are condensed — a summary by the run's own ``optimizer``,
+    else a deterministic cut, always representing the lowest-scoring trial — and tasks the
+    budget cannot list are named. With ``run_dir`` a condensed entry's full text is written
+    there and linked. Without ``run_dir`` (a unit render) long entries are cut, no link.
+    """
+    fd = feedback_digest
+    budget = budget if budget is not None else fd.Budget()
+    flaky = sorted(flaky, key=lambda pt: float(pt.get("reward", 0) or 0))
+    got = fd.fit(list(always_fail) + flaky, budget.left, head=_fmt_head, run_dir=run_dir,
+                 optimizer=optimizer)
+    budget.spend(got.used)
+    shown_ids = {str(pt.get("task_id")) for pt in got.shown}
+    shown_af = [pt for pt in always_fail if str(pt.get("task_id")) in shown_ids]
+    shown_fl = [pt for pt in flaky if str(pt.get("task_id")) in shown_ids]
+    entry = lambda pt: got.entries[str(pt.get("task_id"))]
     lines: list[str] = []
+    if got.condensed:
+        lines.append("(Some entries are condensed to fit this prompt's feedback budget; each condensed "
+                     "entry starts with every trial's reward and leads with the LOWEST-scoring trial. "
+                     + ("Its full feedback, every trial, is in the linked file under ./"
+                        f"{fd.DIR}/.)" if run_dir is not None else "Full traces are in ./trajectories/.)"))
+        lines.append("")
     if always_fail:
         lines.append(f"## (a) {len(always_fail)} ALWAYS-failing task(s) — fix the shared "
                      "root cause (full traces in ./trajectories/):")
-        lines += [_fmt(pt) for pt in always_fail[:10]]
+        lines += [entry(pt) for pt in shown_af]
         lines.append("")
     if flaky:
         lines.append(f"## (b) {len(flaky)} FLAKY task(s) — pass sometimes; make the good "
                      "behavior consistent (full traces in ./trajectories/):")
-        lines.append("(reward is the mean over trials — the honest signal; the feedback line is "
-                     "from the LAST trial and may say 'passed' even when the mean is below 1.)")
-        lines += [_fmt(pt) for pt in flaky[:8]]
+        lines.append("(reward is the mean over trials — the honest signal; listed lowest reward first.)")
+        lines += [entry(pt) for pt in shown_fl]
+        lines.append("")
+    if got.rest:
+        lines.append(got.rest_line)
         lines.append("")
     if not always_fail and not flaky:
         lines.append("## No actionable failures in focus — seek a robustness/generalization gain "
@@ -4803,9 +4881,13 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
                         instructions_file=None, bench_repo: str | None = None,
                         optimizer_name: str | None = None,
                         seed_empty: bool | None = None,
-                        target_reader: str = "") -> str:
+                        target_reader: str = "", run_dir=None, optimizer=None,
+                        feedback_budget: "feedback_digest.Budget | None" = None) -> str:
     """Render one iteration's INSTRUCTIONS by substituting dynamic blocks into the
-    optimizer-instructions template.
+    optimizer-instructions template. ``run_dir`` enables the full-feedback files and, with the
+    run's ``optimizer``, the feedback summaries (``feedback_digest``); without them long entries
+    are cut, not summarized. ``feedback_budget`` is what is left of this prompt's feedback
+    budget after the caller's own feedback blocks (default: all of it).
 
     The static framing (analyze → ideate → edit, the read-pointers, the code-bearing
     tools guidance, the economy footer) lives in the template file — authored by the
@@ -4833,7 +4915,8 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
         f"{len(solid)} solid / {len(flaky)} flaky / {len(always_fail)} failing"
         + (f" / {len(errored)} infra-errored" if errored else "") + f" of {n} {scope}."
     )
-    failures = _failures_block(always_fail, flaky, errored)
+    failures = _failures_block(always_fail, flaky, errored, run_dir=run_dir, optimizer=optimizer,
+                               budget=feedback_budget)
     passing = _passing_block(protect) if history_enabled() else ""
     cap = _capability_brief(capabilities)
     algo = _algorithm_brief(current_val, algorithm)
@@ -4865,9 +4948,7 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
     except OSError as e:
         why = f"could not be read ({e})"
     if tmpl and "{{FOCUS_SUMMARY}}" in tmpl:
-        for k, v in repl.items():
-            tmpl = tmpl.replace(k, v)
-        return tmpl
+        return _fill_slots(tmpl, repl)
     if tmpl:
         why = "has no {{FOCUS_SUMMARY}} placeholder, so it cannot be rendered"
     # Falling back is a fact worth stating: the optimizer is about to read cap-evolve's
@@ -5113,8 +5194,7 @@ class OptimizerContext:
             "{{PASSING}}": "",
             "{{ALGO_BRIEF}}": "",
         }
-        for k, v in repl.items():
-            text = text.replace(k, v)
+        text = _fill_slots(text, repl)
         # Any slot the template carries that this method does not know about would otherwise
         # reach the reader as literal braces. Drop them rather than ship a broken document.
         return re.sub(r"\{\{[A-Z0-9_]+\}\}", "", text)
@@ -5143,11 +5223,16 @@ class OptimizerContext:
 
     def instructions(self, current_val: SplitResult, focus_ids, label: str, *,
                      algorithm: str, parent_dir: Path | None = None,
-                     extra: str = "") -> str:
+                     extra: str = "", run_dir: RunDir | None = None,
+                     optimizer: "OptimizerFn | None" = None,
+                     feedback_budget: "feedback_digest.Budget | None" = None) -> str:
         """Render this iteration's prompt from the shared template.
 
         ``parent_dir`` (the candidate being forked) enables the empty-seed note;
-        ``extra`` is appended verbatim for the caller's own block.
+        ``extra`` is appended verbatim for the caller's own block. When ``extra`` carries
+        feedback too (GEPA's reflection, SkillOpt's slow update), the caller builds it from a
+        ``feedback_digest.Budget`` and passes the same object as ``feedback_budget``, so the
+        whole prompt's feedback stays inside ONE budget.
         """
         seed_empty = (_capability_is_empty(list(self.capabilities), parent_dir)
                       if parent_dir is not None else None)
@@ -5155,7 +5240,8 @@ class OptimizerContext:
             current_val, focus_ids, label, capabilities=list(self.capabilities),
             algorithm=algorithm, instructions_file=self.instructions_file,
             bench_repo=self.bench_repo, optimizer_name=self.optimizer_name,
-            seed_empty=seed_empty, target_reader=self.target_reader)
+            seed_empty=seed_empty, target_reader=self.target_reader, run_dir=run_dir,
+            optimizer=optimizer, feedback_budget=feedback_budget)
         return (text.rstrip() + "\n\n" + extra.strip() + "\n") if extra.strip() else text
 
 
@@ -5292,7 +5378,8 @@ def hill_climb_loop(
             focus_ids, label = None, focus
         parent_dir = run_dir.candidate_dir(run_dir.best_id)
         instructions = ctx.instructions(current_val, focus_ids, label,
-                                        algorithm=algorithm, parent_dir=parent_dir)
+                                        algorithm=algorithm, parent_dir=parent_dir, run_dir=run_dir,
+                                        optimizer=optimizer)
         if convergence:
             # Pure: recomputed from the steps so far, so a resumed run rebuilding the
             # same observation list gets the identical signal.
