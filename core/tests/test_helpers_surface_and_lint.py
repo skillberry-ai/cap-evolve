@@ -244,8 +244,9 @@ def test_skill_package_makes_risky_imports_errors_only_when_helpers_are_on(tmp_p
     sp = _sp()
     _cand(tmp_path, {"skills/a/SKILL.md": "---\nname: a\ndescription: does a thing when asked to do it\n---\n# a\n",
                      "skills/a/scripts/f.py": "import socket\n\ndef f():\n    return socket.gethostname()\n"})
-    off = sp.validate(tmp_path)                      # v1: a root with skills/ but no SKILL.md is not a package
-    assert off.get("empty")
+    off = sp.validate(tmp_path)                      # skills/ is a multi-skill root with helpers off too
+    assert not off.get("empty") and off["ok"]        # ...but socket is only a warning there
+    assert not any("socket" in p for p in off["problems"])
     monkeypatch.setenv("CAPEVOLVE_HELPERS", "1")
     on = sp.validate(tmp_path)
     assert not on["ok"] and any("socket" in p for p in on["problems"])
