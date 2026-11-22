@@ -57,8 +57,10 @@ MIN_BUDGET = 4_000
 #: budget), and the pointer fallback would become the normal path.
 MAX_BUDGET = 52_000
 #: A cached summary is reused while this prompt's room is at most this many times the room it
-#: was made for; above that it is made again for the larger room. Each remake at least doubles
-#: the room, so one task is summarized at most about log2(MAX_BUDGET / MIN_ENTRY) times.
+#: was made for; above that it is made again for the larger room. A remake is sized for the
+#: smallest room in its batch (at least about 2/3 of the common size), so each remake grows the
+#: room by at least about 4/3, and one task is summarized at most about
+#: log_{4/3}(MAX_BUDGET / MIN_ENTRY) times.
 REUSE_RATIO = 2
 #: After this many prompt builds in a row whose summary calls all failed, the run stops
 #: calling the summarizer (the deterministic cut is used): a broken summarizer is not paid
@@ -526,7 +528,8 @@ editing task: do not change, create or delete any file except ./summaries.json.
 Each file in ./tasks/ is one task: its trials, each trial's reward, and each trial's feedback
 (often the rationale of an LLM judge). Read EVERY file in full.
 
-For EACH task write a summary of at most {n} characters that keeps:
+For EACH task write a summary of at most {n} bytes (UTF-8; a non-ASCII character takes 2-4
+bytes) that keeps:
 1. the issues of the LOWEST-scoring trial, first, in the scorer's own terms;
 2. the issues that recur across trials;
 3. when trials differ, what the higher-scoring trials did differently.

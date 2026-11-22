@@ -200,7 +200,7 @@ def main() -> int:
     failing = sorted(
         ({"task_id": tid, "reward": (sum(rates[tid]) / len(rates[tid])) if rates[tid] else 0.0,
           "feedback": feedback_digest.join_trial_feedback(fb[tid])}
-         for tid in rates if any(r is None or r < 1.0 for _, r, _ in fb[tid])),
+         for tid in rates if any(r is not None and r < 1.0 for _, r, _ in fb[tid])),
         key=lambda pt: (pt["reward"], pt["task_id"]))
     fitted = feedback_digest.fit([pt for pt in failing if pt["feedback"]], feedback_digest.budget_bytes(),
                                  run_dir=rd_fb)

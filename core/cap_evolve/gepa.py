@@ -246,7 +246,9 @@ def _write_reflection(workdir: Path, parent_mb: SplitResult, *, run_dir=None, op
     per = parent_mb.per_task
     failing = [pt for pt in per if (pt.get("reward", 0) or 0) < 1.0]
     passing = [pt for pt in per if (pt.get("reward", 0) or 0) >= 1.0]
-    actionable = [pt for pt in failing if not (pt.get("raw") or {}).get("errored")]
+    # Worst first: ``fit`` expects rows most important first and names the tail when short.
+    actionable = sorted((pt for pt in failing if not (pt.get("raw") or {}).get("errored")),
+                        key=lambda pt: ((pt.get("reward", 0) or 0), str(pt.get("task_id"))))
     errored = [pt for pt in failing if (pt.get("raw") or {}).get("errored")]
 
     lines = [

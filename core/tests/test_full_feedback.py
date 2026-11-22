@@ -934,7 +934,7 @@ def test_a_summary_made_for_a_small_room_is_made_again_for_a_much_larger_one(tmp
     sized = lambda i: None   # replaced below: reply exactly the size the prompt asks for
 
     def opt(workdir, prompt):
-        n = int(re.search(r"at most (\d+) characters", prompt).group(1))
+        n = int(re.search(r"at most (\d+) bytes", prompt).group(1))
         ids = re.findall(r"^- tasks/\S+ -> (\S+)$", prompt, re.M)
         calls.append(n)
         (Path(workdir) / "summaries.json").write_text(json.dumps({i: f"{i} " + "s" * (n - 10) for i in ids}))
