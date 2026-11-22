@@ -28,7 +28,10 @@ def test_explicit_feedback_and_confirm_become_the_partition(tmp_path):
     assert json.loads((run_dir.sealed_dir / "splits_full.json").read_text())["confirm"] == C
     ev = [json.loads(l) for l in run_dir.events_path.read_text().splitlines() if '"pooled_split"' in l]
     assert ev[0]["explicit"] is True and ev[0]["n_confirm"] == len(C)
-    assert not any(t in run_dir.events_path.read_text() for t in C)            # ids never reach the log
+    # ids never reach the log. Match them as JSON string values, not bare substrings: short ids
+    # like "c0" also occur by chance in the temp path logged by spec_resolved (e.g. macOS ".../mrx0c0000gn/...").
+    log = run_dir.events_path.read_text()
+    assert not any(f'"{t}"' in log for t in C)
 
 
 def test_the_explicit_partition_is_never_redrawn(tmp_path):
