@@ -12,12 +12,14 @@
 #     <run_id>__<slug>.tar.zst   (.tar.gz if zstd is missing) the run's whole work area:
 #                                <out_dir>/ (report, metrics, optimized capability, logs) and
 #                                <out_dir>_proj/.capevolve/ (project + run dir: candidates, traces,
-#                                rollouts, journal)
-#     members.sha256             sha256 of every regular file, taken on the source BEFORE packing,
+#                                rollouts, journal), and <out_dir>_proj.sealed/ when the run sealed
+#                                data there
+#     members.sha256             sha256 of every readable regular file, taken on the source BEFORE packing,
 #                                one `<sha256>  <tar member path>` line each (FULL_BACKUP §5.5:
 #                                hashes are taken on the source, because the workspace is gone by
 #                                the time anyone captures this)
 #     symlinks.txt               every symlink in the work area and its target
+#     unreadable.txt             every path the job could not read (not in the archive)
 #     backup.json                what this is: run, attempt, bench, tier, who triggered it, runner,
 #                                archive sha256 and size, member count and bytes
 # and a copy of backup.json at <out_dir>/backup.json, which publish_results.sh puts in the run's
@@ -57,11 +59,13 @@ SECTIONS_URL="${SECTIONS_URL:-https://raw.githubusercontent.com/skillberry-runs/
 
 log() { echo "backup_run: $*"; }
 
-# What to archive: the output dir and the project's .capevolve/ (project + run dir), each as
+# What to archive: the output dir, the project's .capevolve/ (project + run dir) and, when the run
+# sealed data, core's default sealed dir <project work>.sealed/ (rundir.py seal()), each as
 # (base dir, member path relative to it).
 bases=(); rels=()
 [ -d "$out" ] && { bases+=("$(dirname "$out")"); rels+=("$(basename "$out")"); }
 [ -d "$PROJECT_WORK/.capevolve" ] && { bases+=("$(dirname "$PROJECT_WORK")"); rels+=("$(basename "$PROJECT_WORK")/.capevolve"); }
+[ -d "$PROJECT_WORK.sealed" ] && { bases+=("$(dirname "$PROJECT_WORK")"); rels+=("$(basename "$PROJECT_WORK").sealed"); }
 [ "${#rels[@]}" -gt 0 ] || { log "no run data at $out or $PROJECT_WORK/.capevolve; nothing to keep"; exit 0; }
 parts=(); for i in "${!rels[@]}"; do parts+=(-C "${bases[$i]}" "${rels[$i]}"); done
 
@@ -91,7 +95,10 @@ if command -v zstd >/dev/null 2>&1; then ext="tar.zst"; else
 fi
 
 # Disk check: the uncompressed size is an upper bound for the archive.
-need_kb=$(du -sk "$out" "$PROJECT_WORK/.capevolve" 2>/dev/null | awk '{s+=$1} END{print s+0}')
+need_kb=0
+for i in "${!rels[@]}"; do
+  need_kb=$(( need_kb + $(du -sk "${bases[$i]}/${rels[$i]}" 2>/dev/null | awk '{print $1+0}') ))
+done
 avail_kb=$(df -Pk "$ROOT" | awk 'NR==2{print $4}')
 if [ $(( avail_kb - need_kb )) -lt $(( MIN_FREE_GB * 1024 * 1024 )) ]; then
   echo "::warning::not keeping $name (~$((need_kb / 1024)) MB): only $((avail_kb / 1024 / 1024)) GB free on the runner's capture disk, below the ${MIN_FREE_GB} GB floor. Capture dirs in $ROOT whose runs a full backup (docs/FULL_BACKUP.md) recorded as uploaded and checked may be removed by the runner's admin to make room."
@@ -102,31 +109,38 @@ tmp="$dst.partial"
 rm -rf "$tmp"; mkdir -p "$tmp" || { echo "::warning::cannot create $tmp; raw run data of $name not kept"; exit 0; }
 fail() { rm -rf "$tmp"; echo "::warning::keeping the raw run data of $name failed ($1); not kept"; exit 0; }
 
-# Source hashes and symlinks first, on the files as they are (FULL_BACKUP §5.5).
+# Source hashes and symlinks first, on the files as they are (FULL_BACKUP §5.5). A file the job
+# cannot read (for example one a container wrote as root) does not stop the capture: it is listed
+# in unreadable.txt and backup.json, and FULL_BACKUP records it as an `unreadable` gap.
 sha256_cmd() { if command -v sha256sum >/dev/null 2>&1; then sha256sum "$@"; else shasum -a 256 "$@"; fi; }
 export -f sha256_cmd
-: > "$tmp/members.sha256"; : > "$tmp/symlinks.txt"
+find --version 2>/dev/null | grep -q GNU || echo "::warning::find on runner ${RUNNER_NAME:-?} is not GNU find; symlinks.txt and unreadable.txt of $name may be incomplete"
+: > "$tmp/members.sha256"; : > "$tmp/symlinks.txt"; : > "$tmp/unreadable.txt"
 for i in "${!rels[@]}"; do
-  ( cd "${bases[$i]}" && find "${rels[$i]}" -type f -print0 | LC_ALL=C sort -z | xargs -0 -r bash -c 'sha256_cmd "$@"' _ ) \
+  ( cd "${bases[$i]}" && find "${rels[$i]}" -type f -readable -print0 | LC_ALL=C sort -z | xargs -0 -r bash -c 'sha256_cmd "$@"' _ ) \
     >> "$tmp/members.sha256" || fail "hashing ${rels[$i]}"
+  ( cd "${bases[$i]}" && find "${rels[$i]}" \( -type f -o -type d \) ! -readable -print ) >> "$tmp/unreadable.txt" 2>/dev/null || true
   ( cd "${bases[$i]}" && find "${rels[$i]}" -type l -printf '%p -> %l\n' ) >> "$tmp/symlinks.txt" 2>/dev/null || true
 done
+[ -s "$tmp/unreadable.txt" ] && echo "::warning::$(wc -l < "$tmp/unreadable.txt" | tr -d ' ') paths of $name are not readable by the job; kept the rest, listed them in unreadable.txt"
+tar_opts=(); tar --version 2>/dev/null | grep -q GNU && tar_opts=(--ignore-failed-read)
 
 archive="$tmp/$name.$ext"
 if [ "$ext" = "tar.zst" ]; then
-  tar -cf - "${parts[@]}" 2>/dev/null | zstd -q -T0 -10 -f -o "$archive"; rc=$?
+  tar "${tar_opts[@]}" -cf - "${parts[@]}" 2>/dev/null | zstd -q -T0 -10 -f -o "$archive"; rc=$?
 else
-  tar -czf "$archive" "${parts[@]}" 2>/dev/null; rc=$?
+  tar "${tar_opts[@]}" -czf "$archive" "${parts[@]}" 2>/dev/null; rc=$?
 fi
 { [ "$rc" -eq 0 ] && [ -s "$archive" ]; } || fail "rc=$rc"
 
 bytes=$(wc -c < "$archive" | tr -d ' ')
 sha=$(sha256_cmd "$archive" | awk '{print $1}')
 "$PY" - "$tmp/backup.json" "$dst" "$name.$ext" "${RUNNER_NAME:-$(hostname)}" "$bytes" "$sha" \
-     "$run_id" "$attempt" "$slug" "$bench" "$repo" "$user" "$tmp/members.sha256" <<'PY' || fail "writing backup.json"
+     "$run_id" "$attempt" "$slug" "$bench" "$repo" "$user" "$tmp/members.sha256" "$tmp/unreadable.txt" <<'PY' || fail "writing backup.json"
 import datetime, json, os, sys
 (path, capture_dir, archive, runner, size, sha, run_id, attempt, slug, bench, repo, user,
- members) = sys.argv[1:]
+ members, unreadable) = sys.argv[1:]
+unreadable = [l for l in open(unreadable, encoding="utf-8", errors="replace").read().splitlines() if l]
 lines = [l for l in open(members, encoding="utf-8", errors="replace").read().splitlines() if l.strip()]
 tier = slug.split("-", 1)[0]
 json.dump({
@@ -140,6 +154,7 @@ json.dump({
     "archive": archive, "bytes": int(size), "sha256": sha,
     "members": "members.sha256", "member_count": len(lines),
     "symlinks": "symlinks.txt",
+    "unreadable": unreadable,
     "created": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
 }, open(path, "w"), indent=2)
 PY

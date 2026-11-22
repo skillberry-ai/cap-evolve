@@ -278,6 +278,7 @@ Every folder of every kind has this tree:
                   metrics_summary.md, reward_check.json                                 [derived]
   method/         the method's run dir(s) as on the source                              [source]
                     cap-evolve: method/capevolve/{project/, run_<name>/, sealed/<run_name>/}
+                    CI run:     also method/capevolve/ci_out/ (the job's output dir)
                     other:      method/<method-name>/...
   champion/       frozen artifact(s), capability.diff vs the seed, hashes                [derived]
   baselines/      <baseline-id>/ per baseline arm (seed, no_skill, warm_seed, reused-<run>) [derived]
@@ -321,8 +322,8 @@ Every folder of every kind has this tree:
 | the session that orchestrated the evaluation | `reproduce/orchestration/` |
 | `git` results at a commit (`skillberry-runs/*`, `*-history`, `results/*`, `records/*`) | `posts/results_repo/<repo-or-branch>@<sha>/` |
 | dashboard UI exports (`benchmark-history/runs/*/ui`, `run/ui/`, `ci_ui/<run>/`) | `method/capevolve/ui_export/` |
-| a CI runner capture archive (§5.3(b)): its `suite_<tier>_<bench>_proj/.capevolve/` and `suite_<tier>_<bench>/` members | `method/capevolve/project/`, `method/capevolve/run_<name>/` and `method/capevolve/ci_out/` (unpacked, §5.5) |
-| the capture's `backup.json`, `members.sha256`, `symlinks.txt` | `logs/ci_capture/` |
+| a CI runner capture archive (§5.3(b)): its `suite_<tier>_<bench>_proj/.capevolve/`, `suite_<tier>_<bench>_proj.sealed/` and `suite_<tier>_<bench>/` members | `method/capevolve/project/`, `method/capevolve/run_<name>/`, `method/capevolve/sealed/<run>/` and `method/capevolve/ci_out/` (unpacked, §5.5) |
+| the capture's `backup.json`, `members.sha256`, `symlinks.txt`, `unreadable.txt` | `logs/ci_capture/` |
 
 Each move is one line in `MOVES.json`: the canonical path, the source path, and the source host.
 A file that came out of an archive or was split for size (§3.3) says so in `op` (Appendix A.7).
@@ -489,9 +490,12 @@ and search at least:
 - **(b) CI state,** on every self-hosted runner:
   - **runner capture dirs** `~/capevolve-ci-capture/<run_id>__<tier>-<bench>[.a<N>]/`
     (`ci/benchmarks/lib/backup_run.sh`): the whole work area of one bench leg, packed, with
-    `members.sha256` (per-file sha256 taken on the runner before packing), `symlinks.txt` and
-    `backup.json`. For recent CI runs this is the only full copy of the run dir. Captured as §5.5
+    `members.sha256` (per-file sha256 taken on the runner before packing), `symlinks.txt`,
+    `unreadable.txt` and `backup.json`. The archive holds the job's output dir, the project's
+    `.capevolve/` and, when the run sealed data, `<project>.sealed/`. For recent CI runs this is the only full copy of the run dir. Captured as §5.5
     ("Packed sources") says;
+  - a `<run_id>__<tier>-<bench>*.partial/` dir is an interrupted capture (the step was stopped). Do not
+    use it as a source. Record it as a `truncated` gap, with what it holds;
   - **earlier runner archives** `~/skillberry-runs-backup/user/<GitHub login>/<repo>/<run_id>__<tier>-<bench>.tar.zst`
     (2026-11-18 until the capture dirs replaced them). This tree is a source in the CI's own layout,
     not part of the backup location. Its `backup.json` (archive sha256 and size) is only in the run's
@@ -571,18 +575,36 @@ checked), `/tmp`, unmerged branches. Then the rest.
      (§3.2), recording each in `MOVES.json` with `op: unpack` and `source_path`
      `<archive path>!<member path>`.
   3. **Source hashes** are the member hashes in `members.sha256`, taken on the runner before packing.
-     Every unpacked member must match its line, and every line must have a member. An archive without
+     Every unpacked member must match its line, and every line must have a member. A line that
+     starts with `\` has an escaped name (GNU `sha256sum` escapes `\` and newline); unescape it
+     before matching. Members listed in `backup.json` `unreadable` were not readable on the runner:
+     each is an `unreadable` gap. An archive without
      `members.sha256` (the earlier runner archives) gets member hashes computed at unpack; say in
      `README.md` that their authenticity rests on the archive's sha256.
   4. Add the symlinks of `symlinks.txt` to `SYMLINKS.txt`, and keep the capture's own files in
      `logs/ci_capture/` (§3.2).
-- **Secrets.** Before anything is uploaded, scan every file for every value in the host's secret
-  files (`.env` files, the CLIs' settings and credential stores, `secrets/` dirs), for
-  credential-named environment variables, and for the profile's `secrets_extra` locations.
-  Command-line tokens captured in logs count too.
-  - **Which values.** Skip empty values and values shorter than 8 characters (for example a
-    credential-named variable set to `1`): they would match everywhere. List the names (never the
-    values) of the skipped ones in `BACKUP_RESULTS_<TS>.md`.
+- **Secrets.** Before anything is uploaded, scan every file for the **secret values** of the host
+  and the run. Command-line tokens captured in logs count too.
+  - **Which values.** Only credentials, never every value in a file. Endpoint URLs, model ids and
+    other settings in the same files are data the run needs (§8.1 `models/`), and they often appear
+    in the repository too. A secret value is:
+    - the value of a credential-named key in the host's secret files (`.env` files, the CLIs'
+      settings, `secrets/` dirs) or in the environment: a key whose name matches
+      `KEY|TOKEN|SECRET|PASSWORD|PASSWD|AUTH|CREDENTIAL|COOKIE|PRIVATE` (case-insensitive), for
+      example `ANTHROPIC_API_KEY`, not `ANTHROPIC_BASE_URL` or `ANTHROPIC_MODEL`;
+    - the content of a credential store (`*.pem`, `*.key`, `credentials.json`, `.credentials.json`,
+      the CLIs' token stores);
+    - the values the profile's `secrets_extra` names.
+
+    Skip empty values and values shorter than 8 characters (for example a credential-named variable
+    set to `1`): they would match everywhere. List in `BACKUP_RESULTS_<TS>.md` the names (never the
+    values) of the keys scanned, and of those skipped with the reason.
+  - **Check each hit before you act on it.** A hit counts only where the value is in a credential
+    position: an assignment to a credential-named key, an `Authorization` header, a token on a
+    command line, or the value standing alone in a credential field. A hit in prose or in an
+    unrelated setting is recorded in `BACKUP_RESULTS_<TS>.md` (file and key name) and not redacted.
+    A value that the scan finds in the repository's own public history is not a secret of this
+    host: record it, and ask the owner before you treat it as one.
   - **Scan the content, not the container.** A byte search finds nothing inside compressed data, so:
     - **packed sources** are scanned after unpacking (above), as plain files;
     - **git bundles** are scanned on the mirror clone they were made from: every blob of every commit
@@ -595,7 +617,7 @@ checked), `/tmp`, unmerged branches. Then the rest.
     backup ends.
   - **In-file occurrences:** replace each with `[REDACTED:<name>]`. Record the file, the count, and
     the sha256 before and after in `REDACTIONS.json`.
-  - **A hit in a git bundle or a saved image** cannot be redacted: changing its bytes breaks the
+  - **A confirmed hit in a git bundle or a saved image** cannot be redacted: changing its bytes breaks the
     bundle or the image digest, and rewriting history is not allowed (Rules). Exclude that bundle or
     image. Record it in `REDACTIONS.json` as `excluded`, with path, size and the secret names, and as
     a `redacted` gap whose `may_exist_at` names the repository or the registry and image digest.

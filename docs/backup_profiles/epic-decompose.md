@@ -7,7 +7,7 @@ Epic decomposition into sub-epics, by a GLM 5.3 agent, scored by checks and a ju
 | Key | Value |
 |---|---|
 | Bench names | `epic-decompose`; experiment `epic-glm53-v5`; settings: none |
-| Code | `unverified`: no adapter in any cap-evolve branch. `may_exist_at`: `/Users/avalappi/Documents/ET/ACE/cap-evolve/.capevolve/project/` and the ACE repo on the owner's machine |
+| Code | `unverified`: no adapter in any cap-evolve branch. `may_exist_at`: `~/Documents/ET/ACE/cap-evolve/.capevolve/project/` and the ACE repo on the owner's machine |
 | Reward | checks plus a judge (record note "judge overflow fixed in this run"); test n = 10. Success: reward = 1 (`unverified`) |
 | Infra rule | as `_core.md` |
 | Telemetry | as `epic-creator` |
@@ -19,7 +19,7 @@ Epic decomposition into sub-epics, by a GLM 5.3 agent, scored by checks and a ju
 | Isolation | as `epic-creator` |
 | Agent evidence | as `epic-creator` |
 | Models as used | as `epic-creator` |
-| External state | the run dir `/Users/avalappi/Documents/ET/ACE/cap-evolve/.capevolve/run_epic-glm53-v5/` on the owner's machine (`may_exist_at`) |
+| External state | the run dir `~/Documents/ET/ACE/cap-evolve/.capevolve/run_epic-glm53-v5/` on the owner's machine (`may_exist_at`) |
 | Sources | `benchmark-history` `runs/202__full-epic-decompose/` (`candidates/`, `work/`, `rollouts/`, `ui/`, `epic-run/`; no `state.json` or `final.json`) and `records/202__full-epic-decompose.json` (author `avalappi`); ledgers: the PriceTag gateway (`may_exist_at`) |
 | Reproduce | as `epic-creator` |
 | Licence | not recorded |

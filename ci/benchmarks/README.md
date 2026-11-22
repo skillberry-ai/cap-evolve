@@ -439,9 +439,10 @@ capture source for the full backup procedure, [`docs/FULL_BACKUP.md`](../../docs
 
 ```
 ~/capevolve-ci-capture/<run_id>__<tier>-<bench>/        (a re-run attempt N>1: <run_id>__<tier>-<bench>.a<N>/)
-  <run_id>__<tier>-<bench>.tar.zst   the output dir and <out_dir>_proj/.capevolve/
+  <run_id>__<tier>-<bench>.tar.zst   the output dir, <out_dir>_proj/.capevolve/ and <out_dir>_proj.sealed/
   members.sha256                     sha256 of every file, taken before packing
   symlinks.txt                       every symlink and its target
+  unreadable.txt                     every path the job could not read (left out, a gap for the backup)
   backup.json                        run, attempt, bench, tier, who triggered it, runner, archive sha256
 ```
 

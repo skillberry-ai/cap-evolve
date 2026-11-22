@@ -11,7 +11,7 @@ the backup location and is never copied into it as is.
 WHAT THIS PINS
 
 1. The capture dir is <root>/<run_id>__<slug>/ with the archive (output dir + the project's
-   .capevolve/), members.sha256 (source hashes, matching the archive's members byte for byte),
+   .capevolve/ + the sealed dir when there is one), members.sha256 (source hashes, matching the archive's members byte for byte),
    symlinks.txt and backup.json (archive sha256 and size, who triggered it, bench, tier); a copy
    of backup.json lands in the output dir.
 2. A capture dir is never overwritten; a re-run attempt gets <run_id>__<slug>.a<N>/.
@@ -20,7 +20,8 @@ WHAT THIS PINS
 5. Too little disk -> skipped with a warning, exit 0. Nothing to archive -> exit 0.
 6. No zstd on the runner -> a .tar.gz, with a warning.
 7. The run folder (run_folder.py) carries backup.json and its README names the capture dir.
-8. The workflow runs it best-effort (continue-on-error), before publishing, with the user name
+8. An unreadable file does not stop the capture: it is listed in unreadable.txt and backup.json.
+9. The workflow runs it best-effort (continue-on-error), before publishing, with the user name
    passed through the environment.
 """
 
@@ -133,6 +134,38 @@ def test_the_user_name_is_recorded_not_used_in_a_path(tmp_path):
     assert [p.name for p in (tmp_path / "capture").iterdir()] == [NAME]
     assert json.loads((tmp_path / CAP / "backup.json").read_text())["triggering_actor"] == "../../etc"
     assert not (tmp_path / "etc").exists()
+
+
+def test_the_sealed_dir_is_kept_too(tmp_path):
+    out = _work(tmp_path)
+    sealed = tmp_path / ".work" / "suite_smoke_tau2_proj.sealed" / "run_suite"
+    (sealed / "rollouts" / "confirm").mkdir(parents=True)
+    (sealed / "splits_full.json").write_text("{}")
+    r = _run(tmp_path, out)
+    assert r.returncode == 0, r.stdout + r.stderr
+    m = _members(next((tmp_path / CAP).glob(f"{NAME}.tar.*")))
+    assert "suite_smoke_tau2_proj.sealed/run_suite/splits_full.json" in m
+    assert "suite_smoke_tau2_proj.sealed/run_suite/splits_full.json" in (tmp_path / CAP / "members.sha256").read_text()
+
+
+@pytest.mark.skipif(hasattr(os, "geteuid") and os.geteuid() == 0, reason="root reads every file")
+def test_an_unreadable_file_is_listed_and_the_rest_kept(tmp_path):
+    out = _work(tmp_path)
+    locked = out / "root_owned.log"
+    locked.write_text("x\n")
+    locked.chmod(0)
+    try:
+        r = _run(tmp_path, out)
+    finally:
+        locked.chmod(0o644)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "not readable by the job" in r.stdout
+    cap = tmp_path / CAP
+    assert (cap / "unreadable.txt").read_text().split() == ["suite_smoke_tau2/root_owned.log"]
+    assert json.loads((cap / "backup.json").read_text())["unreadable"] == ["suite_smoke_tau2/root_owned.log"]
+    m = _members(next(cap.glob(f"{NAME}.tar.*")))
+    assert "suite_smoke_tau2/report.md" in m and "suite_smoke_tau2/root_owned.log" not in m
+    assert "root_owned.log" not in (cap / "members.sha256").read_text()
 
 
 def test_without_sections_json_the_bench_name_is_the_results_repo(tmp_path):

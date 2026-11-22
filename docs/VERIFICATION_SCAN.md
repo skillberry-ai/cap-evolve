@@ -228,8 +228,11 @@ D1, D2, D3 and D5 run in the capture gate. The rest may run later.
 7. **Secrets.** The secret scan finds 0 hits. It scans the content, not the container
    (`docs/FULL_BACKUP.md` §5.5): unpacked archives as plain files, every blob and commit message of
    every git bundle on its mirror clone, and the config and unpacked layers of every saved image.
-   Values that are empty or shorter than 8 characters are skipped, and their names are listed in
-   `BACKUP_RESULTS_<TS>.md`. Every redaction, every excluded secret store, and every bundle or image
+   The values are credentials only (credential-named keys, credential stores, `secrets_extra`),
+   never every value of a settings file; values that are empty or shorter than 8 characters are
+   skipped. The scanned and skipped key names are listed in `BACKUP_RESULTS_<TS>.md`. A hit outside
+   a credential position is recorded there and is not redacted. Endpoint URLs and model ids are
+   never redacted (B2 needs them). Every redaction, every excluded secret store, and every bundle or image
    excluded for a hit is listed in `REDACTIONS.json`, the last two also as `redacted` gaps.
 8. **Licences.** The data is present in full. `NOTICE.md` lists the profile's licence, restrictions
    and protected paths, with a do-not-publish note. A missing licence entry is INFO, never a reason
