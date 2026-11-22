@@ -403,6 +403,43 @@ def test_mid_run_syntax_error_keeps_pooled_and_warns_once(tmp_path, yaml_env, ca
     assert len(unreadable) == 1 and unreadable[0]["spec"] == str(spec) and "line" in unreadable[0]["error"]
 
 
+def test_spec_unreadable_is_written_once_per_run_across_processes(tmp_path, yaml_env, capsys):
+    # agent-optimize runs each step (spend.py, measure.py, ...) as its own process: a
+    # fresh process (empty in-process set) must find the earlier event and stay quiet.
+    from cap_evolve import RunDir, specfile
+    proj = tmp_path / "project"
+    proj.mkdir()
+    spec = proj / "capevolve.yaml"
+    spec.write_text("split_mode: pooled\n", encoding="utf-8")
+    rd = RunDir.create(tmp_path / ".capevolve", ts="procs")
+    rd.log_event("spec_resolved", spec=str(spec))
+    spec.write_text('split_mode: pooled\nrun_name: "oops\n', encoding="utf-8")
+    with rd.events_path.open("a", encoding="utf-8") as fh:
+        fh.write("{not json\n")  # a bad line in the log must not crash the check
+
+    def unreadable():
+        evs = []
+        for ln in rd.events_path.read_text(encoding="utf-8").splitlines():
+            try:
+                evs.append(json.loads(ln))
+            except ValueError:
+                pass
+        return [e for e in evs if e.get("kind") == "spec_unreadable"]
+
+    for _ in range(5):
+        specfile._SPEC_WARNED.clear()  # a new process
+        assert specfile.spec_for_run(rd).get("split_mode") == "pooled"
+    assert len(unreadable()) == 1
+    assert capsys.readouterr().err.count("cannot be read strictly") == 1
+    # a different error on the same spec is a new event
+    spec.write_text("split_mode: pooled\nrun_name: [oops\n", encoding="utf-8")
+    for _ in range(3):
+        specfile._SPEC_WARNED.clear()
+        specfile.spec_for_run(rd)
+    got = unreadable()
+    assert len(got) == 2 and got[0]["error"] != got[1]["error"]
+
+
 
 # --- the built-in strict reader reads valid YAML the same as PyYAML (round 2) ---------
 # Each case: (text, the value PyYAML gives). The built-in reader is checked against that

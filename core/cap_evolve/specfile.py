@@ -826,18 +826,46 @@ def resolve_spec_path(run_dir, project: Path | None = None) -> Path | None:
     return None
 
 
-#: (run dir, spec path) pairs already warned about by ``spec_for_run``, so a long run
-#: that reads its spec many times says it once per process.
-_SPEC_WARNED: set[tuple[str, str]] = set()
+#: (run dir, spec path, error) triples already warned about by ``spec_for_run`` in this
+#: process. The run's events.jsonl is checked too (``_spec_unreadable_logged``): each
+#: agent-optimize step and hook is its own process, and the run must say it once.
+_SPEC_WARNED: set[tuple[str, str, str]] = set()
+
+
+def _spec_unreadable_logged(run_dir, spec: str, error: str) -> bool:
+    """True when the run's events.jsonl already has a ``spec_unreadable`` event for this
+    spec and error. Read tolerantly: a missing file or a bad line is never an error."""
+    events = getattr(run_dir, "events_path", None)
+    if events is None:
+        return False
+    try:
+        with open(events, encoding="utf-8", errors="replace") as fh:
+            for line in fh:
+                if "spec_unreadable" not in line:
+                    continue
+                try:
+                    ev = _json.loads(line)
+                except Exception:  # noqa: BLE001 - a bad line is skipped
+                    continue
+                if (isinstance(ev, dict) and ev.get("kind") == "spec_unreadable"
+                        and ev.get("spec") == spec and ev.get("error") == error):
+                    return True
+    except Exception:  # noqa: BLE001 - no log yet, or unreadable: not logged
+        return False
+    return False
 
 
 def _warn_spec_unreadable(run_dir, path: Path, error: Exception) -> None:
-    """Say once (stderr + a ``spec_unreadable`` event) that the run's spec has a syntax
-    error and is read leniently. The step goes on; it must not go on without a word."""
+    """Say once per run (stderr + a ``spec_unreadable`` event) that the run's spec has a
+    syntax error and is read leniently. The step goes on; it must not go on without a
+    word. A different error on the same spec is said again."""
     root = str(getattr(run_dir, "root", run_dir))
-    if (root, str(path)) in _SPEC_WARNED:
+    key = (root, str(path), str(error))
+    if key in _SPEC_WARNED:
         return
-    _SPEC_WARNED.add((root, str(path)))
+    _SPEC_WARNED.add(key)
+    if _spec_unreadable_logged(run_dir, str(path), str(error)):
+        return
     import sys as _sys
     print(f"cap-evolve: WARNING: the run's spec cannot be read strictly ({error}); this "
           "step reads it with the lenient reader instead, so the values it can read (e.g. "
