@@ -105,5 +105,54 @@ class TestEpisodeWorker(unittest.TestCase):
         self.assertIn("AssertionError", r.error)
 
 
+class TestNativeSims(unittest.TestCase):
+    """Each episode's own ReAct message list lands in <run_dir>/native_sims/<tag>/<split>/, and never
+    in the rollout."""
+
+    def setUp(self):
+        self.run = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.run, ignore_errors=True)
+        (self.run / "splits.json").write_text(json.dumps({"train": ["a", "b"], "val": ["a", "b"], "test": ["c"]}))
+        for d in ("work/cand_0001", "candidates/seed"):
+            (self.run / d).mkdir(parents=True)
+
+    def test_path_is_run_dir_native_sims_tag_split(self):
+        self.assertEqual(adapter_mod._native_dir(self.run / "work" / "cand_0001", ["a", "b"]),
+                         self.run / "native_sims" / "cand_0001" / "val")
+        self.assertEqual(adapter_mod._native_dir(self.run / "candidates" / "seed", ["c"]),
+                         self.run / "native_sims" / "seed" / "test")
+
+    def test_off_and_unknown_layout_write_nothing(self):
+        with patch.dict(os.environ, {"CAPEVOLVE_NATIVE_SIMS": "0"}):
+            self.assertIsNone(adapter_mod._native_dir(self.run / "work" / "cand_0001", ["a"]))
+        self.assertIsNone(adapter_mod._native_dir(self.run / "elsewhere", ["a"]))
+
+    def test_a_second_record_never_replaces_the_first(self):
+        dest = self.run / "native_sims" / "seed" / "val" / "a__t0.json"
+        first = adapter_mod._write_native(dest, {"phase": "baseline"})
+        second = adapter_mod._write_native(dest, {"phase": "final"})
+        self.assertEqual((first, second), (dest, dest.with_name("a__t0__2.json")))
+        self.assertEqual(json.loads(dest.read_text())["phase"], "baseline")
+
+    def test_episode_writes_messages_to_native_sims_not_the_rollout(self):
+        msgs = [{"role": "user", "content": "demo turn"}, {"role": "assistant", "content": "code"}]
+
+        def fake_run(cmd, **kw):
+            Path(cmd[-1]).write_text(json.dumps({
+                "task_id": "a", "termination": "completed", "steps": [{"step": 1}],
+                "native": {"task_id": "a", "num_prompt_messages": 1, "messages": msgs}}))
+            return subprocess.CompletedProcess(cmd, 0, "", "")
+
+        dest = self.run / "native_sims" / "cand_0001" / "val" / "a__t0.json"
+        with patch.object(adapter_mod.subprocess, "run", side_effect=fake_run):
+            r = adapter_mod.Adapter()._episode(Task(id="a", input={}), EX / "seed_capability", 0,
+                                               self.run, self.run, native_path=dest)
+        self.assertNotIn("native", r.metadata)
+        self.assertEqual(r.trace, [{"step": 1}])
+        saved = json.loads(dest.read_text())
+        self.assertEqual(saved["messages"], msgs)
+        self.assertEqual((saved["seed"], saved["termination"]), (0, "completed"))
+
+
 if __name__ == "__main__":
     unittest.main()
