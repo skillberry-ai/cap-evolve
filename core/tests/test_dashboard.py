@@ -587,13 +587,15 @@ def _shipped_bundle_dirs(root):
         for p in root.glob(pat):
             if not p.is_dir() or "node_modules" in p.parts:
                 continue
-            top = p.relative_to(root).parts[0]
+            rel = p.relative_to(root).parts
+            top = rel[0]
             if top in ("site", "vendor"):   # site/ is issue #123; vendor/ = third-party clones
                 continue
-            # Hidden top-level folders (.claude/, .symcc/, .git/...) hold local
-            # worktree copies of the whole repo (review-cycles reviewer checkouts,
-            # symcc task copies) — scanning them re-audits site/ and fails on noise.
-            if top.startswith("."):
+            # Local copies of the whole repo, not shipped bundles: .claude/worktrees/
+            # (review-cycles reviewer checkouts), .symcc/ (symcc task copies), .git/.
+            # Scanning them re-audits site/ and fails on noise. Any other dot folder
+            # (e.g. a bundle under .claude/skills/...) is still checked.
+            if top in (".symcc", ".git") or tuple(rel[:2]) == (".claude", "worktrees"):
                 continue
             out.append(p)
     return sorted(out)
@@ -610,9 +612,14 @@ def test_bundle_discovery_skips_hidden_top_level_worktree_folders(tmp_path):
         d = tmp_path / hidden / "worktrees" / "x" / "dashboard" / "dist"
         d.mkdir(parents=True)
         (d / "b.js").write_text(bad)
+    g = tmp_path / ".git" / "x" / "dist"
+    g.mkdir(parents=True)
     kept = tmp_path / "benchmarks" / "b" / "ui"
     kept.mkdir(parents=True)
-    assert _shipped_bundle_dirs(tmp_path) == [kept]
+    # Only .claude/worktrees is skipped, not all of .claude/: other bundles there ship.
+    other = tmp_path / ".claude" / "skills" / "s" / "ui"
+    other.mkdir(parents=True)
+    assert _shipped_bundle_dirs(tmp_path) == sorted([kept, other])
 
 
 def test_bundle_discovery_still_skips_site_vendor_and_node_modules(tmp_path):
@@ -645,6 +652,11 @@ def test_shipped_spa_bundles_have_no_external_cdn_reference():
     assets cap-evolve ships. Auditing those made this guard fail on whatever a cloned
     dependency happens to have in its own ``ui/`` — a finding about someone else's
     frontend, which says nothing about our offline story.
+
+    Three dot folders are excluded too: ``.claude/worktrees/`` (reviewer checkouts),
+    ``.symcc/`` (symcc task copies) and ``.git/``. They hold local copies of the whole
+    repo, not shipped bundles. Any other dot folder (e.g. ``.claude/skills/...``) is
+    still checked.
     """
     exts = {".css", ".js", ".jsx", ".ts", ".tsx", ".html"}
     # Every shipped/served bundle dir, discovered — not enumerated.

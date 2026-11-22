@@ -217,6 +217,14 @@ def test_doctor_warns_that_reserved_metric_keys_have_no_effect(tmp_path):
     assert not [r for r in _doctor_checks(proj) if r["name"] == "metrics"]
 
     spec = proj / "capevolve.yaml"
+    plain = spec.read_text(encoding="utf-8")
+    # null / ~ (bare or quoted as strings) count as blank: no warning row.
+    for blank in ("null", "~", '"null"', "'~'", '" null "'):
+        spec.write_text(plain.replace('metric_primary: ""', f"metric_primary: {blank}"),
+                        encoding="utf-8")
+        assert not [r for r in _doctor_checks(proj) if r["name"] == "metrics"], blank
+    spec.write_text(plain, encoding="utf-8")
+
     spec.write_text(spec.read_text(encoding="utf-8").replace(
         'metric_primary: ""', "metric_primary: accuracy"), encoding="utf-8")
     rows = [r for r in _doctor_checks(proj) if r["name"] == "metrics"]

@@ -1524,8 +1524,12 @@ def _doctor_checks(project: Path) -> list[dict]:
             f"{', '.join(sorted(CONVERGENCE_ALGORITHMS))}")
 
     # Reserved metric keys: documented once as working settings, but nothing reads them.
+    # "null" / "~" count as blank too: a spec loaded without PyYAML (or hand-quoted)
+    # can carry them as literal strings.
+    def _blank(v):
+        return v in (None, [], {}) or (isinstance(v, str) and v.strip() in ("", "null", "~"))
     reserved = [k for k in ("metric_primary", "metrics_display", "metric_directions")
-                if spec.get(k) not in (None, "", [], {})]
+                if not _blank(spec.get(k))]
     if reserved:
         add("metrics", "warn",
             f"{', '.join(reserved)} {'has' if len(reserved) == 1 else 'have'} no effect yet "
