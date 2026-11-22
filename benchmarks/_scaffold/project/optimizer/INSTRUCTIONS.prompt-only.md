@@ -22,7 +22,7 @@ did in prior runs). So the discipline is "many fixes, each one real and safe" �
 fixes". Do not stop at the first cluster; work through them all.
 
 ## WHAT YOU MAY EDIT — and the two ways iterations get wasted here
-Edit ONLY the capability files listed in `{{CAP_BRIEF}}` below (the prompt / skill text in
+Edit ONLY the capability files listed in the capability brief below (the prompt / skill text in
 this working directory). Everything else you can see is READ-ONLY CONTEXT.
 
 **You may NOT edit the adapter, the harness, the scorer, the benchmark, or the
@@ -84,7 +84,7 @@ anything `LEDGER.md` / `JOURNAL.md` show was already tried and rejected.
   skill describes for it.
 - `./guidance/diagnose/SKILL.md` — the failure-clustering method. Use it.
 - `./trajectories/` — the FULL traces of the current best candidate (the step you build
-  on). The `{{FAILURES}}` block below summarizes them with argument-level feedback — read
+  on). The failure index ("ALWAYS-failing" / "FLAKY" sections) below summarizes them with argument-level feedback — read
   the actual traces for the clusters you'll fix, don't rely on the summary alone.
 - `./LEDGER.md` — FACTS (read-only): every prior iteration's outcome + the exact tasks it
   broke/fixed. Your SAFE test starts here — never re-introduce a change that broke a task.
@@ -211,7 +211,7 @@ to understand the failure CLASS, then write the general fix.
 ## Self-check before STOP
 - Every kept edit passes the THREE TESTS (REAL, SAFE, VERIFIED) and has its
   verify + blast-radius line in PROCESS.md. Drop any that doesn't.
-- You edited ONLY the capability files in `{{CAP_BRIEF}}` — no adapter, harness, scorer,
+- You edited ONLY the capability files named in the capability brief — no adapter, harness, scorer,
   benchmark or environment file, and no shell command that mutates the environment.
 - You read each selected capability's `./guidance/<cap>/SKILL.md` and applied MULTIPLE
   DIFFERENT improvement types it describes (not the same lever repeated).

@@ -13,7 +13,9 @@ nothing measured here is evidence until the merged artifact clears a full-val ga
     python taskeval.py --project <dir> <candidate_dir> 7,17 --n 10 \
         --canary 0,3,12 --canary-n 3 --traces /tmp/tr.json [--split val] [--conc 40]
 
-Prints per-task pass RATE (k/n), the distinct failure feedback strings, and with --traces every
+Prints per-task pass RATE (k/n), the scorer feedback of every failing task (each trial under its
+own reward label, the lowest trial always shown, all failing tasks within one feedback budget;
+the same code as the core loop, ``cap_evolve.feedback_digest``), and with --traces every
 agent tool call per failing trial, so the next edit is aimed at an observed decision rather than
 a guess. For an UNSTABLE task, diff a failing trial against a passing one: the divergence point
 is the ambiguity.
@@ -138,7 +140,7 @@ def main() -> int:
 
     rates: dict[str, list[float]] = defaultdict(list)
     role: dict[str, str] = {}
-    fb: dict[str, list[str]] = defaultdict(list)
+    fb: dict[str, list] = defaultdict(list)      # tid -> [(trial, reward or None, feedback)]
     traces: list[dict] = []
     infra: dict[str, int] = defaultdict(int)
     comps: dict[str, dict[str, list[float]]] = defaultdict(
@@ -163,14 +165,14 @@ def main() -> int:
                 for k, roll in enumerate(rolls or []):
                     if roll is None or getattr(roll, "error", None):
                         infra[tid] += 1          # missing data, NOT a zero
+                        fb[tid].append((k, None, str(getattr(roll, "error", "") or "")))
                         continue
                     s = adapter.score(by_id[tid], roll)
                     rates[tid].append(float(s.reward))
                     for comp, v in component_rates(s, roll).items():
                         comps[tid][comp].append(v)
+                    fb[tid].append((k, float(s.reward), s.feedback or ""))
                     if s.reward < 1.0:
-                        if s.feedback:
-                            fb[tid].append(s.feedback)
                         if args.traces:
                             traces.append({
                                 "task": tid, "trial": k, "reward": s.reward,
@@ -186,6 +188,26 @@ def main() -> int:
                                 ],
                             })
 
+    # Every failing task's feedback through the core's ONE implementation: each trial under its
+    # [trial k reward r] label (errored trials marked), the lowest trial always represented, all
+    # of them within one feedback budget (CAPEVOLVE_FEEDBACK_BUDGET_BYTES), worst task first. A
+    # condensed entry's full text is linked under the run dir when --run-dir is given.
+    from cap_evolve import feedback_digest
+    rd_fb = None
+    if args.run_dir:
+        from cap_evolve import RunDir
+        rd_fb = RunDir.open(Path(args.run_dir))
+    failing = sorted(
+        ({"task_id": tid, "reward": (sum(rates[tid]) / len(rates[tid])) if rates[tid] else 0.0,
+          "feedback": feedback_digest.join_trial_feedback(fb[tid])}
+         for tid in rates if any(r is not None and r < 1.0 for _, r, _ in fb[tid])),
+        key=lambda pt: (pt["reward"], pt["task_id"]))
+    fitted = feedback_digest.fit([pt for pt in failing if pt["feedback"]], feedback_digest.budget_bytes(),
+                                 run_dir=rd_fb)
+    if rd_fb is not None:
+        # This JSON is read from any cwd: the full-text links name the files where they are.
+        fitted.entries = {tid: feedback_digest.absolute_links(e, rd_fb) for tid, e in fitted.entries.items()}
+
     per_task = {
         tid: {
             "role": role[tid],
@@ -198,7 +220,9 @@ def main() -> int:
             # actionable number and thirty useless ones. Empty when the scorer has no components.
             "component_rates": {c: round(sum(v) / len(v), 3)
                                 for c, v in sorted(comps[tid].items()) if v},
-            "distinct_feedback": sorted({f for f in fb[tid]})[:4],
+            # "" for a task that passed every trial, or whose feedback was over the budget
+            # (see feedback_not_listed).
+            "feedback": fitted.entries.get(tid, ""),
         }
         for tid, v in sorted(rates.items(), key=lambda kv: (role[kv[0]], kv[0]))
     }
@@ -212,6 +236,8 @@ def main() -> int:
         "reminder": "target_mean is a TRAINING number; only the full-val gate is evidence",
         "per_task": per_task,
     }
+    if fitted.rest:
+        result["feedback_not_listed"] = fitted.rest_line
     if args.traces:
         Path(args.traces).write_text(json.dumps(traces, indent=2))
         result["traces_written"] = f"{args.traces} ({len(traces)} failing trials)"

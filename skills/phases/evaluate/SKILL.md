@@ -85,6 +85,35 @@ python scripts/run.py --run-dir .capevolve/run_XXXX --project .capevolve/project
   (`harness.py:49-57`); scoring stays serial so the numbers match a serial run.
   Keep it at 1 if `run_target` is not thread-safe (shared scratch dir, one live
   container, module-global client) — `harness.py:225-227`.
+- Per-task `feedback` carries **every** trial's scorer feedback, untruncated: each
+  distinct text once, under a `[trial k reward r]` label (`[trial k errored]` for an
+  infra error), unless every trial gave the same text and none errored. Trials with no
+  text are listed under `(no feedback)`, so their rewards are still shown.
+- All feedback text in ONE optimizer prompt shares ONE budget,
+  `CAPEVOLVE_FEEDBACK_BUDGET_BYTES` (default 48000 bytes, clamped to 4000–52000). That covers the failure index,
+  GEPA's reflection and SkillOpt's slow/meta-update block, and keeps the prompt under
+  every optimizer row's inline limit:
+  - When everything fits, every entry is shown in full and nothing is summarized.
+  - Otherwise only the longest entries are condensed, all to the same size, chosen so the
+    block fills the budget. Short entries keep their full text, and what they leave goes
+    to the long ones.
+  - The budget also sets how many tasks are listed (worst first): each needs at least
+    300 bytes. The rest are named.
+  - A condensed entry is summarized by the run's OWN optimizer: the same agent CLI and
+    model the algorithm proposes edits with. Each call gets at most one budget's worth of
+    feedback, and calls run at the run's `workers` concurrency. A call is not started when
+    the run's `max_optimizer_usd`/`max_usd` has no room left. Its spend counts as
+    optimizer spend. A summary is cached and reused until a prompt has more than twice the
+    room it was made for. After 3 prompt builds in a row whose calls all failed, the run
+    stops calling the summarizer. `CAPEVOLVE_FEEDBACK_SUMMARY=off` disables it.
+  - With no optimizer, or a call that gives no usable result, a deterministic cut is used
+    instead. It keeps the start and the end of each text. A `feedback_summary` event
+    records which was used.
+  - Either way, a condensed entry starts with a short line of the trials' rewards, the
+    lowest marked, and represents the lowest-scoring trial. A later good trial never
+    hides a failure.
+  - The full text is in `./feedback_full/<task>-<hash>.md`, linked from the entry. The
+    full rollouts stay in `./trajectories/`.
 - A subset/triage eval (`ids=`) is **never** gateable: its `n_tasks` is the subset,
   so `coverage` reads 1.0 (`harness.py:229-237`).
 
