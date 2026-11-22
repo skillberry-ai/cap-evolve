@@ -20,7 +20,8 @@ WHAT THIS PINS
 5. Too little disk -> skipped with a warning, exit 0. Nothing to archive -> exit 0.
 6. No zstd on the runner -> a .tar.gz, with a warning.
 7. The run folder (run_folder.py) carries backup.json and its README names the capture dir.
-8. An unreadable file does not stop the capture: it is listed in unreadable.txt and backup.json.
+8. An unreadable file or directory does not stop the capture: it is listed in unreadable.txt and
+   backup.json, and the rest is kept.
 9. The workflow runs it best-effort (continue-on-error), before publishing, with the user name
    passed through the environment.
 """
@@ -166,6 +167,28 @@ def test_an_unreadable_file_is_listed_and_the_rest_kept(tmp_path):
     m = _members(next(cap.glob(f"{NAME}.tar.*")))
     assert "suite_smoke_tau2/report.md" in m and "suite_smoke_tau2/root_owned.log" not in m
     assert "root_owned.log" not in (cap / "members.sha256").read_text()
+
+
+@pytest.mark.skipif(hasattr(os, "geteuid") and os.geteuid() == 0, reason="root reads every dir")
+@pytest.mark.parametrize("mode", [0o000, 0o600], ids=["no-read", "read-no-enter"])
+def test_an_unreadable_dir_is_listed_and_the_rest_kept(tmp_path, mode):
+    out = _work(tmp_path)
+    locked = out / "container_out"
+    locked.mkdir()
+    (locked / "f.txt").write_text("y\n")
+    locked.chmod(mode)
+    try:
+        r = _run(tmp_path, out)
+    finally:
+        locked.chmod(0o755)
+    assert r.returncode == 0, r.stdout + r.stderr
+    cap = tmp_path / CAP
+    assert cap.is_dir(), r.stdout + r.stderr
+    assert (cap / "unreadable.txt").read_text().split() == ["suite_smoke_tau2/container_out"]
+    assert json.loads((cap / "backup.json").read_text())["unreadable"] == ["suite_smoke_tau2/container_out"]
+    assert "suite_smoke_tau2/report.md" in _members(next(cap.glob(f"{NAME}.tar.*")))
+    hashed = (cap / "members.sha256").read_text()
+    assert "suite_smoke_tau2/report.md" in hashed and "container_out" not in hashed
 
 
 def test_without_sections_json_the_bench_name_is_the_results_repo(tmp_path):

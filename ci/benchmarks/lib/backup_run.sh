@@ -114,15 +114,24 @@ fail() { rm -rf "$tmp"; echo "::warning::keeping the raw run data of $name faile
 # in unreadable.txt and backup.json, and FULL_BACKUP records it as an `unreadable` gap.
 sha256_cmd() { if command -v sha256sum >/dev/null 2>&1; then sha256sum "$@"; else shasum -a 256 "$@"; fi; }
 export -f sha256_cmd
-find --version 2>/dev/null | grep -q GNU || echo "::warning::find on runner ${RUNNER_NAME:-?} is not GNU find; symlinks.txt and unreadable.txt of $name may be incomplete"
+# -readable, -executable and -printf are GNU find primaries (bfs has them too); without them the
+# capture may not be kept at all, so say so up front.
+find . -maxdepth 0 -readable -executable -printf '' >/dev/null 2>&1 \
+  || echo "::warning::find on runner ${RUNNER_NAME:-?} lacks -readable/-executable/-printf (not GNU find); the raw run data of $name may not be kept"
+# A directory the job cannot list or enter is pruned, never opened: find would exit 1 on it and,
+# with pipefail, drop the whole capture. Pruned dirs and unreadable files go to unreadable.txt.
+blocked=( \( -type d \( ! -readable -o ! -executable \) \) )
 : > "$tmp/members.sha256"; : > "$tmp/symlinks.txt"; : > "$tmp/unreadable.txt"
 for i in "${!rels[@]}"; do
-  ( cd "${bases[$i]}" && find "${rels[$i]}" -type f -readable -print0 | LC_ALL=C sort -z | xargs -0 -r bash -c 'sha256_cmd "$@"' _ ) \
+  ( cd "${bases[$i]}" && { find "${rels[$i]}" "${blocked[@]}" -prune -o -type f -readable -print0 2>/dev/null || true; } \
+      | LC_ALL=C sort -z | xargs -0 -r bash -c 'sha256_cmd "$@"' _ ) \
     >> "$tmp/members.sha256" || fail "hashing ${rels[$i]}"
-  ( cd "${bases[$i]}" && find "${rels[$i]}" \( -type f -o -type d \) ! -readable -print ) >> "$tmp/unreadable.txt" 2>/dev/null || true
-  ( cd "${bases[$i]}" && find "${rels[$i]}" -type l -printf '%p -> %l\n' ) >> "$tmp/symlinks.txt" 2>/dev/null || true
+  ( cd "${bases[$i]}" && find "${rels[$i]}" "${blocked[@]}" -print -prune -o -type f ! -readable -print ) >> "$tmp/unreadable.txt" 2>/dev/null || true
+  ( cd "${bases[$i]}" && find "${rels[$i]}" "${blocked[@]}" -prune -o -type l -printf '%p -> %l\n' ) >> "$tmp/symlinks.txt" 2>/dev/null || true
 done
 [ -s "$tmp/unreadable.txt" ] && echo "::warning::$(wc -l < "$tmp/unreadable.txt" | tr -d ' ') paths of $name are not readable by the job; kept the rest, listed them in unreadable.txt"
+# GNU tar skips what it cannot read (already listed in unreadable.txt) instead of failing; another
+# tar has no such option, so there an unreadable path still makes the archive step fail.
 tar_opts=(); tar --version 2>/dev/null | grep -q GNU && tar_opts=(--ignore-failed-read)
 
 archive="$tmp/$name.$ext"
