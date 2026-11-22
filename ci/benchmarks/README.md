@@ -429,27 +429,39 @@ github.com still works, so publishing no longer goes through the artifact servic
 To publish a run its bench job never published — one you resumed by hand, or drove directly on
 the runner — follow [PUBLISHING.md](PUBLISHING.md); it runs these same scripts in the same order.
 
-### Raw run data: archived on the runner (interim, for Box)
+### Raw run data: kept on the runner for the full backup
 
 What gets published is a summary. The raw run data, meaning the run dir with every candidate, trace and
 rollout, plus the job's output dir, would otherwise be lost when the next job's checkout cleans the
-workspace. So each bench job archives it first (step `Back up the raw run data on the runner`,
-[`lib/backup_run.sh`](lib/backup_run.sh)), **on the runner, outside the workspace**, in the same layout
-as the Box folder `skillberry-runs-backup`:
+workspace. So each bench job keeps it first (step `Keep the raw run data on the runner for the full
+backup`, [`lib/backup_run.sh`](lib/backup_run.sh)), **on the runner, outside the workspace**, as a
+capture source for the full backup procedure, [`docs/FULL_BACKUP.md`](../../docs/FULL_BACKUP.md):
 
 ```
-~/skillberry-runs-backup/user/<who triggered the run>/<repo>/<run_id>__<tier>-<bench>.tar.zst
+~/capevolve-ci-capture/<run_id>__<tier>-<bench>/        (a re-run attempt N>1: <run_id>__<tier>-<bench>.a<N>/)
+  <run_id>__<tier>-<bench>.tar.zst   the output dir and <out_dir>_proj/.capevolve/
+  members.sha256                     sha256 of every file, taken before packing
+  symlinks.txt                       every symlink and its target
+  backup.json                        run, attempt, bench, tier, who triggered it, runner, archive sha256
 ```
 
-`<repo>` is the benchmark's skillberry-runs repo (from the dashboard's `sections.json`). The run's
-`ci_runs/` folder gets a `backup.json` (archive path, size, sha256, runner) and its README names the
-archive, so the archive can be found from the run's page.
+A capture dir is written once and never overwritten. The run's `ci_runs/` folder gets a copy of
+`backup.json`, and its README says where the capture dir is, so it can be found from the run's page.
+The step is best-effort: it never fails a run, falls back to `.tar.gz` if `zstd` is missing, and skips
+(with a warning) when the runner's disk would drop below 20 GB free.
 
-**Interim:** moving the archives to Box is manual for now, by someone with access to the runner (a plain
-copy of `~/skillberry-runs-backup/` into the Box folder, then deleting what was copied), until CI can
-upload to Box itself (rclone or an approved Box app, both unavailable since IBM's network change). The
-step is best-effort: it never fails a run, falls back to `.tar.gz` if `zstd` is missing, and skips (with
-a warning) when the runner's disk would drop below 20 GB free.
+**Moving it to the backup location** is done only by following `docs/FULL_BACKUP.md`, which lists this
+tree as a source (§5.3(b)). The operator unpacks each archive into staging, checks it against
+`backup.json` and `members.sha256`, scans it for secrets, organizes it into a run folder and uploads that.
+**Never copy `~/capevolve-ci-capture/` into the backup location as is**: it is not in the location's
+layout, it was never scanned for secrets, and it has no `MANIFEST.json`. The backup never deletes a
+source. Once a full backup's `BACKUP_RESULTS_<TS>.md` records a run as uploaded and checked, the
+runner's admin may remove that capture dir to free disk.
+
+Runs from 2026-11-18 until this change were archived as
+`~/skillberry-runs-backup/user/<who triggered the run>/<repo>/<run_id>__<tier>-<bench>.tar.zst`, with
+`backup.json` (archive sha256, no per-file hashes) only in the run's `ci_runs/` folder. They are
+captured the same way (FULL_BACKUP §5.3(b)).
 
 ### Live monitoring while a run is in progress
 

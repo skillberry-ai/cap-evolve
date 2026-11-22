@@ -1,7 +1,7 @@
 # Verification scan of an evaluation run: procedure
 
 **Procedure v3.0.** A generic checklist, run on each assembled run folder of `docs/FULL_BACKUP.md`
-(v3.0, §9; formerly `docs/BACKUP_BOX.md` v2.0). It checks four things:
+(v3.0, §9). It checks four things:
 - the run's result can be trusted;
 - the folder is complete, and its gaps are reported;
 - the run can be reproduced;
@@ -195,6 +195,12 @@ D1, D2, D3 and D5 run in the capture gate. The rest may run later.
 1. **Source copies.** Every source file of the run has a copy in the folder whose sha256 equals the
    `source_sha256` taken on the source at capture. A file without such a copy is listed in
    `REDACTIONS.json` or `GAPS.json`.
+   - **Unpacked sources** (`MOVES.json` `op: unpack`): the archive's sha256 equals its `backup.json`,
+     and every member matches its line in `members.sha256` (`docs/FULL_BACKUP.md` §5.5). An archive
+     without `members.sha256` is noted, with the README sentence that says so.
+   - **Split files** (`MANIFEST.json` entries with `parts`): the parts are present, and concatenated
+     in order they give the entry's `sha256`. No file in the folder is larger than the remote's
+     maximum file size recorded in `BACKUP_RESULTS_<TS>.md`.
 2. **Required items.** These must be present for every round, attempt and unit: the ledger, journal
    and insights files, every round's workdir, the run state and events, the candidates, and every
    item of the requirement list (`docs/FULL_BACKUP.md` §6.1). Anything missing is a gap, with its class
@@ -219,8 +225,12 @@ D1, D2, D3 and D5 run in the capture gate. The rest may run later.
 6. **cap-evolve tools.** The cap-evolve tools load the copy. `cap-evolve tail --from-start` exits 0
    and prints at least one line; exit 3 (timed out with no event shown) is a failure. The dashboard renders in memory. **Not applicable**
    to partial exports, other methods and test windows.
-7. **Secrets.** The secret scan finds 0 hits. Every redaction and every excluded secret store is
-   listed in `REDACTIONS.json`.
+7. **Secrets.** The secret scan finds 0 hits. It scans the content, not the container
+   (`docs/FULL_BACKUP.md` §5.5): unpacked archives as plain files, every blob and commit message of
+   every git bundle on its mirror clone, and the config and unpacked layers of every saved image.
+   Values that are empty or shorter than 8 characters are skipped, and their names are listed in
+   `BACKUP_RESULTS_<TS>.md`. Every redaction, every excluded secret store, and every bundle or image
+   excluded for a hit is listed in `REDACTIONS.json`, the last two also as `redacted` gaps.
 8. **Licences.** The data is present in full. `NOTICE.md` lists the profile's licence, restrictions
    and protected paths, with a do-not-publish note. A missing licence entry is INFO, never a reason
    to leave data out.

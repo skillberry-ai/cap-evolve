@@ -297,6 +297,7 @@ from zero: [tau2](docs/REPRODUCE_tau2.md) · [SkillsBench](docs/REPRODUCE_skills
 | [Agent orchestration](docs/AGENT_ORCHESTRATION.md) | You want the agent to drive the loop itself (`orchestration_mode: agent`, `agent-optimize`) |
 | [Honest evaluation](docs/HONEST_EVAL.md) | You need details on splits, gates, and sealing |
 | [Results](docs/RESULTS.md) | You want the full experiments and artifacts |
+| [Full backup of evaluation runs](docs/FULL_BACKUP.md) | You are archiving runs (local, cluster or CI) to the team's backup location; with its [verification scan](docs/VERIFICATION_SCAN.md) |
 | [Comparison](docs/COMPARISON.md) | You want positioning vs other tools and external results |
 | [Extending cap-evolve](docs/EXTENDING.md) | You are adding a capability, optimizer, or algorithm |
 | [Troubleshooting](docs/TROUBLESHOOTING.md) | Installation or a run failed |

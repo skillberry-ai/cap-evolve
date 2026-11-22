@@ -1,6 +1,6 @@
 # Evaluation-run full backup: procedure
 
-**Procedure FULL_BACKUP v3.0** (formerly `BACKUP_BOX.md` v2.0). It applies to every benchmark in
+**Procedure FULL_BACKUP v3.0.** It applies to every benchmark in
 `benchmarks/`, every method (cap-evolve and others) and every evaluation window. Each evaluation run
 found on any source is captured in full, organized into one common folder layout, and checked for
 gaps and validity. It is then copied with `rclone` to **the backup location**: one folder on any
@@ -29,7 +29,9 @@ checklist is `docs/VERIFICATION_SCAN.md` (v3.0).
 - **Never delete or overwrite anything at the backup location.** Use `rclone copy` or `copyto`
   with `--immutable`, never `sync`, `move` or `purge`. Every file there is written once (§2.6). Never rename there, because on most remotes a rename is a copy and a delete.
   This holds even when the operator's role on the remote allows deletes. Never change or delete a
-  source on the host.
+  source on the host. A source tree is never copied into the backup location as is, even when it is
+  laid out like it (for example the CI runners' capture dirs, §5.3(b)): every byte reaches the
+  location only through staging, the secret scan and §10.
 - **Never rewrite git history.** If a merge is needed, it is done on a new branch (§5.8).
 - **Existing folders at the backup location are never written to** (§2.7).
 - **Two stages.** The capture stage (§5, §6) must be done at backup time. It ends only when the
@@ -70,16 +72,17 @@ short of each objective in a way that later processing cannot repair:
 | Objective | Component or operation | Section |
 |---|---|---|
 | Comprehensive | Discovery beyond the run dir: sealed data, CLI transcripts, harness and service state, benchmark clones, agents' side copies | §5.3(a), (d), (e), (j) |
-| Comprehensive | Sources on other hosts: cluster workareas, CI runners, gateway ledgers, posts from the API | §5.3(b), (f), (h), (i) |
+| Comprehensive | Sources on other hosts: cluster workareas, CI runners (capture dirs that keep each leg's whole work area past the workspace clean-up), gateway ledgers, posts from the API | §5.3(b), (f), (h), (i) |
 | Comprehensive | Capture order (most volatile first), git sources pinned by commit and snapshotted first, discovery repeated at the end | §5.2, §5.4, §5.9 |
 | Comprehensive | Capture gate: every required item present or recorded as a gap, with fetch attempts | §5.10 |
 | Authentic | Backup location validated before capture: remote, access, permissions, hash support | §5.1 |
-| Authentic | Source hashes taken on the host, compared with the staged copy and with the backup location | §5.5, §10, §11 |
+| Authentic | Source hashes taken on the host, compared with the staged copy and with the backup location; for packed CI captures, per-file hashes taken on the runner before packing; split files keep their whole-file hash | §3.3, §5.5, §10, §11 |
+| Authentic | Write-once uploads (`--immutable`, never `--no-check-dest`), secrets scanned in the content of archives, bundles and images | §2.6, §5.5, §11 |
 | Authentic | Gap report per folder (requirement list, gap classes, coverage per source and union) and roll-up per backup | §6, §12 |
 | Reproducible | Live-state snapshots: images, versions, inherited settings, services, freezes, host | §5.6, §8 |
 | Reproducible | Code, upstream clones and benchmark data at the commits that ran; reproducibility level | §5.3(d), §8 |
 | Usable for analysis | Owner answers recorded with the run | §5.7 |
-| Usable for analysis | Common layout, profiles, schemas, metrics, verification scan (may run later) | §3, §4, §7, §9 |
+| Usable for analysis | Common layout, profiles, schemas, metrics, verification scan (may run later); every unpack and split recorded, so a reader restores the original files | §3, §4, §7, §9, Appendix A |
 
 ---
 
@@ -146,21 +149,21 @@ Find the person with the first rule that applies:
 | Where the data comes from | Person | How to find them |
 |---|---|---|
 | A human-authored git commit (history branches, `skillberry-runs/*`, `results/*` branches, run dirs committed under `benchmarks/`, `docs/experiments/`) | the **author** of the first commit that added the data | `git log --follow --diff-filter=A --format='%an <%ae>' -- <path>`. Skip pure moves and history migrations (for example `aeee7126d`, the `benchmarks/` move). Never use the committer field: it is often `GitHub <noreply@github.com>` (web merges), or whoever migrated a repo. |
-| A `skillberry-bot` commit (`benchmark-history` runs and records) | the person who started the CI run | `gh api repos/skillberry-ai/cap-evolve/actions/runs/<run_id> --jq .triggering_actor.login`. If that is itself a bot (for example `skillberry-bot` on a PR-triggered run), use the author of the triggering PR. For a local record with no run id, use the record's `source` field (for example `bcarmeli`). |
+| A CI benchmark run: a `skillberry-bot` commit (`ci_runs/`, `ci_ui/` in the `skillberry-runs/*` repos, `records/` in `skillberry-runs/dashboard`, the retired `benchmark-history` runs and records), or a runner capture dir (§5.3(b)) | the person who started the CI run | `gh api repos/skillberry-ai/cap-evolve/actions/runs/<run_id> --jq .triggering_actor.login`, or `triggering_actor` in the capture's `backup.json`. If that is itself a bot (for example `skillberry-bot` on a PR-triggered run), use the author of the triggering PR. For a local record with no run id, use the record's `source` field (for example `bcarmeli`). |
 | Not from git (local `.capevolve*`, cluster workareas, archives) | the person who launched the run | owner of the run dir or workarea, LSF job user, `run_meta.txt`. If these disagree, ask the owner and record the answer (§5.7). |
 
 Map the person to a `<user-id>` with the table in Appendix C. A person not in the table gets a **new
 user folder, created without asking or notifying anyone**. The id is derived as follows:
-1. the local part of a real (non-`noreply`) e-mail, lowercased: `avalappi@redhat.com` → `avalappi`;
+1. the local part of a real (non-`noreply`) e-mail, lowercased: `jdoe@example.com` → `jdoe`;
 2. otherwise the GitHub login, lowercased, with the `<digits>+` prefix of a `users.noreply` address
-   stripped: `136134023+yyualvin@users.noreply.github.com` → `yyualvin`;
+   stripped: `12345+JDoe@users.noreply.github.com` → `jdoe`;
 3. aliases of one person are merged by GitHub login before applying rule 1.
 
 Create it with `rclone mkdir $LOC/user/<user-id>` and check it with `rclone lsd $LOC/user`. On a
 remote without real directories (§5.1 check 4), skip the `lsd` check: the folder exists once the
 first file is uploaded into it, and the `rclone check` of §11 confirms it. A person
 who already has a folder at the location, in any layout, keeps the **same** id. Record the new id and
-its derivation in `BACKUP_RESULTS_<TS>.md`.
+its derivation (without the e-mail address) in `BACKUP_RESULTS_<TS>.md`.
 
 A run goes to exactly one user folder: the person the table above gives. Everyone else whose data
 is in it is listed in `runmeta.contributors`.
@@ -317,15 +320,30 @@ Every folder of every kind has this tree:
 | `~/.claude/projects/<slug>/`, other CLIs' session stores, `host/transcript.jsonl` | `optimizer/sessions/<cli>/` |
 | the session that orchestrated the evaluation | `reproduce/orchestration/` |
 | `git` results at a commit (`skillberry-runs/*`, `*-history`, `results/*`, `records/*`) | `posts/results_repo/<repo-or-branch>@<sha>/` |
-| dashboard UI exports (`benchmark-history/runs/*/ui`, `run/ui/`) | `method/capevolve/ui_export/` |
+| dashboard UI exports (`benchmark-history/runs/*/ui`, `run/ui/`, `ci_ui/<run>/`) | `method/capevolve/ui_export/` |
+| a CI runner capture archive (§5.3(b)): its `suite_<tier>_<bench>_proj/.capevolve/` and `suite_<tier>_<bench>/` members | `method/capevolve/project/`, `method/capevolve/run_<name>/` and `method/capevolve/ci_out/` (unpacked, §5.5) |
+| the capture's `backup.json`, `members.sha256`, `symlinks.txt` | `logs/ci_capture/` |
 
 Each move is one line in `MOVES.json`: the canonical path, the source path, and the source host.
+A file that came out of an archive or was split for size (§3.3) says so in `op` (Appendix A.7).
 
 ### 3.3 No packing or compression
 
 Upload plain, uncompressed trees, whatever the file count. Many remotes accept only a few files per
 second (Box: about 4.5 files/s per account), so large trees take long. Plan for that, and raise
 rclone parallelism (§11) instead of using tars.
+- **Packed sources are unpacked.** A source that is itself an archive (a CI runner capture's
+  `.tar.zst` or `.tar.gz`, a colleague's tarball) is unpacked into staging and verified (§5.5). The
+  archive itself is not uploaded; its name, size and sha256 are kept in `MOVES.json`.
+- **Formats that are kept whole** are git bundles (§5.2, §8.1) and saved container images (§5.6):
+  they are files in their own right, and unpacking them would lose what makes them restorable.
+- **Files larger than the remote's maximum file size** (§5.1 check 9) are the one exception to "no
+  packing". Split such a file with `split -b <size> -d -a 3 <file> <file>.part-`, where `<size>` is
+  below the limit. Upload the parts in place of the file. Its `MANIFEST.json` entry keeps the whole
+  file's `sha256` and `source_sha256`, and lists the parts with their bytes and sha256 (Appendix
+  A.2). `MOVES.json` records the split (`op: split`). A reader restores the file with
+  `cat <file>.part-* > <file>` and checks the whole-file sha256. Do not use other methods (for
+  example rclone's `chunker` overlay), so that every reader restores the same way.
 
 ### 3.4 Shared windows
 
@@ -433,8 +451,14 @@ value of `EXPERIMENT_BACKUP_LOCATION`; `<remote>` is its part before the first `
      overwrite it.
    - Record checks 8–10 in `BACKUP_RESULTS_<TS>.md`.
 9. **Space and limits.** If `rclone about <remote>:` is supported, record the free space and compare it
-   with the staging size. Record any known rate limit of the remote (Box handles about 4.5 files/s per
-   account) to plan §11.
+   with the staging size.
+   - **Maximum file size.** Record the remote's limit on the size of one file, from the provider's
+     documentation for the account or plan, or from the owner (Box: by plan, a few GB on some plans).
+     Compare it with the largest file in staging (`find <staging> -type f -printf '%s %p\n' | sort -n |
+     tail -1`). Every larger file is split as §3.3 says, before §10. If the limit is unknown, ask the
+     owner; until then, split every file over 4 GiB.
+   - **Rate.** Record any known rate limit of the remote (Box handles about 4.5 files/s per account)
+     and the request rate the owner or provider allows, to set `--tpslimit` in §11.
 10. **Delete permission is not needed and is never tested.** A role that allows deletes does not
     change the rules: nothing at the location is deleted, overwritten or renamed.
 
@@ -462,9 +486,23 @@ and search at least:
 - **(a) cap-evolve run dirs:** every directory holding `events.jsonl` and `state.json` under any
   `.capevolve*/` (including `.capevolve-blackbox/`), plus the sibling `project/`, plus
   `<project>.sealed/<run>/` and `$CAPEVOLVE_SEALED_DIR`.
-- **(b) CI state:** `ci/benchmarks/.work/suite_*` run dirs, kept-run slots (for example
-  `~/.cache/capevolve-latest/*-slots/`), and the workflow run's artifacts. A CI artifact is a
-  partial export, because files in it are cut to 256 KiB.
+- **(b) CI state,** on every self-hosted runner:
+  - **runner capture dirs** `~/capevolve-ci-capture/<run_id>__<tier>-<bench>[.a<N>]/`
+    (`ci/benchmarks/lib/backup_run.sh`): the whole work area of one bench leg, packed, with
+    `members.sha256` (per-file sha256 taken on the runner before packing), `symlinks.txt` and
+    `backup.json`. For recent CI runs this is the only full copy of the run dir. Captured as §5.5
+    ("Packed sources") says;
+  - **earlier runner archives** `~/skillberry-runs-backup/user/<GitHub login>/<repo>/<run_id>__<tier>-<bench>.tar.zst`
+    (2026-11-18 until the capture dirs replaced them). This tree is a source in the CI's own layout,
+    not part of the backup location. Its `backup.json` (archive sha256 and size) is only in the run's
+    `ci_runs/` folder;
+  - `ci/benchmarks/.work/suite_*` work dirs and kept-run slots (for example
+    `~/.cache/capevolve-latest/*-slots/`), until the next job of that tier and bench cleans them;
+  - the optimizer CLI's transcripts on the runner, in `~/.claude/projects/<slug of the work dir>/`
+    (one slug per tier and bench, shared by every run of it: pick the sessions by time and by the
+    run's work paths);
+  - the workflow run's artifacts, where they exist (uploads from self-hosted runners time out since
+    2026-11-18). A CI artifact is a partial export, because files in it are cut to 256 KiB.
 - **(c) Committed partial exports:** `run_full/`, `run_agentopt*/`, `run/` and similar dirs under
   `benchmarks/`, and `docs/experiments/*`.
 - **(d) Each profile's `external_state`:** harness job dirs, native sims, external run dirs, service
@@ -477,10 +515,12 @@ and search at least:
   use their own session stores.
 - **(f) Other hosts and archives** in each profile's `sources.hosts` and `sources.archives`: cluster
   workareas, LSF logs, colleagues' machines, off-repo archives.
-- **(g) Git result sources** (§5.2), as partial exports and as published claims: `benchmark-history`
-  `records/`, `runs/` and `live/` (live-monitor snapshots), the `*-history` branches, `results/*`
-  and `records/*` branches, and the `skillberry-runs/*` repos. Retired benchmarks are found mainly
-  here.
+- **(g) Git result sources** (§5.2), as partial exports and as published claims: the `skillberry-runs/*`
+  repos (per run `ci_runs/<run_id>__<tier>-<bench>/`, with the CI run record as `runmeta.json` and the
+  capture's `backup.json`, and `ci_ui/<run_id>__<tier>-<bench>/`), `skillberry-runs/dashboard`
+  `records/`, the per-job branches of `skillberry-runs/live` (deleted when the job ends: volatile),
+  the retired `benchmark-history` `records/`, `runs/` and `live/`, the `*-history` branches, and the
+  `results/*` and `records/*` branches. Retired benchmarks are found mainly here.
 - **(h) Gateway and proxy usage ledgers** for the run's time window (`sources.ledgers`), which are
   sometimes the only token record.
 - **(i) Posts:** every comment on the tracking issue(s) and PRs, and the workflow runs, fetched from
@@ -513,21 +553,59 @@ about 32 at a time. A serial listing of a large folder can take hours.
   points to the existing folder, and its gap report compares both copies (§6.4).
 
 **Capture order.** Most volatile first, by the profile's `volatile: true` entries: harness job dirs
-deleted on a timer, CI work dirs and slots, `/tmp`, unmerged branches. Then the rest.
+deleted on a timer, CI work dirs and slots, `skillberry-runs/live` branches, runner capture dirs
+(removed by the runner's admin to free disk, only after a backup recorded them as uploaded and
+checked), `/tmp`, unmerged branches. Then the rest.
 
 ### 5.5 Copy, hash and redact
 
 - **Hash on the source.** Hash every source file (sha256) **on the source, before copying**. The
   result is `source_sha256` in `MANIFEST.json`.
 - **Copy into staging.** Copy into a local staging tree laid out as in §3. Preserve timestamps.
+- **Packed sources** (§3.3), for example a CI runner capture dir (§5.3(b)):
+  1. Hash the archive on its host, and compare it with the `sha256` and `bytes` in its `backup.json`
+     (for an earlier runner archive, the `backup.json` in the run's `ci_runs/` folder). A mismatch is
+     a finding: record both values, capture the archive as found, and report it in `GAPS.json`
+     (`unreadable` if it does not unpack).
+  2. Unpack it into a scratch dir outside staging, then move each member to its canonical place
+     (§3.2), recording each in `MOVES.json` with `op: unpack` and `source_path`
+     `<archive path>!<member path>`.
+  3. **Source hashes** are the member hashes in `members.sha256`, taken on the runner before packing.
+     Every unpacked member must match its line, and every line must have a member. An archive without
+     `members.sha256` (the earlier runner archives) gets member hashes computed at unpack; say in
+     `README.md` that their authenticity rests on the archive's sha256.
+  4. Add the symlinks of `symlinks.txt` to `SYMLINKS.txt`, and keep the capture's own files in
+     `logs/ci_capture/` (§3.2).
 - **Secrets.** Before anything is uploaded, scan every file for every value in the host's secret
   files (`.env` files, the CLIs' settings and credential stores, `secrets/` dirs), for
   credential-named environment variables, and for the profile's `secrets_extra` locations.
   Command-line tokens captured in logs count too.
+  - **Which values.** Skip empty values and values shorter than 8 characters (for example a
+    credential-named variable set to `1`): they would match everywhere. List the names (never the
+    values) of the skipped ones in `BACKUP_RESULTS_<TS>.md`.
+  - **Scan the content, not the container.** A byte search finds nothing inside compressed data, so:
+    - **packed sources** are scanned after unpacking (above), as plain files;
+    - **git bundles** are scanned on the mirror clone they were made from: every blob of every commit
+      (`git rev-list --all | xargs git grep -F -l -f <values-file>`, which also searches binary blobs)
+      and every commit message (`git log --all --format=%B | grep -F -f <values-file>`);
+    - **saved images** are scanned in the image config (`docker image inspect`, including `Env` and
+      the history) and in every layer, unpacked.
+
+    `<values-file>` is a file outside staging, readable only by the operator, and deleted when the
+    backup ends.
   - **In-file occurrences:** replace each with `[REDACTED:<name>]`. Record the file, the count, and
     the sha256 before and after in `REDACTIONS.json`.
+  - **A hit in a git bundle or a saved image** cannot be redacted: changing its bytes breaks the
+    bundle or the image digest, and rewriting history is not allowed (Rules). Exclude that bundle or
+    image. Record it in `REDACTIONS.json` as `excluded`, with path, size and the secret names, and as
+    a `redacted` gap whose `may_exist_at` names the repository or the registry and image digest.
+    Keep the image digest in `reproduce/images/`, and the commit SHAs of the bundle's refs in
+    `reproduce/code/code_commits.json`, so the run can still be rebuilt from the original. The gap's
+    `impact` states the effect on the reproducibility level (§8.2).
   - **Whole secret stores** (for example `.env`, `settings.json`, `*.pem`): never copy them. List
-    each one in `REDACTIONS.json` as `excluded`, with path and size.
+    each one in `REDACTIONS.json` as `excluded`, with path and size. This covers such a file in a
+    run's work area as well; a secret store committed in git history is covered by the bundle rule
+    above.
 
 ### 5.6 Live-state snapshots
 
@@ -794,7 +872,10 @@ The scan writes `SCAN_RESULTS_<TS>.md` and `SCAN_RESULTS_<TS>.json` into the fol
   other methods and test windows, write `NOT_APPLICABLE` with the reason.
 - **Completeness:** every source copy's sha256 equals its `source_sha256`. Every other source file is
   listed in `REDACTIONS.json` or `GAPS.json`.
-- **Secret scan:** 0 occurrences of any secret value (§5.5) in any file.
+- **Secret scan:** 0 occurrences of any scanned secret value (§5.5) in any file, and in the content
+  of every git bundle and saved image that is uploaded.
+- **File size:** no file in staging is larger than the remote's maximum file size (§5.1 check 9);
+  every split file's parts concatenate to its whole-file sha256.
 - **Conformance:** every file of Appendix A follows its schema. No USD of 0 whose source is not
   measured. Shared-window copies are identical (§3.4).
 - **Write `MANIFEST.json` last.**
@@ -805,19 +886,22 @@ For each run, after repeating checks 4 and 5 of §5.1:
 
 ```
 rclone copy <staging>/<run> "$LOC/user/<user-id>/<bench-id>/<run>" --immutable \
-       --transfers 16 --checkers 32 --retries 10 --low-level-retries 30 \
+       --transfers 4 --checkers 8 --tpslimit <T> --retries 10 --low-level-retries 30 \
        --log-file <log> --log-level INFO
 rclone check <staging>/<run> "$LOC/user/<user-id>/<bench-id>/<run>" --one-way
 ```
 
-- Upload folder trees as they are, uncompressed.
-- **Parallelism.** Copy several run folders at once (for example 8–12 `rclone copy` processes, each
-  with `--transfers 8`), largest file count first. The remote's rate limit (§5.1 check 9) is the
-  ceiling, so raise parallelism only while the throughput still grows.
-- **Only on the first copy attempt of a run folder,** and only when `rclone lsf` shows, just before,
-  that the folder does not exist, add `--no-traverse --no-check-dest`. They skip listing the
-  destination, which saves one API call per file. `--no-check-dest` turns off the `--immutable`
-  check, so never use it on a retry or on a folder that holds files.
+- Upload folder trees as they are, uncompressed (split files as §3.3 says).
+- **Parallelism.** Run up to 4 such `rclone copy` processes at once, one run folder each, largest
+  file count first: at most 16 uploads at a time against one account. `<T>` is the request rate
+  recorded in §5.1 check 9 divided by the number of processes (for Box with no recorded rate, start
+  at `--tpslimit 2`). Add a process only while the total throughput still grows and the logs show no
+  `429`; on `429`s, lower `<T>` or the number of processes.
+- **Never use `--no-check-dest`.** It turns off the `--immutable` check, and with `--retries` above 1
+  rclone transfers every file again on a retry, which on Box makes a new version of every file (an
+  overwrite) and on remotes that allow duplicate names (Google Drive) makes duplicates.
+  `--no-traverse` without it is allowed when the destination folder is new: each file is still
+  checked before upload.
 - `rclone check` must report 0 differences and 0 missing files for every run. It is a content check
   when the remote shares a hash type with the local disk (§5.1 check 8); otherwise add `--download`.
 - A check that fails only because listing failed (`429`, an expired token) is not a content difference.
@@ -862,6 +946,12 @@ It then records:
 All files are UTF-8 JSON (or JSONL) with these keys. Extra keys are allowed only inside the objects
 marked `extra`. Rewards are fractions in [0, 1]. Times are ISO-8601 UTC.
 
+The schema tags (`runmeta v2`, `manifest v2`, `gaps v2`, `metrics_summary v2`) are versioned apart from
+the procedure: a tag changes only when its schema changes incompatibly, so v2 files are current under
+procedure v3.0. Files with these names that a source holds (for example the CI run record
+`ci_runs/<run>/runmeta.json`, or a CI capture's `backup.json`, `schema: "ci-capture v1"`) are source
+copies in their own shapes, kept where §3.2 puts them; they are never read as these schemas.
+
 ### A.1 `runmeta.json`
 
 The fields of the CI run record (`.github/workflows/benchmarks.yml`, `ci/benchmarks/lib/record.py`)
@@ -895,8 +985,12 @@ extra: {}
 
 ```
 {schema: "manifest v2", files: [{path, bytes, sha256, kind: source|redacted|derived,
-  source_host, source_path, source_sha256, derived_from: [path]}]}
+  source_host, source_path, source_sha256, derived_from: [path],
+  parts: [{path, bytes, sha256}]}]}      (parts: only for a file split for size, §3.3)
 ```
+
+A split file's entry describes the whole file (`path`, `bytes`, `sha256`); the files at the location
+are its `parts`.
 
 ### A.3 `data/metrics_full.jsonl`
 
@@ -972,7 +1066,8 @@ One object per arm.
 
 ```
 REDACTIONS: [{path, kind: in-file|excluded, secret_names: [], count, sha256_source, sha256_backup, bytes}]
-MOVES:      [{path, source_host, source_path}]
+MOVES:      [{path, source_host, source_path, op: move|unpack|split, archive: {path, bytes, sha256}}]
+            (op defaults to move; archive: for unpack, the archive the member came from)
 ```
 
 ### A.8 `SCAN_RESULTS_<TS>.json`
@@ -1104,15 +1199,15 @@ Copy the profile used for a run into the run folder as `PROFILE.md` (a source co
 The same ids are used for every folder at the backup location, in any layout (§2.2). The table maps
 the people known so far.
 
-| Person (e-mails, GitHub logins) | `<user-id>` |
-|---|---|
-| Boaz Carmeli — `boazc@il.ibm.com`, `bcarmeli`, `boazc` | `boazc` |
-| Eran Raichstein — `eranra@il.ibm.com` | `eranra` |
-| Erez Hadad — `erezh@il.ibm.com` | `erezh` |
-| Osher Elhadad — `osher.elhadad@live.biu.ac.il`, `OsherElhadad` | `osher.elhadad` |
+E-mail addresses are not listed: the ids are enough, and the commits name the addresses.
 
-Expected new ids (§2.2):
-- `AIMikav` / Anamika (`avalappi@redhat.com`, `44390109+AIMikav@users.noreply.github.com`) → `avalappi`.
-  This is the owner of the `epic-creator`, `epic-decompose`, `rh-swebench` and `swebench-verified` runs.
-- `yyualvin` → `yyualvin`. Record each new id in `BACKUP_RESULTS_<TS>.md`. This table is updated by a change
-proposal (Rules).
+| Person (names and GitHub logins they appear under) | `<user-id>` |
+|---|---|
+| Boaz Carmeli — `bcarmeli`, `boazc` | `boazc` |
+| Eran Raichstein — `eranra` | `eranra` |
+| Erez Hadad — `erezh16`, `erezh` | `erezh` |
+| Osher Elhadad — `OsherElhadad` | `osher.elhadad` |
+| Anamika — `AIMikav` (owner of the `epic-creator`, `epic-decompose`, `rh-swebench` and `swebench-verified` runs) | `avalappi` |
+| `yyualvin` | `yyualvin` |
+
+Record each new id in `BACKUP_RESULTS_<TS>.md`. This table is updated by a change proposal (Rules).
