@@ -20,22 +20,19 @@ def _coerce(val: str):
     if s in ("", "[]"):
         return [] if s == "[]" else ""
     if s.startswith("[") and s.endswith("]"):
-        inner = s[1:-1].strip()
-        return [_coerce(x) for x in _split_list(inner)] if inner else []
+        return [_coerce(x) for x in _flow_items(s[1:-1])]
     if s.startswith("{") and s.endswith("}"):
-        inner = s[1:-1].strip()
-        if not inner:
-            return {}
         d = {}
-        for pair in _split_list(inner):
-            k, _, v = pair.partition(":")
-            d[k.strip()] = _coerce(v.strip())
+        for item in _flow_items(s[1:-1]):
+            k, v = _flow_pair(item)
+            # `{a}` and `{a: }` give a null value, as in PyYAML; `{"a": 1}` has key a
+            d[_unquote_key(k)] = None if not v else _coerce(v)
         return d
     if len(s) >= 2 and (s[0], s[-1]) == ("'", "'"):
         return s[1:-1].replace("''", "'")  # '' is an escaped ' inside '...'
     if len(s) >= 2 and (s[0], s[-1]) == ('"', '"'):
         try:  # YAML's "..." escapes (\" \n \\) are JSON's for everything we write
-            out = _json.loads(s)
+            out = _json.loads(s, strict=False)  # strict=False: a tab inside is fine
             if isinstance(out, str):
                 return out
         except ValueError:
@@ -87,27 +84,104 @@ def _unquote_key(k: str) -> str:
     return k
 
 
-def _split_list(inner: str) -> list[str]:
-    out, buf, depth, q = [], "", 0, ""
-    for ch in inner:
-        if q:  # inside a quoted item: commas and brackets are text
-            buf += ch
-            if ch == q:
-                q = ""
+def _flow_items(inner: str) -> list[str]:
+    """The items of a one-line ``[...]``/``{...}`` (the text inside the brackets), split at
+    its top-level commas. Quotes count the way ``_scan_flow`` counts them: only where a
+    value starts (after ``[ { , :``), so ``"a, b"`` is one item and ``don't`` is text.
+    A trailing comma (``[a, b,]``) adds no item, as in PyYAML."""
+    out, buf, depth, last, j = [], "", 0, ",", 0
+    while j < len(inner):
+        c = inner[j]
+        if c in "\"'" and last in "[{,:":
+            end = _scan_quoted(inner, j)
+            end = len(inner) if end == -1 else end
+            buf += inner[j:end]
+            j, last = end, c
             continue
-        if ch in "\"'" and not buf.strip():
-            q = ch
-        elif ch in "[{":
+        if c in "[{":
             depth += 1
-        elif ch in "]}":
+        elif c in "]}":
             depth -= 1
-        if ch == "," and depth == 0:
-            out.append(buf); buf = ""
+        if c == "," and depth == 0:
+            out.append(buf.strip())
+            buf, last = "", ","
         else:
-            buf += ch
+            buf += c
+            if not c.isspace():
+                last = c
+        j += 1
     if buf.strip():
-        out.append(buf)
+        out.append(buf.strip())
     return out
+
+
+def _flow_pair(item: str) -> tuple[str, str | None]:
+    """``(key text, value text or None)`` for one item of a ``{...}``: ``a: 1`` ->
+    ``("a", "1")``, ``"a":1`` -> ``('"a"', "1")``, a bare ``a`` -> ``("a", None)``."""
+    if item[:1] in ("\"", "'"):
+        end = _scan_quoted(item, 0)
+        if end > 0:
+            rest = item[end:].lstrip()
+            if not rest:
+                return item[:end], None
+            if rest[0] == ":":
+                return item[:end], rest[1:].strip()
+    m = re.search(r":(\s|$)", item)
+    if m is None:
+        return item, None
+    return item[:m.start()].strip(), item[m.end():].strip()
+
+
+def _flow_problem(s: str) -> str | None:
+    """Why the built-in reader cannot read the one-line flow ``s`` (``[...]``/``{...}``)
+    the way PyYAML does, or ``None`` when it can (strict mode refuses the rest)."""
+    is_map = s[0] == "{"
+    for item in _flow_items(s[1:-1]):
+        if not item:
+            return "an empty item between two commas"
+        if is_map:
+            k, v = _flow_pair(item)
+            if k[:1] in "[{?" or k[:1] in "\"'" and _scan_quoted(k, 0) != len(k):
+                return f"the key {k[:30]!r}"
+            parts = [k] + ([v] if v else [])
+        else:
+            if (item[:1] in "\"'" and item[_scan_quoted(item, 0):].strip()
+                    or item[:1] not in "\"'[{" and re.search(r":(\s|$)", item)):
+                return f"a 'key: value' inside a [...] list ({item[:30]!r})"
+            parts = [item]
+        for part in parts:
+            why = _scalar_problem(part)
+            if why:
+                return why
+    return None
+
+
+def _scalar_problem(p: str) -> str | None:
+    """Why one value inside a flow ``[...]``/``{...}`` cannot be read right, or ``None``."""
+    c = p[0]
+    if c in "[{":
+        return _flow_problem(p) if _scan_flow(p, 0) == len(p) else f"the value {p[:30]!r}"
+    if c in "\"'":
+        end = _scan_quoted(p, 0)
+        if end != len(p):
+            return f"text after a closing quote ({p[:30]!r})"
+        if c == '"' and not _json_string_ok(p):
+            return f"an escape in {p[:30]!r}"
+        return None
+    if p in ("-", "?", ":") or p[:2] in ("- ", "? ", ": ") or c in "!&*|>%@`,]}#" or c == ":":
+        return f"the value {p[:30]!r}"
+    if re.search(r":(\s|$)", p):
+        return f"': ' inside the value {p[:30]!r}"
+    return None
+
+
+def _json_string_ok(s: str) -> bool:
+    """``True`` when the double-quoted ``s`` decodes as JSON (the escapes ``_coerce`` reads:
+    ``\\" \\\\ \\/ \\b \\f \\n \\r \\t \\uXXXX``)."""
+    try:
+        return isinstance(_json.loads(s, strict=False), str)
+    except ValueError:
+        return False
 
 
 def _strip_comment(line: str) -> str:
@@ -352,8 +426,24 @@ def _strict_value(val: str, n: int, lines: list[str], source: str | None, eof: i
             raise SpecError(f"unexpected text {tail[:30]!r} after the closing "
                             f"{'quote' if c in chr(34) + chr(39) else 'bracket'}",
                             source=source, line=n)
+        if c == '"' and not _json_string_ok(v[:end]):
+            # YAML-only escapes (\x41 \e \0 ...) would be kept raw, and a bad one
+            # ("C:\Users") is an error in PyYAML: refuse both
+            raise SpecError("this double-quoted value has an escape the built-in reader "
+                            "cannot read (e.g. \\x41, \\e, \\0) or an invalid one (a path "
+                            "like \"C:\\Users\" needs single quotes or '\\\\'); "
+                            f"{_NEEDS_PYYAML}", source=source, line=n)
+        if c in "[{":
+            why = _flow_problem(v[:end])
+            if why:
+                raise SpecError(f"cannot read this {what} ({why}); if it is valid YAML, "
+                                f"{_NEEDS_PYYAML}", source=source, line=n)
         return
-    if c in "@`":
+    if v in ("-", "?", ":") or v[:2] in ("- ", "? ", ": "):
+        raise SpecError(f"a value cannot start with {v[:2].strip()!r} on this line (put list "
+                        "items on their own lines under the key; a list inside a list item "
+                        f"('- - a') or a '?' key needs PyYAML)", source=source, line=n)
+    if c in "@`%,]}" or (c in "|>" and not _BLOCK_SCALAR.match(_plain_part(v))):
         raise SpecError(f"found character {c!r} that cannot start any token",
                         source=source, line=n)
     if c in "!&*":
@@ -398,22 +488,32 @@ def _read_yaml_minimal(text: str, strict: bool = False, source: str | None = Non
     a tab in the indentation; a quote or ``[``/``{`` that is never closed; text after a
     closing quote or bracket; a top level that is a list or a plain string; a line with no
     ``key: value``; ``: `` inside an unquoted value; a line indented under a key that
-    already has a value; a value that starts with ``@`` or a backquote. It also refuses
+    already has a value; a line whose indentation matches no open block (a bad dedent, or
+    an indented first line); a ``---`` after the first key; a value that starts with
+    ``@``, a backquote, ``%``, ``,``, ``]``, ``}`` or ``- ``. It also refuses
     valid YAML that this reader cannot read right (a quoted value or list over several
     lines, ``|``/``>`` block text, a flow ``{...}``/``[...]`` where a ``key: value`` line
-    is expected, e.g. a one-line JSON spec), and says so: reading it wrong without a word
+    is expected, e.g. a one-line JSON spec, a ``key: value`` inside a flow ``[...]``, a
+    list inside a list item (``- - a``), a double-quoted value with a YAML-only escape like
+    ``\\x41``), and says so: reading it wrong without a word
     is the bug strict mode exists to stop. Any other error inside this reader is a
     ``SpecError`` with the line in strict mode; lenient mode keeps what it read.
 
     What it reads the way PyYAML does (both modes): a leading BOM is dropped; quoted keys
-    are unquoted; ``key:`` with no indented child is ``None``; a bare ``-`` takes the
-    mapping on the lines below it; list items may sit flush with their key; YAML 1.1
-    booleans (``yes/no/on/off``) and numbers (``.5``, ``+5``, ``1_000``, ``0x1F``).
+    are unquoted (in flow ``{...}`` too); ``key:`` with no indented child is ``None``; a
+    bare ``-`` takes the mapping on the lines below it; list items may sit flush with their
+    key; YAML 1.1 booleans (``yes/no/on/off``) and numbers (``.5``, ``+5``, ``1_000``,
+    ``0x1F``).
+
+    What it does NOT do like PyYAML: plain keys are not typed (``on:`` stays the string
+    ``'on'``, PyYAML gives ``True``; ``1:`` stays ``'1'``), and dates (``2024-01-31``) stay
+    strings. No current spec key depends on either.
     """
     data: dict = {}
-    # stack entries: (indent, container, kind) — kind is "map" (container is a dict,
-    # grown by "key: val" lines) or "seq" (container is a list, grown by "- " lines).
-    stack = [(-1, data, "map")]
+    # stack entries: (indent, container, kind, col) — kind is "map" (container is a dict,
+    # grown by "key: val" lines) or "seq" (container is a list, grown by "- " lines); col
+    # is the column of the block's first key or dash: every line of the block starts there.
+    stack = [(-1, data, "map", 0)]
     # A `key:` line with a blank value doesn't yet know whether its child block is a
     # nested mapping or a sequence — that is only decided by the NEXT line, so the
     # placeholder None written for it is held here (as (indent, parent, key)) and
@@ -469,19 +569,37 @@ def _minimal_line(n, raw, lines, eof, strict, source, stack, data, pending, scal
         lead = raw[:len(raw) - len(raw.lstrip())]
         if "\t" in lead:
             fail("found a tab in the indentation; YAML needs spaces", n)
-        if body in ("---", "...") or body.startswith("%"):
+        marker = _plain_part(body)
+        if marker == "---" or body.startswith("%"):
+            # a document start (or a directive) is fine before the first key only
+            if not first:
+                fail("found a second document ('---' or '%' after the first key); a spec "
+                     "is a single document", n)
             return keep
+        if marker == "...":
+            if any(x.strip() and not x.strip().startswith("#") for x in lines[n:]):
+                fail("found text after the document end '...'; a spec is a single "
+                     "document", n)
+            return keep
+        if marker.startswith("--- "):
+            fail(f"a value on the '---' line is not supported here; {_NEEDS_PYYAML}", n)
         # Check the line, then read it with its comment cut the YAML way (a quote
         # only opens a value at its start, so `don't # x` is `don't`).
         if _is_dash(body):
-            rest = body[1:].strip()
+            after = body[1:]
+            rest = after.strip()
+            # keep the spaces after the dash: `-   name: a` puts `name` at column 4,
+            # and the item's next keys line up under it
+            gap = after[:len(after) - len(after.lstrip())] or " "
+            if rest in ("-", "?") or rest[:2] in ("- ", "? "):
+                _strict_value(rest, n, lines, source, eof)  # refuses `- - a`, `- -`
             kv = None if rest[:1] in ("{", "[", "\"", "'") else _key_split(rest)
             if kv is not None:
                 _strict_value(kv[1], n, lines, source, eof)
-                clean = f"- {kv[0].strip()}: {_clean_value(kv[1]) if kv[1].strip() else ''}"
+                clean = f"-{gap}{kv[0].strip()}: {_clean_value(kv[1]) if kv[1].strip() else ''}"
             else:
                 _strict_value(rest, n, lines, source, eof)
-                clean = f"- {_clean_value(rest)}" if rest else "-"
+                clean = f"-{gap}{_clean_value(rest)}" if rest else "-"
         else:
             if body[0] in "{[":
                 # e.g. a one-line JSON spec: valid YAML, but this reader reads block style
@@ -520,14 +638,14 @@ def _minimal_line(n, raw, lines, eof, strict, source, stack, data, pending, scal
             is_seq = _is_dash(content)
             container = [] if is_seq else {}
             parent[key] = container
-            stack.append((pend_indent, container, "seq" if is_seq else "map"))
+            stack.append((pend_indent, container, "seq" if is_seq else "map", indent))
         elif indent == pend_indent and _is_dash(content) and isinstance(parent, dict):
             # `caps:\n- a\n- b`: list items flush with their key (valid YAML, common).
             # The seq sits half a column left of its dashes, so the dashes do not pop it
             # but the next `key:` line at that indent does (see the loop below).
             container = []
             parent[key] = container
-            stack.append((pend_indent - 0.5, container, "seq"))
+            stack.append((pend_indent - 0.5, container, "seq", pend_indent))
         else:
             parent[key] = None  # `key:` with no indented child is null, as in PyYAML
 
@@ -535,8 +653,15 @@ def _minimal_line(n, raw, lines, eof, strict, source, stack, data, pending, scal
                      or (stack[-1][0] % 1 and not _is_dash(content)
                          and indent <= stack[-1][0] + 0.5)):
         stack.pop()
-    _, container, kind = stack[-1] if stack else (-1, data, "map")
+    _, container, kind, col = stack[-1] if stack else (-1, data, "map", 0)
     scalar_col = None
+    if strict and indent != col:
+        # PyYAML refuses a line whose indent matches no open block; reading it into the
+        # deeper block would move e.g. a top-level `max_usd` into `helpers:`
+        if stack[-1][0] == -1 and indent and not data:
+            fail("the first line is indented; start the spec at column 0", n)
+        fail(f"this line's indentation (column {indent}) does not match any open block "
+             f"(expected column {col})", n)
 
     if kind == "seq" and _is_dash(content):
         rest = content[1:].strip()
@@ -551,8 +676,8 @@ def _minimal_line(n, raw, lines, eof, strict, source, stack, data, pending, scal
             container.append(item)
             # Siblings of `k` (more "key: val" lines of the SAME item) are
             # indented past the dash itself — same depth `k` started at.
-            stack.append((indent, item, "map"))
             key_col = indent + len(content) - len(rest)
+            stack.append((indent, item, "map", key_col))
             if v == "":
                 item[k] = None
                 # a child of `k` must be indented past `k` itself, not only past the

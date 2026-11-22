@@ -260,6 +260,19 @@ _STRICT_CASES = {
     "wrong-closer": ("splits: [a, b}\n", "line 1"),
     "text-after-quote": ('run_name: "a" b\n', "line 1"),
     "indented-under-a-value": ("max_usd: 5\n  stall: 2\n", "line 2"),
+    # round 4 (T-34): bad dedents must not move a key into the wrong block
+    "bad-dedent-map": ("helpers:\n    enabled: true\n  max_usd: 5\n", "line 3"),
+    "bad-dedent-list": ("a:\n  - x\n - y\n", "line 3"),
+    "bad-dedent-in-item": ("a:\n  - b: 1\n   c: 2\n", "line 3"),
+    "indented-first-line": ("  a: 1\nb: 2\n", "line"),
+    "second-document": ("max_usd: 5\n---\nmax_usd: 50\n", "line 2"),
+    "bad-escape": ('k: "C:\\Users\\x"\n', "line 1"),
+    "dash-after-key": ("k: - 5\n", "line 1"),
+    "bare-dash-after-key": ("k: -\n", "line 1"),
+    "percent-value": ("k: %x\n", "line 1"),
+    "closer-value": ("k: ]x\n", "line 1"),
+    "colon-in-flow-value": ("k: {a: b: c}\n", "line 1"),
+    "empty-flow-item": ("k: [a, , b]\n", "line 1"),
 }
 
 
@@ -296,7 +309,11 @@ def test_strict_read_without_pyyaml_uses_the_built_in_reader(monkeypatch):
 
 
 @pytest.mark.parametrize("text", ["notes: |\n  hi\n", "splits: [a,\n  b]\n", '{"max_usd": 5}\n',
-                                  "[1, 2]\n"])
+                                  "[1, 2]\n",
+                                  # round 4 (T-34): valid YAML the built-in reader would misread
+                                  "k: [a: 1]\n", 'k: ["a": 1]\n', "split_ids:\n- - t1\n  - t2\n",
+                                  "l:\n  - -\n", 'k: "\\x41"\n', 'k: "\\e"\n', 'k: "\\0"\n',
+                                  'k: {a: "\\e"}\n'])
 def test_strict_built_in_reader_refuses_valid_yaml_it_cannot_read(monkeypatch, text):
     # valid YAML, but the built-in reader would misread it: refuse with a clear message
     monkeypatch.setitem(sys.modules, "yaml", None)
@@ -412,6 +429,21 @@ _SAME_AS_PYYAML = {
                          "  direction: maximize\nmax_usd: 5\n",
                          {"capabilities": ["system-prompt", "tools"],
                           "objectives": [{"name": "reward", "direction": "maximize"}], "max_usd": 5}),
+    # round 4 (T-34): flow mappings, spaces after a dash, document markers
+    "flow-quoted-keys": ('helpers: {"enabled": true}\nk: {\'a\': 1, "b":2}\n',
+                         {"helpers": {"enabled": True}, "k": {"a": 1, "b": 2}}),
+    "flow-quoted-comma": ('objectives:\n  - {name: reward, description: "accuracy, higher is better"}\n'
+                          "l: [a, 'b, c', don't]\n",
+                          {"objectives": [{"name": "reward", "description": "accuracy, higher is better"}],
+                           "l": ["a", "b, c", "don't"]}),
+    "flow-bare-keys": ("k: {a}\nj: {a: }\nm: {a, b: 1}\n",
+                       {"k": {"a": None}, "j": {"a": None}, "m": {"a": None, "b": 1}}),
+    "flow-nested": ("k: {a: [1, 2], b: {c: d}}\nl: [a,]\n",
+                    {"k": {"a": [1, 2], "b": {"c": "d"}}, "l": ["a"]}),
+    "spaces-after-dash": ("objectives:\n-   name: reward\n    direction: maximize\n",
+                          {"objectives": [{"name": "reward", "direction": "maximize"}]}),
+    "document-markers": ("# c\n---\nmax_usd: 5\n...\n", {"max_usd": 5}),
+    "json-escapes": ('k: "a\\nb \\u00e9"\n', {"k": "a\nb \u00e9"}),
 }
 
 
