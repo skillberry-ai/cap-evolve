@@ -74,6 +74,16 @@ def _find_skills_dir() -> Path | None:
     return None
 
 
+def _export_skills_dir(skills_dir: Path) -> None:
+    """Tell the scripts we start where the skills are, but only for a real install (no source
+    ``skills/`` next to this package). In a source checkout they find their own tree, and a
+    flat tree from install.sh would hide the source layout from them."""
+    # Same test the harness uses for its own fallback (harness._skill_dir): parents[2]/skills.
+    if (Path(__file__).resolve().parents[2] / "skills").is_dir():
+        return
+    os.environ.setdefault("CAPEVOLVE_SKILLS_DIR", str(skills_dir))
+
+
 def _cmd_version(argv):
     print(json.dumps({"cap-evolve": __version__}))
     return 0

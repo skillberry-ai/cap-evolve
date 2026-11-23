@@ -63,3 +63,54 @@ def test_flat_install_layout_is_found(tmp_path, monkeypatch):
     finally:
         for m in [m for m in sys.modules if m == "cap_evolve" or m.startswith("cap_evolve.")]:
             sys.modules.pop(m, None)
+
+
+def test_cli_exports_skills_dir_only_when_installed(tmp_path, monkeypatch):
+    from cap_evolve import cli
+    flat = tmp_path / "flat"
+    flat.mkdir()
+    # This test runs from a source checkout (skills/ next to the package): leave it unset.
+    monkeypatch.delenv("CAPEVOLVE_SKILLS_DIR", raising=False)
+    cli._export_skills_dir(flat)
+    assert "CAPEVOLVE_SKILLS_DIR" not in __import__("os").environ
+    # A copy of the package with no skills/ above it counts as installed: export.
+    site = tmp_path / "a" / "b" / "site"
+    shutil.copytree(REPO / "core" / "cap_evolve", site / "cap_evolve",
+                    ignore=shutil.ignore_patterns("__pycache__"))
+    monkeypatch.syspath_prepend(str(site))
+    for m in [m for m in sys.modules if m == "cap_evolve" or m.startswith("cap_evolve.")]:
+        monkeypatch.delitem(sys.modules, m)
+    cli2 = importlib.import_module("cap_evolve.cli")
+    assert Path(cli2.__file__).resolve().is_relative_to(site.resolve())
+    try:
+        cli2._export_skills_dir(flat)
+        assert __import__("os").environ["CAPEVOLVE_SKILLS_DIR"] == str(flat)
+    finally:
+        __import__("os").environ.pop("CAPEVOLVE_SKILLS_DIR", None)
+
+
+def test_venv_inside_project_with_skills_folder(tmp_path, monkeypatch):
+    """Documented install: venv inside the cloned repo (which has skills/). The CLI must
+    still export the flat tree, and the harness must find the skill through it."""
+    proj = tmp_path / "proj"
+    (proj / "skills").mkdir(parents=True)
+    site = proj / ".venv" / "lib" / "python3.12" / "site-packages"
+    shutil.copytree(REPO / "core" / "cap_evolve", site / "cap_evolve",
+                    ignore=shutil.ignore_patterns("__pycache__"))
+    flat = tmp_path / "flat"
+    (flat / "system-prompt").mkdir(parents=True)
+    monkeypatch.delenv("CAPEVOLVE_SKILLS_DIR", raising=False)
+    monkeypatch.syspath_prepend(str(site))
+    for m in [m for m in sys.modules if m == "cap_evolve" or m.startswith("cap_evolve.")]:
+        monkeypatch.delitem(sys.modules, m)
+    try:
+        cli2 = importlib.import_module("cap_evolve.cli")
+        h2 = importlib.import_module("cap_evolve.harness")
+        assert Path(cli2.__file__).resolve().is_relative_to(site.resolve())
+        cli2._export_skills_dir(flat)
+        assert __import__("os").environ["CAPEVOLVE_SKILLS_DIR"] == str(flat)
+        assert h2._skill_dir("capabilities", "system-prompt").is_dir()
+    finally:
+        __import__("os").environ.pop("CAPEVOLVE_SKILLS_DIR", None)
+        for m in [m for m in sys.modules if m == "cap_evolve" or m.startswith("cap_evolve.")]:
+            sys.modules.pop(m, None)
