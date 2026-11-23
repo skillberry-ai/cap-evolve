@@ -18,7 +18,9 @@ class _Run:
 
 
 def test_flat_install_layout_is_found(tmp_path, monkeypatch):
-    site = tmp_path / "site"
+    # Deep enough that the package's source-checkout fallback (parents[2]/"skills") is NOT
+    # the folder CAPEVOLVE_SKILLS_DIR points to, so the env var is really what is tested.
+    site = tmp_path / "a" / "b" / "site"
     shutil.copytree(REPO / "core" / "cap_evolve", site / "cap_evolve",
                     ignore=shutil.ignore_patterns("__pycache__"))
     skills = tmp_path / "skills"
