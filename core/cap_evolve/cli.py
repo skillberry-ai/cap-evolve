@@ -628,7 +628,7 @@ def _cmd_run(argv):
     if not skills_dir:
         print(json.dumps({"error": "skills dir not found; set CAPEVOLVE_SKILLS_DIR or --skills-dir"}))
         return 1
-    os.environ.setdefault("CAPEVOLVE_SKILLS_DIR", str(skills_dir))
+    _export_skills_dir(skills_dir)
     skills = _resolve_skills(skills_dir)
     spec_path, spec_err = _resolve_spec(args.spec, args.project)
     if spec_err is not None:
