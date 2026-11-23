@@ -3363,7 +3363,7 @@ def _inject_native_skills(run_dir: RunDir, workdir: Path, caps, repo_root: Path,
     guaranteed channel.
     """
     try:
-        reg_path = repo_root / "skills" / "optimizers" / "registry.yaml"
+        reg_path = _optimizer_registry_path()
         if not reg_path.is_file():
             return
         try:
@@ -4455,8 +4455,7 @@ def _optimizer_parallel(optimizer_name: str | None) -> bool:
     if not optimizer_name:
         return False
     try:
-        repo_root = Path(__file__).resolve().parents[2]
-        reg_path = repo_root / "skills" / "optimizers" / "registry.yaml"
+        reg_path = _optimizer_registry_path()
         if not reg_path.is_file():
             return False
         from .specfile import read_yaml
@@ -4496,6 +4495,17 @@ def _skill_dir(component: str, name: str) -> Path:
             if cand.is_dir():
                 return cand
     return roots[-1] / component / name
+
+
+def _optimizer_registry_path() -> Path:
+    """``optimizers/registry.yaml``: ``CAPEVOLVE_SKILLS_DIR`` first, then the source checkout."""
+    env = os.environ.get("CAPEVOLVE_SKILLS_DIR")
+    src = Path(__file__).resolve().parents[2] / "skills" / "optimizers" / "registry.yaml"
+    if env:
+        cand = Path(env) / "optimizers" / "registry.yaml"
+        if cand.is_file():
+            return cand
+    return src
 
 
 def _load_capability_abstract(name: str, tag: str) -> tuple:
