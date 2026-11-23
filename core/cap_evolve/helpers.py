@@ -215,7 +215,7 @@ _MESSAGE_METHODS = {"debug", "info", "warning", "warn", "error", "exception", "c
 
 
 def _prose_strings(tree) -> set[int]:
-    """Ids of string constants that are prose, not data: docstrings, exception messages, the arguments of message
+    """Ids of string constants that are prose, not data: docstrings, the text of exception messages and of message
     calls, and ``__all__`` entries that name something the module defines.
 
     A protected pattern (gold, answer, split) in prose is a word, not a path: the task template's own field is
@@ -229,6 +229,29 @@ def _prose_strings(tree) -> set[int]:
             if isinstance(n, ast.Constant) and isinstance(n.value, str):
                 into.add(id(n))
 
+    def message(node):
+        """The message text itself, never what another call computes (review of #1008): a constant, an
+        f-string's literal parts, and constants joined by ``%``/``+``, a tuple of ``%`` args, or ``.format``.
+        ``print(rd("gold/x"))`` and ``print(r, d := "gold")`` are not prose: a string handed to any other
+        call, or bound to a name, stays checked."""
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            prose.add(id(node))
+        elif isinstance(node, ast.JoinedStr):
+            for v in node.values:
+                if isinstance(v, ast.Constant):
+                    prose.add(id(v))
+        elif isinstance(node, ast.BinOp) and isinstance(node.op, (ast.Mod, ast.Add)):
+            message(node.left)
+            message(node.right)
+        elif isinstance(node, ast.Tuple):
+            for e in node.elts:
+                message(e)
+        elif isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "format" \
+                and isinstance(node.func.value, (ast.Constant, ast.JoinedStr)):
+            message(node.func.value)
+            for a in node.args:
+                message(a)
+
     defined = {n.name for n in ast.walk(tree) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))}
     defined |= {t.id for n in ast.walk(tree) if isinstance(n, ast.Assign) for t in n.targets if isinstance(t, ast.Name)}
     for node in ast.walk(tree):
@@ -237,8 +260,9 @@ def _prose_strings(tree) -> set[int]:
             if isinstance(first, ast.Expr) and isinstance(first.value, ast.Constant) \
                     and isinstance(first.value.value, str):
                 prose.add(id(first.value))
-        elif isinstance(node, ast.Raise) and node.exc is not None:
-            under(node.exc, prose)
+        elif isinstance(node, ast.Raise) and isinstance(node.exc, ast.Call):
+            for a in [*node.exc.args, *(k.value for k in node.exc.keywords)]:     # raise E(<message>)
+                message(a)
         elif isinstance(node, (ast.Assign, ast.AugAssign)):
             targets = node.targets if isinstance(node, ast.Assign) else [node.target]
             if any(isinstance(t, ast.Name) and t.id == "__all__" for t in targets) \
@@ -254,7 +278,7 @@ def _prose_strings(tree) -> set[int]:
             elif (isinstance(f, ast.Name) and f.id in _MESSAGE_FUNCS) or \
                     (isinstance(f, ast.Attribute) and f.attr in _MESSAGE_METHODS):
                 for a in args:
-                    under(a, prose)
+                    message(a)
     return prose - path
 
 

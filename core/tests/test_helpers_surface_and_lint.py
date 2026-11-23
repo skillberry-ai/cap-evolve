@@ -485,6 +485,9 @@ _EXCEL_NAMES = ", ".join(f"'F{i}'" for i in range(30))
     "def check(answer_position):\n    if not answer_position:\n"
     "        raise ValueError('answer_position must be a non-empty string')\n",
     "def check(p):\n    raise ValueError(f'answer_position {p!r} is empty')\n",
+    "def check(p):\n    raise ValueError('answer_position %r is empty' % (p,))\n",
+    "def check(p):\n    raise ValueError('answer_position {} is empty'.format(p))\n",
+    "def check(p):\n    raise ValueError('answer_position ' + str(p) + ' is empty')\n",
     "__all__ = ['parse_answer_position']\n\ndef parse_answer_position(s):\n    return s\n",
     "import logging\nlog = logging.getLogger(__name__)\n\ndef f(p):\n    log.warning('answer_position %r is empty', p)\n",
     # a docstring that mentions the words, with a slash (main's lint refused it as a path)
@@ -525,6 +528,12 @@ def test_ordinary_spreadsheet_code_passes_the_lint(src):
     ("def f():\n    raise ValueError(open('/d/gold/x').read())\n", "evaluator/gold"),
     ("def error(p):\n    return open(p)\n\ndef f():\n    return error('/data/gold/x.xlsx')\n", "evaluator/gold"),
     ("__all__ = ['golden']\n", "evaluator/gold"),
+    # ... nor a path handed to another call inside a message (review round 2 of #1008)
+    ("def rd(p):\n    return open(p).read()\n\ndef f():\n    print(rd('/d/gold/x.json'))\n", "evaluator/gold"),
+    ("def rd(p):\n    return open(p).read()\n\ndef f():\n    raise ValueError(rd('gold'))\n", "evaluator/gold"),
+    ("import shutil\n\ndef f():\n    raise RuntimeError(shutil.move('splits', 'x'))\n", "evaluator/gold"),
+    ("import os\n\ndef f(log):\n    log.info(os.path.abspath('gold'))\n", "evaluator/gold"),
+    ("def f(r):\n    print(r, d := 'gold')\n    return open(r + '/' + d)\n", "evaluator/gold"),
     # task-identity branches are still refused when they compare with a real literal
     ("def f(task_id):\n    if task_id == '10452':\n        return 42\n", "task identity"),
     ("def f(sample_id):\n    return 1 if sample_id in ('a1', 'b2') else 0\n", "task identity"),
