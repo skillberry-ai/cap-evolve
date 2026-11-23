@@ -809,8 +809,9 @@ def complete_finalize(ctx, intent: dict) -> dict:
         base = harness.split_result_from_rollouts(run_dir, "FINAL_seed", "test")
         if not base.per_task:
             raise Refused("the earlier finalize died between the champion's and the seed's test scoring; the seed's "
-                          "test rollouts (FINAL_seed) are missing. Scoring them now continues the same sealed finalize "
-                          "but needs CAPEVOLVE_ALLOW_TEST_RESCORE=1, which is recorded in the run")
+                          "test rollouts (FINAL_seed) are missing. The test split is sealed and was already "
+                          "scored, so it cannot be scored again from here; report the FINAL test rollouts "
+                          "on disk and stop")
         payload.update(test_baseline=base.to_dict(), baseline_id="seed", test_delta=round(test.reward - base.reward, 6))
     else:
         payload.update(test_baseline=test.to_dict(), baseline_id=best, test_delta=0.0)

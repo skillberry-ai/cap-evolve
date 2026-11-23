@@ -11,6 +11,9 @@ importantly, pin the behaviour it must NOT break -- one honest finalize scores t
 (the best as ``FINAL`` and the baseline as ``FINAL_seed``).
 """
 
+import json
+from pathlib import Path
+
 import pytest
 
 from cap_evolve.rundir import RunDir
@@ -48,7 +51,10 @@ def test_retry_after_test_was_scored_is_refused(tmp_path):
     msg = str(exc.value)
     assert "already SCORED" in msg
     assert "second look" in msg.lower()
-    assert "CAPEVOLVE_ALLOW_TEST_RESCORE" in msg, "the refusal must name its own override"
+    assert "sealed" in msg.lower()
+    # #799: an optimizer agent read the override's name in this message and switched the guard off.
+    assert "CAPEVOLVE_ALLOW_TEST_RESCORE" not in msg
+    assert "ALLOW_TEST" not in msg
 
 
 def test_override_is_explicit_and_opt_in(tmp_path, monkeypatch):
@@ -84,3 +90,52 @@ def test_committed_seal_still_refuses(tmp_path):
         rd.begin_test_attempt()
     with pytest.raises(TestSealError):
         rd.reserve_test()
+
+
+def test_no_skill_file_names_the_override():
+    """#799: agents read everything under skills/, so the override must not be named there."""
+    skills = Path(__file__).resolve().parents[2] / "skills"
+    assert skills.is_dir()
+    hits = []
+    for f in skills.rglob("*"):
+        if f.is_file():
+            try:
+                text = f.read_text(encoding="utf-8")
+            except (UnicodeDecodeError, OSError):
+                continue
+            if "CAPEVOLVE_ALLOW_TEST_RESCORE" in text:
+                hits.append(str(f.relative_to(skills)))
+    assert hits == []
+
+
+def _events(rd):
+    p = rd.root / "events.jsonl"
+    if not p.exists():
+        return []
+    return [json.loads(line) for line in p.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
+def test_override_use_is_recorded_in_events_and_final_json(tmp_path, monkeypatch):
+    rd = _run(tmp_path)
+    _write_test_rollout(rd)
+    monkeypatch.setenv("CAPEVOLVE_ALLOW_TEST_RESCORE", "1")
+    rd.begin_test_attempt()
+    ev = [e for e in _events(rd) if e["kind"] == "test_rescore_override"]
+    assert len(ev) == 1 and ev[0]["existing_test_rollouts"] == 1
+    (rd.root / "final.json").write_text(json.dumps({"test": {"reward": 0.5}}), encoding="utf-8")
+    rd.commit_test()
+    final = json.loads((rd.root / "final.json").read_text(encoding="utf-8"))
+    assert final["test"] == {"reward": 0.5}
+    assert final["test_rescore_override"]["used"] is True
+    assert final["test_rescore_override"]["count"] == 1
+
+
+def test_no_override_leaves_no_mark(tmp_path, monkeypatch):
+    monkeypatch.delenv("CAPEVOLVE_ALLOW_TEST_RESCORE", raising=False)
+    rd = _run(tmp_path)
+    rd.begin_test_attempt()
+    (rd.root / "final.json").write_text(json.dumps({"test": {"reward": 0.5}}), encoding="utf-8")
+    rd.commit_test()
+    final = json.loads((rd.root / "final.json").read_text(encoding="utf-8"))
+    assert "test_rescore_override" not in final
+    assert not [e for e in _events(rd) if e["kind"] == "test_rescore_override"]
