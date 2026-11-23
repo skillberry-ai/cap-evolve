@@ -6,8 +6,11 @@ stands in for ``$PY``. Python heredocs and scripts run on the real interpreter, 
 the generated project, spec and secrets file can be inspected as the runner would see them.
 """
 
+import contextlib
+import fcntl
 import json
 import os
+import shutil
 import re
 import stat
 import subprocess
@@ -33,6 +36,25 @@ exec "$REAL_PY" "$@"
 """
 
 
+# run_suite.sh always builds its project in this one folder (it is not configurable), and it
+# deletes and rebuilds it on every run. Under `pytest -n auto` two xdist workers would race on it,
+# so every test that drives run_suite.sh holds this lock from the run until its folder is removed.
+WORK = REPO / "ci" / "benchmarks" / ".work" / "suite_integration_appworld_proj"
+_LOCK = REPO / "ci" / "benchmarks" / ".work" / ".suite_integration_appworld_proj.lock"
+
+
+@contextlib.contextmanager
+def _work_folder_lock():
+    _LOCK.parent.mkdir(parents=True, exist_ok=True)
+    with open(_LOCK, "w") as fh:
+        fcntl.flock(fh, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            shutil.rmtree(WORK, ignore_errors=True)
+            fcntl.flock(fh, fcntl.LOCK_UN)
+
+
 def _run_suite(tmp_path: Path, **env_extra) -> tuple[subprocess.CompletedProcess, Path]:
     stub = tmp_path / "py"
     stub.write_text(STUB)
@@ -55,15 +77,14 @@ def _run_suite(tmp_path: Path, **env_extra) -> tuple[subprocess.CompletedProcess
     }
     proc = subprocess.run(["bash", str(LIB / "run_suite.sh"), "appworld", str(out)], cwd=str(REPO),
                           env=env, capture_output=True, text=True, timeout=120)
-    return proc, REPO / "ci" / "benchmarks" / ".work" / "suite_integration_appworld_proj"
+    return proc, WORK
 
 
 @pytest.fixture
 def suite(tmp_path):
-    proc, work = _run_suite(tmp_path)
-    yield proc, work, tmp_path
-    import shutil
-    shutil.rmtree(work, ignore_errors=True)
+    with _work_folder_lock():
+        proc, work = _run_suite(tmp_path)
+        yield proc, work, tmp_path
 
 
 def test_tier_is_the_examples_itest_task():
@@ -116,9 +137,8 @@ def test_agent_key_is_in_a_private_file_not_the_spec(suite):
 
 def test_missing_lint_cache_fails_loudly(tmp_path):
     stub_dir = tmp_path
-    proc, work = _run_suite(stub_dir, AW_EVAL=str(tmp_path / "empty"))
-    import shutil
-    shutil.rmtree(work, ignore_errors=True)
+    with _work_folder_lock():
+        proc, work = _run_suite(stub_dir, AW_EVAL=str(tmp_path / "empty"))
     assert proc.returncode != 0
     assert "lint_cache.json missing" in proc.stdout + proc.stderr
     assert not (tmp_path / "calls").exists()
