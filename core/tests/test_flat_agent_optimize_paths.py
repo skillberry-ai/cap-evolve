@@ -51,6 +51,39 @@ def test_flat_tree_paths_exist(tmp_path, monkeypatch):
         assert (_skills_path("algorithms", "agent-optimize", skills) / "scripts" / f).is_file()
 
 
+def _render_briefing(host, tmp_path):
+    run, proj = tmp_path / "run", tmp_path / "proj"
+    run.mkdir(), proj.mkdir()
+    return host._briefing(run_dir=run, project=proj, spec={}, skills=host.SKILLS, rounds=1,
+                          workdir=tmp_path, context={})
+
+
+def _briefing_paths(text, host):
+    import re
+    a = re.search(r'^A="([^"]+)"', text, re.M).group(1)
+    s = re.search(r'^S="([^"]+)"', text, re.M).group(1)
+    names = set(re.findall(r"`\$A/([\w.]+\.py)`", text))
+    return Path(a), Path(s), names
+
+
+def test_flat_briefing_paths_exist(tmp_path, monkeypatch):
+    skills = _flat(tmp_path)
+    monkeypatch.setenv("CAPEVOLVE_SKILLS_DIR", str(skills))
+    host = _load("host", skills / "agent-optimize" / "scripts", monkeypatch)
+    a, s, names = _briefing_paths(_render_briefing(host, tmp_path), host)
+    assert s.is_dir() and a.is_dir() and a.is_relative_to(skills)
+    assert {"spend.py", "gate_check.py", "commit.py", "measure.py"} <= names
+    for n in names:
+        assert (a / n).is_file(), n
+
+
+def test_source_checkout_briefing_paths_exist(tmp_path, monkeypatch):
+    monkeypatch.delenv("CAPEVOLVE_SKILLS_DIR", raising=False)
+    host = _load("host", AO, monkeypatch)
+    a, _, names = _briefing_paths(_render_briefing(host, tmp_path), host)
+    assert a == AO and all((a / n).is_file() for n in names)
+
+
 def test_source_checkout_still_resolves(monkeypatch):
     monkeypatch.delenv("CAPEVOLVE_SKILLS_DIR", raising=False)
     from cap_evolve import eval_index, harness

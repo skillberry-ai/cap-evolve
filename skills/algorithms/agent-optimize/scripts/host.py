@@ -609,7 +609,7 @@ from this briefing; this briefing only gives you the facts SKILL.md cannot know.
 R="{run_dir}"      # the run dir: splits, baseline, candidates, rollouts, events
 P="{project}"      # the project: capevolve.yaml, adapters/, {cap_path}
 S="{skills}"       # the skills dir (CAPEVOLVE_SKILLS_DIR is already set to it)
-A="$S/algorithms/agent-optimize/scripts"
+A="{helpers}"      # agent-optimize's scripts folder (layout-neutral)
 PY="{interpreter}"      # the ONLY interpreter that can import this benchmark's adapter deps
 mkdir -p "$R/work"
 ```
