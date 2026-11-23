@@ -61,12 +61,16 @@ DEFAULT_PROTECTED = [r"(?i)golden", r"(?i)ground[_-]?truth", r"(?i)(^|[/\\._-])a
                      r"(?i)(^|[/\\])gold([/\\._-]|$)"]
 def _protected_hit(pat, v: str) -> bool:
     """``pat`` matches ``v``; the "answer" rule only counts when ``v`` looks like a path
-    (has a slash or backslash, or ends in a file extension), so ``t["answer_position"]`` passes."""
+    (has a slash or backslash, or ends in a file extension) or is exactly the bare folder name
+    "answer"/"answers" (``os.path.join(r, "answers", t)``), so ``t["answer_position"]`` passes."""
     if not pat.search(v):
         return False
     if pat.pattern == DEFAULT_PROTECTED[2]:
-        return bool(re.search(r"[/\\]|\.\w+$", v))
+        return bool(re.search(r"[/\\]|\.\w+$", v) or _BARE_ANSWER.fullmatch(v.strip()))
     return True
+
+
+_BARE_ANSWER = re.compile(r"(?i)answers?")
 
 
 #: Rollout splits no fixture may be harvested from (the hidden confirm stratum, test, and the legacy val/pool).

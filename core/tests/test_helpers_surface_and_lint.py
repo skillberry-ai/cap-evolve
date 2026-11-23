@@ -502,3 +502,18 @@ def test_parse_harvest_keeps_answer_position_argument():
     import json as _j
     row = {"helper": "skills/s/scripts/m.py", "call": "f", "args_kwargs": _j.dumps([["answer_position"], {}])}
     assert len(helpers.parse_harvest(f"{helpers.CALLS_TAG} {_j.dumps([row])}")) == 1
+    for bad in ["answers", "Answer"]:
+        row = {"helper": "skills/s/scripts/m.py", "call": "f", "args_kwargs": _j.dumps([[bad], {}])}
+        assert helpers.parse_harvest(f"{helpers.CALLS_TAG} {_j.dumps([row])}") == [], bad
+
+
+def test_bare_answer_folder_name_is_refused():
+    """T-74: a bare "answer"/"answers" folder literal used with os.path.join or Path / is refused."""
+    cfg = helpers.resolve({"helpers": {"enabled": True}})
+    lint = lambda src: helpers.lint_source(src, "f.py", cfg)
+    assert lint('import os\ndef f(r, t):\n    return open(os.path.join(r, "answers", t))\n')
+    assert lint('from pathlib import Path\ndef f(r):\n    return (Path(r)/"answer"/"x").read_text()\n')
+    assert lint('def f():\n    return "ANSWERS"\n')
+    assert lint('def f(t):\n    return t["answer_position"]\n') == []
+    assert lint('def f(t):\n    return t.get("answer_sheet")\n') == []
+    assert lint('def f():\n    return "the answer is wrong"\n') == []
