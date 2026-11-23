@@ -119,13 +119,13 @@ python scripts/run.py --run-dir .capevolve/run_X --project .capevolve/project \
   --focus hardest-first --max-iterations 10 --n-trials 4 --protected-paths default
 ```
 
-## Known gate edge case (open, issue #351)
+## Known gate edge case (issue #351, #766)
 
 Under the paired gate with `k_se = 1.0`, a candidate that improves **exactly one**
-val task and changes nothing else has `Δ̄ == SE(Δ)` algebraically, so a strict `>`
-resolves it on floating-point representation alone. The default `k_se = 0.2` banks such a
-one-task gain (the bar is `0.2·Δ̄`); at `k_se = 1.0` expect it not to bank, unpredictably
-by split size. Prefer edits that generalize across a class of tasks, which is what the
+val task and changes nothing else has `Δ̄ == SE(Δ)` algebraically. The gate treats
+such a tie (equal within a small relative tolerance) as a reject, at every split size.
+The default `k_se = 0.2` banks such a one-task gain (the bar is `0.2·Δ̄`); at
+`k_se = 1.0` it never banks. Prefer edits that generalize across a class of tasks, which is what the
 loop is asking for anyway.
 
 ## Agent mode
