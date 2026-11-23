@@ -484,3 +484,21 @@ def test_lint_sheet_name_none_and_answer_position_message_pass():
     assert lint("def f(task_id):\n    if task_id == '10452':\n        return 42\n")
     assert lint("def f():\n    return open('/data/1_10452_golden.xlsx')\n")
     assert lint('def f():\n    return open("/data/answers/1 2.json")\n')
+
+
+def test_answer_word_is_a_gold_path_only_with_a_separator_or_extension():
+    cfg = helpers.resolve({"helpers": {"enabled": True}})
+    lint = lambda src: helpers.lint_source(src, "f.py", cfg)
+    assert lint('def f(t):\n    return t["answer_position"]\n') == []
+    assert lint('def f(t):\n    return t.get("answer_sheet")\n') == []
+    assert lint("def f(a):\n    raise ValueError('answer_position must be a non-empty string')\n") == []
+    for lit in ['"1_10452_answer.xlsx"', 'open("answers.json")', 'open("/data/answers/1 2.json")',
+                '"C:\\\\answers\\\\x y"', "open('/data/1_10452_golden.xlsx')"]:
+        assert lint(f"def f():\n    return {lit}\n"), lit
+    assert lint("def f(task_id):\n    if task_id == '10452':\n        return 42\n")
+
+
+def test_parse_harvest_keeps_answer_position_argument():
+    import json as _j
+    row = {"helper": "skills/s/scripts/m.py", "call": "f", "args_kwargs": _j.dumps([["answer_position"], {}])}
+    assert len(helpers.parse_harvest(f"{helpers.CALLS_TAG} {_j.dumps([row])}")) == 1

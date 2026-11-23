@@ -59,6 +59,16 @@ SKILL_SUFFIXES = {".py", ".md", ".json", ".txt", ".yaml", ".yml"}
 DEFAULT_PROTECTED = [r"(?i)golden", r"(?i)ground[_-]?truth", r"(?i)(^|[/\\._-])answer(s)?([._/\\-]|$)",
                      r"(?i)evaluat(or|ion)\.py", r"(?i)dataset\.json", r"(?i)(^|[/\\])splits?([/\\._]|$)",
                      r"(?i)(^|[/\\])gold([/\\._-]|$)"]
+def _protected_hit(pat, v: str) -> bool:
+    """``pat`` matches ``v``; the "answer" rule only counts when ``v`` looks like a path
+    (has a slash or backslash, or ends in a file extension), so ``t["answer_position"]`` passes."""
+    if not pat.search(v):
+        return False
+    if pat.pattern == DEFAULT_PROTECTED[2]:
+        return bool(re.search(r"[/\\]|\.\w+$", v))
+    return True
+
+
 #: Rollout splits no fixture may be harvested from (the hidden confirm stratum, test, and the legacy val/pool).
 FIXTURE_SPLITS_FORBIDDEN = {"confirm", "test", "val", "pool"}
 _TRUE, _FALSE = {"1", "true", "yes", "on"}, {"0", "false", "no", "off"}
@@ -316,8 +326,7 @@ def lint_source(src: str, rel: str, cfg: dict) -> list[str]:
             sv = str(v)
             if isinstance(v, str):
                 for pat in prot:
-                    if pat.search(v) and not (pat.pattern == DEFAULT_PROTECTED[2] and re.search(r"\s", v)
-                                                   and not re.search(r"[/\\]|\.\w+$", v)):
+                    if _protected_hit(pat, v):
                         add(node, f"names an evaluator/gold/split path ({v[:60]!r})")
                         break
             if sv in ids or any(len(i) >= 4 and re.search(rf"(?<![\w.]){re.escape(i)}(?![\w.])", sv)
@@ -513,7 +522,7 @@ def parse_harvest(exec_result: str) -> list[dict]:
                     args, kwargs = json.loads(r["args_kwargs"])
                 except (KeyError, ValueError, TypeError):
                     continue
-                if any(p.search(x) for x in _str_leaves([args, kwargs]) for p in prot):
+                if any(_protected_hit(p, x) for x in _str_leaves([args, kwargs]) for p in prot):
                     continue
                 out.append({"helper": r["helper"], "call": r["call"], "args": args, "kwargs": kwargs})
             return out
