@@ -145,6 +145,29 @@ def _serial_map(fn, jobs):
     return [fn(j) for j in jobs]
 
 
+class _SealedEvents:
+    """A view of a ``RunDir`` whose ``log_event`` goes to the sealed private log, not ``events.jsonl``.
+
+    Used for every confirm-stratum (C) evaluation (#847). ``harness.evaluate_candidate`` logs
+    ``eval_start`` / ``eval_progress`` / ``evaluate`` (reward, stderr, n_subset, timing) and warnings
+    for the split it measures; for C those numbers must not reach the proposer-readable event log
+    (the optimizer runs in ``<run>/work/cand_NNNN`` and can read ``../../events.jsonl``). They are
+    kept in ``private/p2_confirm.jsonl``; ``events.jsonl`` gets only the accept/reject bit
+    (``p2_confirm`` / ``p2_sequential``). Every other attribute is the real ``RunDir``'s."""
+
+    def __init__(self, ev: "P2Evaluator"):
+        object.__setattr__(self, "_ev", ev)
+
+    def __getattr__(self, name):
+        return getattr(self._ev.run_dir, name)
+
+    def __setattr__(self, name, value):
+        setattr(self._ev.run_dir, name, value)
+
+    def log_event(self, kind: str, **fields) -> None:
+        self._ev._private("event", event=kind, **fields)
+
+
 def _passes(draws: list) -> list:
     """Occurrence index of each draw: ``[(task, pass_idx)]``; the j-th time a task is drawn is pass j."""
     seen: dict = {}
@@ -174,6 +197,7 @@ class P2Evaluator:
                              f"(got {len(self.splits.feedback)} / {len(self.splits.confirm)})")
         self.errored_policy = errored_policy or self._default_policy()
         self._lock = threading.Lock()
+        self._private_lock = threading.Lock()   # sealed-log appends come from worker threads
         self._round_dir().mkdir(parents=True, exist_ok=True)
 
     def _default_policy(self) -> str:
@@ -252,8 +276,13 @@ class P2Evaluator:
         path = self.run_dir.private_dir / "p2_confirm.jsonl"
         path.parent.mkdir(parents=True, exist_ok=True)
         clean = {k: (None if isinstance(v, float) and not math.isfinite(v) else v) for k, v in fields.items()}
-        with path.open("a", encoding="utf-8") as f:
-            f.write(json.dumps({"kind": kind, "ts": time.time(), **clean}) + "\n")
+        line = json.dumps({"kind": kind, "ts": time.time(), **clean}, default=str) + "\n"
+        with self._private_lock, path.open("a", encoding="utf-8") as f:
+            f.write(line)
+
+    def _run_dir_for(self, split: str):
+        """The run dir to hand ``harness.evaluate_candidate``: C evaluations log to the sealed log (#847)."""
+        return _SealedEvents(self) if split == "confirm" else self.run_dir
 
     def open_round(self, candidates: Mapping[str, Path], incumbent: tuple) -> "Round":
         """``candidates = {cid: workdir}``, ``incumbent = (cid, dir)``. Persists the round."""
@@ -289,7 +318,7 @@ class P2Evaluator:
         base = SEED_BASE["final"]
         for name, d in (("champion", champion_dir), ("seed", seed_dir)):
             res[name] = harness.evaluate_candidate(
-                self.adapter, Path(d), run_dir=self.run_dir, split="confirm", ids=self.splits.confirm,
+                self.adapter, Path(d), run_dir=self._run_dir_for("confirm"), split="confirm", ids=self.splits.confirm,
                 n_trials=n_trials, tag=f"final__{name}", trial_offset=base, fixed_seeds=True,
                 errored_policy=self.errored_policy, workers=self.workers, budget_reserve=True)
         c = {pt["task_id"]: pt.get("trial_rewards") or [] for pt in res["champion"].per_task}
@@ -320,7 +349,7 @@ class P2Evaluator:
 
         def measure(name, d):
             res = harness.evaluate_candidate(
-                self.adapter, Path(d), run_dir=self.run_dir, split="confirm", ids=C, n_trials=n_trials,
+                self.adapter, Path(d), run_dir=self._run_dir_for("confirm"), split="confirm", ids=C, n_trials=n_trials,
                 tag=f"final__{name}", trial_offset=base, fixed_seeds=True, errored_policy=self.errored_policy,
                 workers=self.workers, budget_reserve=True)
             return {pt["task_id"]: pt.get("trial_rewards") or [] for pt in res.per_task}
@@ -430,7 +459,7 @@ class Round:
             return None
         mk.parent.mkdir(parents=True, exist_ok=True)
         res = harness.evaluate_candidate(
-            self.ev.adapter, self._dir_of(job.cid), run_dir=self.ev.run_dir, split=job.role,
+            self.ev.adapter, self._dir_of(job.cid), run_dir=self.ev._run_dir_for(job.role), split=job.role,
             ids=list(job.ids), n_trials=job.n_trials, tag=job.tag, trial_offset=job.trial_offset,
             fixed_seeds=True, errored_policy=self.ev.errored_policy, workers=self.ev.workers,
             budget_reserve=True)
