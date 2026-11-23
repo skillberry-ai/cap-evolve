@@ -62,18 +62,88 @@ def test_accept_without_gate_escape_records_reason(tmp_path):
     assert acc[-1]["accepted_without_gate"] == "gate infra down"
 
 
-def test_gate_check_event_accept_then_commit_accepts(tmp_path):
-    run_dir, work = _staged(tmp_path)
-    run_dir.log_event("gate_check", candidate="cand_2", verdict="accept", mode="paired")
-    p = base._commit(run_dir, work, decision="accept")
+# --- the REAL gate_check.py, run as a subprocess -------------------------------------------
+
+import os
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+_ROOT = Path(__file__).resolve().parents[2]
+_S = _ROOT / "skills" / "algorithms" / "agent-optimize" / "scripts"
+_J = ["--missing-handover-justification", "x", "--missing-ranked-issues-justification", "x",
+      "--missing-diagnosis-justification", "x"]
+
+
+class _Real:
+    def __init__(self, tmp_path):
+        from cap_evolve import Budget, RunDir, harness
+        from cap_evolve.skillcheck import SyntheticAdapter, seed_capability_dir
+        self.harness = harness
+        self.ad = SyntheticAdapter(n=12)
+        seed = seed_capability_dir(tmp_path, level=3)
+        self.rd = RunDir.create(tmp_path / ".capevolve", ts="t81", budget=Budget(max_iterations=9, stall=9))
+        harness.ensure_splits(self.ad, self.rd, seed=0)
+        harness.baseline(self.ad, seed, run_dir=self.rd)
+        self.env = {**os.environ, "CAPEVOLVE_CORE": str(_ROOT / "core"), "PYTHONPATH": str(_ROOT / "core")}
+
+    def mk(self, tag, lvl):
+        w = self.rd.root / "work" / tag
+        w.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(self.rd.root / "candidates" / "seed", w)
+        (w / "level.txt").write_text(str(lvl))
+        self.harness.evaluate_candidate(self.ad, w, run_dir=self.rd, split="val", n_trials=1, tag=tag)
+        return w
+
+    def run(self, script, *a):
+        p = subprocess.run([sys.executable, str(_S / script), "--run-dir", str(self.rd.root), *a],
+                           capture_output=True, text=True, env=self.env)
+        return p
+
+    def gate(self, tag, *extra):
+        p = self.run("gate_check.py", "--candidate", tag, "--k-se", "1.0", *extra)
+        return json.loads(p.stdout)["verdict"]
+
+    def commit(self, tag, w, *extra):
+        m = self.harness.split_result_from_rollouts(self.rd, tag, "val").reward
+        return self.run("commit.py", "--candidate-id", tag, "--from-dir", str(w), "--decision",
+                        "accept", "--val", str(m), "--note", "n", *_J, *extra)
+
+    def best(self):
+        from cap_evolve import RunDir
+        return RunDir.open(self.rd.root).best_id
+
+
+def test_real_gate_check_accept_then_commit_accepts(tmp_path):
+    r = _Real(tmp_path)
+    w = r.mk("candA", 12)
+    assert r.commit("candA", w).returncode == 2  # no gate yet
+    assert r.gate("candA") == "accept"
+    p = r.commit("candA", w)
     assert p.returncode == 0, p.stdout + p.stderr
-    assert _best(run_dir) == "cand_2"
+    assert r.best() == "candA"
+    acc = [e for e in _events(r.rd) if e["kind"] == "accept"][-1]
+    assert acc["gate_verdict"] == "accept" and acc["gate_reference"] == "seed"
 
 
-def test_gate_check_event_reject_then_commit_accept_refused(tmp_path):
-    run_dir, work = _staged(tmp_path)
-    run_dir.log_event("gate_check", candidate="cand_2", verdict="reject", mode="paired")
-    before = _best(run_dir)
-    p = base._commit(run_dir, work, decision="accept")
+def test_stale_reference_gate_does_not_let_a_loser_replace_champion(tmp_path):
+    r = _Real(tmp_path)
+    wa = r.mk("candA", 12)
+    assert r.gate("candA") == "accept"
+    assert r.commit("candA", wa).returncode == 0
+    wb = r.mk("candB", 6)
+    assert r.gate("candB") == "reject"  # vs champion candA
+    assert r.commit("candB", wb).returncode == 2
+    assert r.gate("candB", "--current", "seed") == "accept"  # weaker reference
+    p = r.commit("candB", wb)
     assert p.returncode == 2, p.stdout + p.stderr
-    assert _best(run_dir) == before
+    assert r.best() == "candA"
+
+
+def test_real_gate_check_reject_then_commit_accept_refused(tmp_path):
+    r = _Real(tmp_path)
+    w = r.mk("candC", 1)
+    assert r.gate("candC") == "reject"
+    assert r.commit("candC", w).returncode == 2
+    assert r.best() == "seed"

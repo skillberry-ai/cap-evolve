@@ -312,7 +312,8 @@ def main(argv=None) -> int:
         next_cmd += " (or --decision provisional, then scripts/grow.py, to buy more n on this candidate)"
     # Leave a record commit.py --decision accept can rely on (it refuses an accept with no
     # passing gate). Newest event per candidate wins, so a later reject cancels an earlier accept.
-    run_dir.log_event("gate_check", candidate=args.candidate, verdict=verdict, mode=args.mode)
+    run_dir.log_event("gate_check", candidate=args.candidate, verdict=verdict, mode=args.mode,
+                      reference=cur_tag)
     print(json.dumps({
         "current": {"tag": cur_tag, "reward": cur.reward, "stderr": cur.stderr,
                     "pooled_tags": cur_tags if len(cur_tags) > 1 else None},

@@ -444,9 +444,13 @@ def _gate_row(run_dir: RunDir, candidate_id: str) -> dict | None:
     return None
 
 
-def _promote_gate_verdict(run_dir: RunDir, candidate_id: str) -> str | None:
-    """Verdict of the newest ``promote_gate`` event ``act.py promote`` logs before committing."""
-    out = None
+def _event_gate(run_dir: RunDir, candidate_id: str) -> tuple[str | None, str | None, str | None]:
+    """(verdict, reference, kind) of the newest ``promote_gate`` / ``gate_check`` event for a candidate.
+
+    ``reference`` is the ``--current`` the gate_check compared against (None for promote_gate,
+    which gates against the champion by construction).
+    """
+    out: tuple[str | None, str | None, str | None] = (None, None, None)
     try:
         with run_dir.events_path.open(encoding="utf-8") as f:
             for line in f:
@@ -455,9 +459,9 @@ def _promote_gate_verdict(run_dir: RunDir, candidate_id: str) -> str | None:
                 except Exception:  # noqa: BLE001
                     continue
                 if ev.get("kind") in ("promote_gate", "gate_check") and str(ev.get("candidate")) == str(candidate_id):
-                    out = ev.get("verdict")
+                    out = (ev.get("verdict"), ev.get("reference"), ev["kind"])
     except FileNotFoundError:
-        return None
+        return (None, None, None)
     return out
 
 
@@ -702,8 +706,16 @@ def main(argv=None) -> int:
     # #763: an accept moves the champion, so it needs a passing gate record for THIS candidate
     # (a round-table row, or the promote_gate event act.py promote writes). Else exit 2.
     accepted_without_gate = None
+    gate_reference = None
     if accepted:
-        passing = "accept" in (gate_verdict, _promote_gate_verdict(run_dir, args.candidate_id))
+        ev_verdict, ev_ref, ev_kind = _event_gate(run_dir, args.candidate_id)
+        # A gate_check only counts if it compared against the champion as it stands NOW.
+        if ev_kind == "gate_check" and (ev_ref is None or str(ev_ref) != str(run_dir.best_id)):
+            ev_verdict = None
+        passing = "accept" in (gate_verdict, ev_verdict)
+        gate_reference = ev_ref if ev_verdict == "accept" else None
+        if passing:
+            gate_verdict = "accept"
         if not passing:
             if not args.accept_without_gate:
                 print(json.dumps({
@@ -966,6 +978,7 @@ def main(argv=None) -> int:
                       val_unverified=args.val_unverified,
                       gate_verdict=gate_verdict, overrode_gate=overrode_gate,
                       accepted_without_gate=accepted_without_gate,
+                      gate_reference=gate_reference,
                       note=args.note,
                       reject_basis=args.reject_basis,
                       bypassed_screen_and_gate=bypassed_screen_and_gate,
