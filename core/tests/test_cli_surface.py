@@ -232,6 +232,33 @@ def test_init_selects_agent_mode_for_an_agent_driven_algorithm(tmp_path):
     assert "orchestration_mode: agent" in text
 
 
+def test_init_writes_every_spec_line_algorithms_shows(tmp_path):
+    """`cap-evolve algorithms` promises init writes the shown lines -- all of them."""
+    import yaml
+    from cap_evolve.cli import _doctor_checks
+    want = {
+        "gepa": {"max_metric_calls": 200,
+                 "algorithm_args": "--minibatch-size 4 --component-selector round_robin"},
+        "skillopt": {"algorithm_args": "--epochs 6 --lr-schedule cosine"},
+        "agent-optimize": {"orchestration_mode": "agent", "stop_condition":
+                           "stop when val gains stall for 3 rounds or $20 is spent"},
+        "hill-climb": {"algorithm_focus": "all"},
+    }
+    base = tmp_path / "base"
+    assert _run("init", "--project", str(base / "p"), "--yes")[0] == 0
+    base_fails = {r["name"] for r in _doctor_checks(base / "p") if r["status"] == "fail"}
+    for name, keys in want.items():
+        proj = tmp_path / name / "p"
+        rc, _out, err = _run("init", "--project", str(proj), "--algorithm", name, "--yes")
+        assert rc == 0, err
+        spec = yaml.safe_load((proj / "capevolve.yaml").read_text(encoding="utf-8"))
+        assert spec["algorithm_skill"] == name
+        for k, v in keys.items():
+            assert spec[k] == v, (name, k)
+        fails = {r["name"] for r in _doctor_checks(proj) if r["status"] == "fail"}
+        assert fails <= base_fails, (name, fails - base_fails)
+
+
 def test_init_refuses_to_clobber_an_existing_spec(tmp_path):
     proj = tmp_path / ".capevolve" / "project"
     assert _run("init", "--project", str(proj), "--yes")[0] == 0
