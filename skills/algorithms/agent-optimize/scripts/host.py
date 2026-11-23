@@ -579,6 +579,8 @@ def _briefing(*, run_dir: Path, project: Path, spec: dict, skills: Path,
     arm_block = _arm_section(arm)
     skill_md = SKILL_DIR / "SKILL.md" if optimizer_config.new_engine(spec) else LEGACY_DOC
     helpers = HERE
+    diagnose, evaluate, report = (harness.skills_path("phases", n, skills)
+                                  for n in ("diagnose", "evaluate", "report"))
     # Quoted from the constant that actually sets BASH_*_TIMEOUT_MS below, so the briefing
     # cannot promise a ceiling the env does not grant.
     hours = round(BASH_TIMEOUT_MS / 3_600_000, 1)
@@ -612,6 +614,9 @@ R="{run_dir}"      # the run dir: splits, baseline, candidates, rollouts, events
 P="{project}"      # the project: capevolve.yaml, adapters/, {cap_path}
 S="{skills}"       # the skills dir (CAPEVOLVE_SKILLS_DIR is already set to it)
 A="{helpers}"      # agent-optimize's scripts folder (layout-neutral)
+DIAGNOSE="{diagnose}"    # helper skills' folders (layout-neutral): scripts live in "$DIAGNOSE/scripts"
+EVALUATE="{evaluate}"
+REPORT="{report}"
 PY="{interpreter}"      # the ONLY interpreter that can import this benchmark's adapter deps
 mkdir -p "$R/work"
 ```

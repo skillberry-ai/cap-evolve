@@ -118,3 +118,32 @@ def test_source_checkout_still_resolves(monkeypatch):
     assert Path(eval_index.eval_cmd("r", "p", "t", "val", 1)[1]).is_file()
     assert harness.skills_path("phases", "diagnose", REPO / "skills").is_dir()
     assert (_skills_path("algorithms", "agent-optimize", REPO / "skills") / "scripts" / "conductor.py").is_file()
+
+
+def test_installed_docs_script_paths_resolve(tmp_path, monkeypatch):
+    """Every "$VAR/..." script in the installed SKILL.md and legacy-SKILL.md exists once the
+    briefing's variables are substituted; no $S/phases|algorithms|optimizers left."""
+    import re
+    import subprocess
+    src = tmp_path / "src"
+    shutil.copytree(REPO, src, ignore=shutil.ignore_patterns(
+        ".git", ".symcc", ".scratch", "node_modules", "__pycache__", "dashboard", "benchmarks", ".venv"))
+    dest = tmp_path / "inst"
+    r = subprocess.run(["bash", str(src / "install.sh"), "--dest", str(dest)],
+                       capture_output=True, text=True, cwd=src)
+    monkeypatch.setenv("CAPEVOLVE_SKILLS_DIR", str(dest))
+    host = _load("host", dest / "agent-optimize" / "scripts", monkeypatch)
+    text = _render_briefing(host, tmp_path)
+    env = dict(re.findall(r'^([A-Z]+)="([^"]*)"', text, re.M))
+    docs = [dest / "agent-optimize" / "SKILL.md",
+            dest / "agent-optimize" / "references" / "legacy-SKILL.md"]
+    for doc in docs:
+        assert doc.is_file(), r.stdout + r.stderr
+        body = doc.read_text()
+        assert not re.search(r'\$S/(phases|algorithms|optimizers)', body), doc
+        assert not re.search(r'^\s*A=', body, re.M), doc
+        found = re.findall(r'"\$([A-Z]+)/([\w./-]+\.py)"', body)
+        assert found, doc
+        for var, rel in found:
+            assert var in env, (doc, var)
+            assert (Path(env[var]) / rel).is_file(), (doc, var, rel)

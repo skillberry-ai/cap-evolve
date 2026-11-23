@@ -36,7 +36,7 @@ Stock default has `active_eval` OFF: `probe --auto` then silently runs FULL val.
 
 ```bash
 R="<run_dir from the handoff>"; P="<project dir>"
-S="${CAPEVOLVE_SKILLS_DIR:?set to the skills/ dir}"; A="$S/algorithms/agent-optimize/scripts"
+# R, P, A, DIAGNOSE, EVALUATE, REPORT are set by the briefing (absolute paths; do not reset them).
 mkdir -p "$R/work"
 python "$A/spend.py" --run-dir "$R" --project "$P"      # parses stop_condition; ask the user if constraints.ambiguous
 python "$A/digest.py" --run-dir "$R" --project "$P"     # first line must NOT start with "!! CONFIG"
@@ -50,7 +50,7 @@ present (benchmark facts only; ignore its "one edit" advice).
 ## The loop
 
 ```bash
-python "$S/phases/diagnose/scripts/run.py" --run-dir "$R" --tag "$BEST" --split val --cluster v2 > /dev/null
+python "$DIAGNOSE/scripts/run.py" --run-dir "$R" --tag "$BEST" --split val --cluster v2 > /dev/null
 python "$A/digest.py" --run-dir "$R" --project "$P"
 ```
 
@@ -138,7 +138,7 @@ rollout. Without the flag, nothing here runs and the loop below is unchanged.
 
 ```bash
 python "$A/act.py" finalize --run-dir "$R" --project "$P" --n-confirm 3
-python "$S/phases/report/scripts/run.py" --run-dir "$R"
+python "$REPORT/scripts/run.py" --run-dir "$R"
 ```
 
 Confirms the champion on full val with fresh seeds (with `cost_gating` on, the default, the
