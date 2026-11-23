@@ -139,3 +139,37 @@ def test_no_override_leaves_no_mark(tmp_path, monkeypatch):
     final = json.loads((rd.root / "final.json").read_text(encoding="utf-8"))
     assert "test_rescore_override" not in final
     assert not [e for e in _events(rd) if e["kind"] == "test_rescore_override"]
+
+
+def test_act_finalize_keeps_the_override_mark_in_final_json(tmp_path, capsys, monkeypatch):
+    """`act finalize` rewrites final.json from the phase's printed payload, which lacks the mark
+    commit_test stamped on disk; the mark must survive that rewrite (#799)."""
+    import sys
+    sys.path.insert(0, str(Path(__file__).parent))
+    from test_digest_and_act_verbs import Sh, _act, _args, _run as _act_run
+
+    monkeypatch.setenv("CAPEVOLVE_ALLOW_TEST_RESCORE", "1")
+    rd, project, _, _ = _act_run(tmp_path)
+    d = rd.rollouts / "test"
+    d.mkdir(parents=True, exist_ok=True)
+    for t in rd.read_splits().ids("test"):  # an earlier attempt scored test, no intent left
+        (d / f"{t}__FINAL__t0.json").write_text(json.dumps({"input": None,
+            "rollout": {"task_id": t, "output": "", "error": None},
+            "score": {"task_id": t, "reward": 1.0, "feedback": "", "n": 1, "stderr": 0.0,
+                      "trial_rewards": [1.0], "raw": {}}}), encoding="utf-8")
+
+    def fake_finalize(cmd):  # the same steps harness.finalize takes
+        r = RunDir.open(rd.root)
+        r.begin_test_attempt()
+        payload = {"test": {"reward": 1.0}, "best_id": "cur"}
+        (r.root / "final.json").write_text(json.dumps(payload), encoding="utf-8")
+        r.commit_test()
+        return 0, json.dumps(payload), ""  # run.py prints the returned payload, without the mark
+
+    _act(monkeypatch, capsys, ["finalize", "--n-confirm", "0", *_args(rd, project)],
+         Sh(**{"run.py": fake_finalize}))
+    assert [e for e in _events(rd) if e["kind"] == "test_rescore_override"]
+    final = json.loads((rd.root / "final.json").read_text(encoding="utf-8"))
+    assert final["final"] == {"test": {"reward": 1.0}, "best_id": "cur"}
+    assert final["test_rescore_override"]["used"] is True
+    assert final["test_rescore_override"]["count"] == 1

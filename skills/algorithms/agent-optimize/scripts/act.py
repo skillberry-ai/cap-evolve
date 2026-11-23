@@ -886,6 +886,19 @@ def finalize(a, ctx):
     if rc != 0:
         raise Refused(f"finalize phase failed rc={rc}", stderr=(se or so)[-500:])
     out["final"] = jload(so) or so[-500:]
+    # Keep the seal-bypass mark: the phase stamped it into the on-disk final.json (commit_test),
+    # but its printed payload lacks it and we are about to overwrite that file (#799).
+    uses = RunDir.open(ctx.root).test_rescore_overrides()
+    if uses:
+        out["test_rescore_override"] = {"used": True, "count": len(uses), "uses": uses}
+    else:
+        try:
+            prev = json.loads((ctx.root / "final.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            prev = None
+        mark = prev.get("test_rescore_override") if isinstance(prev, dict) else None
+        if isinstance(mark, dict) and mark.get("used"):
+            out["test_rescore_override"] = mark
     (ctx.root / "final.json").write_text(json.dumps(out, indent=2, default=str), encoding="utf-8")
     ctx.decision("finalize", champ, verdict=(out.get("confirm") or {}).get("verdict_vs_seed"))
     return 0, out
