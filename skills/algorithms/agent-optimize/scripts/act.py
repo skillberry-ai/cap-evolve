@@ -888,7 +888,11 @@ def finalize(a, ctx):
                           "nothing was spent")
         ctx.check_budget(a)
         have = eval_index.counts(run_dir, eval_index.cap_hash(d), "val")
-        fresh_only = bool(a.confirm_fresh_only or ctx.spec.get("confirm_fresh_only"))
+        # #759: the confirmation is judged on the fresh trials only whenever the judge can isolate them
+        # (reward_gated). The selection-era trials that picked the champion are never pooled into the
+        # verdict; the pooled one is recorded as a secondary field. The posterior rule (cost_gating off)
+        # pools the ledger by hash and cannot isolate them, so it stays pooled and says so (fresh_only False).
+        fresh_only = bool(ctx.cfg["cost_gating"])
         # first trial index the top-up will write (evaluate/run.py --topup-to: 1 + max existing)
         fresh_from = 1 + max((int(f.stem.rsplit("__t", 1)[1])
                               for f in (run_dir.rollouts / "val").glob(f"*__{champ}__t*.json")), default=-1)
@@ -967,7 +971,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--n-confirm", type=int, default=3, help="extra full-val trials on the champion (0 = skip)")
     s.add_argument("--n-trials", type=int, default=0, help="test trials (default: spec num_trials)")
     s.add_argument("--confirm-fresh-only", action="store_true",
-                   help="gate the confirmation on the FRESH trials only (also spec confirm_fresh_only); "
+                   help="(default whenever cost_gating is on) gate the confirmation on the FRESH trials only; "
                         "the pooled verdict is recorded as secondary")
     s.add_argument("--seal-anyway", metavar="REASON", help="seal test although the confirm gate did not accept (recorded)")
     s.add_argument("--over-budget", metavar="REASON")
