@@ -4496,9 +4496,18 @@ def _failures_block(always_fail, flaky, errored, run_dir=None, optimizer=None,
     return "\n".join(lines)
 
 
+def _trials_of(pt: dict) -> int:
+    """How many valid trials a per-task row was measured on (1 when it does not say)."""
+    raw = pt.get("raw") or {}
+    try:
+        return max(1, int(raw.get("valid_trials") or pt.get("n") or 1))
+    except (TypeError, ValueError):
+        return 1
+
+
 def _last_reject_block(steps, current_val: SplitResult, run_dir=None, optimizer=None,
                        budget: "feedback_digest.Budget | None" = None) -> str:
-    """The previous step's REJECTED candidate set against the current best, task by task.
+    """The previous step's NOT-accepted candidate set against the current best, task by task.
 
     Hill-climb's prompt is built from the best's results only, and a rejected candidate's
     edits are reverted, so the next proposal never saw what its predecessor's edit actually
@@ -4506,15 +4515,25 @@ def _last_reject_block(steps, current_val: SplitResult, run_dir=None, optimizer=
     trial files under ``./prior_iterations/<id>/trajectories/``. This block puts that feedback
     in the prompt for every task the candidate measurably moved (``movement`` — the same
     rule LEDGER.md uses): worse first, worst first, then better. The best's own feedback on
-    the same tasks is in the failure index, so the two can be read side by side.
+    the same tasks is in the failure index, so the two can be read side by side. Every task
+    on the split is considered, whatever ``--focus`` narrows the failure index to.
+
+    Kept consistent with the rest of the framework's per-task claims:
+      * history ablation off (``history_enabled()`` false) → no block: it IS cross-iteration
+        history, and ``prior_iterations/`` is not even created then;
+      * ``ledger_noise_guard`` on and fewer than ``ledger_min_trials`` trials per task → the
+        same "no causal claim" rule as LEDGER.md and the RESULT stamp: the changed tasks are
+        listed under ONE neutral heading, never as worse/better;
+      * an indecisive (unresolved) step is called "not accepted", not "rejected";
+      * a pooled run's confirm stratum never reaches the prompt: only the proposer-visible
+        split's rows are used, and if the splits cannot be read the block is dropped.
 
     It takes at most HALF of what is left of the prompt's feedback ``budget``
-    (``feedback_digest.fit``, condensed + linked like the failure index); the failure index
-    rendered after it gets the rest. Empty unless the last step was a measured reject. Only
-    rows on the proposer-visible split are used, so a pooled run's confirm stratum never
-    reaches the optimizer.
+    (``feedback_digest.fit``, condensed + linked like the failure index), its own header lines
+    included; the failure index rendered after it gets the rest. It sees only the steps of
+    this ``hill_climb_loop`` call, so the first iteration after a resume has no block.
     """
-    if not steps:
+    if not steps or not history_enabled():
         return ""
     last = steps[-1]
     if last.get("accepted") or not last.get("candidate_val"):
@@ -4522,47 +4541,83 @@ def _last_reject_block(steps, current_val: SplitResult, run_dir=None, optimizer=
     cid = str(last.get("candidate_id") or "the last candidate")
     cand_val = SplitResult.from_dict(last["candidate_val"])
     cand_rows = list(cand_val.per_task or [])
+    guard, min_trials = False, 0
     if run_dir is not None:
         try:
             visible = set(map(str, run_dir.read_splits().ids(gate_split(run_dir))))
-            cand_rows = [pt for pt in cand_rows if str(pt.get("task_id")) in visible]
-        except (OSError, ValueError, KeyError):
-            pass
+        except (OSError, ValueError, KeyError, AttributeError):
+            return ""          # fail closed: cannot prove a row is not in the confirm stratum
+        cand_rows = [pt for pt in cand_rows if str(pt.get("task_id")) in visible]
+        try:
+            gcfg = gatecfg.GateConfig.for_run(run_dir)
+            guard, min_trials = bool(gcfg.ledger_noise_guard), int(gcfg.ledger_min_trials)
+        except Exception:  # noqa: BLE001 — no spec: the guard is off, as in GateConfig's defaults
+            guard = False
     mv = movement(current_val.per_task, cand_rows)
     if not mv["n_shared"]:
         return ""
     by_id = {str(pt.get("task_id")): pt for pt in cand_rows}
-    vals = mv["values"]
-    worse = sorted(mv["broke"] + mv["regressed"], key=lambda t: vals[t][1] - vals[t][0])
-    better = sorted(mv["fixed"] + mv["improved"], key=lambda t: vals[t][0] - vals[t][1])
+    par_by_id = {str(pt.get("task_id")): pt for pt in (current_val.per_task or [])}
+    shared = [t for t in by_id if t in par_by_id and has_valid_trials(by_id[t])
+              and has_valid_trials(par_by_id[t])]
+    n_min = min([min(_trials_of(by_id[t]), _trials_of(par_by_id[t])) for t in shared] or [1])
+    causal = not (guard and n_min < min_trials)
+    rew = lambda rows, t: float(rows[t].get("reward", 0.0) or 0.0)
+    vals = dict(mv["values"])
+    if causal:
+        worse = sorted(mv["broke"] + mv["regressed"], key=lambda t: vals[t][1] - vals[t][0])
+        better = sorted(mv["fixed"] + mv["improved"], key=lambda t: vals[t][0] - vals[t][1])
+        groups = [worse, better]
+    else:
+        changed = [t for t in shared if abs(rew(by_id, t) - rew(par_by_id, t)) > 1e-9]
+        for t in changed:
+            vals[t] = [rew(par_by_id, t), rew(by_id, t)]
+        groups = [sorted(changed, key=lambda t: vals[t][1] - vals[t][0])]
     fd = feedback_digest
     budget = budget if budget is not None else fd.Budget()
-    rows = [by_id[t] for t in worse + better]
-    got = fd.fit(rows, budget.left // 2,
+    room = budget.left // 2
+    indecisive = bool((last.get("decision") or {}).get("indecisive"))
+    outcome = ("was not accepted (the measurement could not decide; NOT evidence against the "
+               "edit)" if indecisive else "was rejected")
+    head_lines = [
+        f"## Last {'unresolved' if indecisive else 'rejected'} candidate `{cid}` vs the current "
+        "best — ITS OWN judge feedback",
+        f"`{cid}` scored {cand_val.reward:.3f} against the best's {current_val.reward:.3f} and "
+        f"{outcome}; its edit was reverted. Below is ITS feedback on the tasks it moved "
+        "(best → candidate reward in each head). The current best's feedback on the same "
+        "tasks is in the failure index; compare the two to see which part of the edit did "
+        f"what. Its diff and every trial are in `./prior_iterations/{cid}/`.",
+    ]
+    unres_line = ("Moved by less than 2·SE (no claim either way): "
+                  + ", ".join(str(t) for t in mv["unresolved"][:40])) if causal and mv["unresolved"] else ""
+    fixed_cost = fd._size("\n".join(head_lines + [unres_line])) + 400   # + headings / rest line
+    rows = [by_id[t] for g in groups for t in g]
+    got = fd.fit(rows, max(0, room - fixed_cost),
                  head=lambda pt: (f"- {pt.get('task_id')} (best {vals[str(pt.get('task_id'))][0]:.2f}"
                                   f" → {cid} {vals[str(pt.get('task_id'))][1]:.2f}): "),
                  run_dir=run_dir, optimizer=optimizer)
-    budget.spend(got.used)
     listed = lambda ids: [got.entries[t] for t in ids if t in got.entries]
-    lines = [
-        f"## Last rejected candidate `{cid}` vs the current best — ITS OWN judge feedback",
-        f"`{cid}` scored {cand_val.reward:.3f} against the best's {current_val.reward:.3f} and "
-        "was rejected; its edit was reverted. Below is ITS feedback on every task it moved by "
-        "more than 2·SE (parent → candidate reward in each head). The current best's feedback "
-        "on the same tasks is in the failure index; compare the two to see which part of the "
-        f"edit did what. Its diff and every trial are in `./prior_iterations/{cid}/`.",
-        "",
-        f"### Measurably WORSE than the best ({len(worse)}) — find what the edit broke here",
-    ]
-    lines += listed(worse) or ["- (none)"]
-    lines += ["", f"### Measurably BETTER than the best ({len(better)}) — keep what caused these"]
-    lines += listed(better) or ["- (none)"]
+    lines = head_lines + [""]
+    if causal:
+        lines.append(f"### Measurably WORSE than the best ({len(groups[0])}, moved > 2·SE) — "
+                     "find what the edit broke here")
+        lines += listed(groups[0]) or ["- (none)"]
+        lines += ["", f"### Measurably BETTER than the best ({len(groups[1])}, moved > 2·SE) — "
+                      "keep what caused these"]
+        lines += listed(groups[1]) or ["- (none)"]
+    else:
+        lines.append(f"### Changed vs the best ({len(groups[0])}) — n={n_min} trial(s) per task is "
+                     f"below ledger_min_trials={min_trials}, so NO causal claim: read these as "
+                     "context, not as what the edit broke or fixed")
+        lines += listed(groups[0]) or ["- (none)"]
     if got.rest:
-        lines += ["", got.rest_line]
-    if mv["unresolved"]:
-        lines += ["", f"Moved by less than 2·SE (no claim either way): "
-                      + ", ".join(str(t) for t in mv["unresolved"][:40])]
-    return "\n".join(lines)
+        lines += ["", f"(+{len(got.rest)} more moved task(s) not listed, over the feedback budget "
+                      f"({fd.ENV_BUDGET}). Their trials are in `./prior_iterations/{cid}/trajectories/`.)"]
+    if unres_line:
+        lines += ["", unres_line]
+    text = "\n".join(lines)
+    budget.spend(fd._size(text))
+    return text
 
 
 def _optimizer_parallel(optimizer_name: str | None) -> bool:

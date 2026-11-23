@@ -118,3 +118,82 @@ def test_hill_climb_puts_the_last_reject_in_the_next_prompt(tmp_path, monkeypatc
     assert "Last rejected candidate" not in prompts[0]
     assert "Last rejected candidate `cand_0001`" in prompts[1], prompts[1][-2000:]
     assert "REJECT-ONLY FEEDBACK: the edit removed the worked example" in prompts[1]
+
+
+# --- review round 1 (PR #1010): the block obeys the same rules as LEDGER.md ------------------
+
+
+def test_no_block_when_the_history_ablation_is_off(monkeypatch):
+    monkeypatch.setenv("CAPEVOLVE_HISTORY", "0")
+    assert harness._last_reject_block([_reject_step()], BEST) == ""
+
+
+class _ValSplits:
+    pooled = False
+
+    def ids(self, split):
+        return ["rfe-005", "rfe-014", "rfe-021", "init-001"]
+
+
+class _ValRun:
+    def read_splits(self):
+        return _ValSplits()
+
+
+def _one_trial(rows):
+    return [{**pt, "n": 1, "stderr": 0.0, "raw": {"n_trials": 1, "valid_trials": 1}} for pt in rows]
+
+
+def test_under_the_noise_guard_few_trials_make_no_worse_or_better_claim(monkeypatch):
+    from cap_evolve import gatecfg
+
+    monkeypatch.setattr(gatecfg.GateConfig, "for_run",
+                        classmethod(lambda cls, rd: cls(ledger_noise_guard=True, ledger_min_trials=3)))
+    best = SplitResult.from_dict({**BEST.to_dict(), "per_task": _one_trial(BEST.to_dict()["per_task"])})
+    step = _reject_step()
+    step["candidate_val"]["per_task"] = _one_trial(step["candidate_val"]["per_task"])
+    text = harness._last_reject_block([step], best, run_dir=_ValRun())
+    assert "Measurably WORSE" not in text and "Measurably BETTER" not in text
+    assert "find what the edit broke" not in text
+    assert "NO causal claim" in text and "n=1 trial(s) per task" in text
+    assert "split fan-out timed out" in text and "init-001 (best 0.70" in text   # still context
+
+
+def test_the_guard_is_off_by_default_so_three_trials_keep_the_claims(monkeypatch):
+    text = harness._last_reject_block([_reject_step()], BEST, run_dir=_ValRun())
+    assert "Measurably WORSE than the best (2" in text
+
+
+def test_an_indecisive_step_is_not_called_rejected():
+    step = {**_reject_step(), "decision": {"indecisive": True}}
+    text = harness._last_reject_block([step], BEST)
+    assert "Last unresolved candidate `cand_0001`" in text
+    assert "was not accepted (the measurement could not decide" in text
+    assert "was rejected" not in text
+
+
+class _BrokenRun:
+    def read_splits(self):
+        raise OSError("splits.json unreadable")
+
+
+def test_unreadable_splits_drop_the_block_instead_of_showing_every_row():
+    assert harness._last_reject_block([_reject_step()], BEST, run_dir=_BrokenRun()) == ""
+
+
+def test_rows_over_the_budget_point_at_the_rejects_own_trials_and_the_header_is_charged():
+    budget = feedback_digest.Budget(total=feedback_digest.MIN_BUDGET)
+    text = harness._last_reject_block([_reject_step()], BEST, budget=budget)
+    assert budget.used == feedback_digest._size(text)          # every byte of the block charged
+    if "more moved task(s) not listed" in text:
+        assert "./prior_iterations/cand_0001/trajectories/" in text
+        assert "failing task(s)" not in text
+
+
+def test_skillopt_does_not_call_missing_data_a_regression():
+    from cap_evolve import skillopt
+
+    prev = [_pt("a", 0.70, stderr=0.02)]
+    errored = {**_pt("a", 0.0, stderr=0.0), "raw": {"n_trials": 3, "valid_trials": 0}}
+    cats = skillopt._categorize(prev, [errored])
+    assert cats["regressed"] == []
