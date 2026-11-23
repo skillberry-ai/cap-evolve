@@ -206,7 +206,10 @@ def _categorize(prev_pt: list, cur_pt: list) -> dict[str, list[dict]]:
         passed_after = after >= 1.0
         if after > before and resolved:
             cats["improved"].append(pt)
-        if passed_before and not passed_after and resolved:
+        # Any resolved drop, not only a 1.0 -> <1.0 one: on a 0-1 reward (an LLM judge, partial
+        # credit) a task that never reached 1.0 can still measurably regress, and requiring
+        # ``passed_before`` filed a 0.70 -> 0.32 drop under persistent_fail instead.
+        if after < before and resolved:
             cats["regressed"].append(pt)
         elif not passed_before and not passed_after:
             cats["persistent_fail"].append(pt)
