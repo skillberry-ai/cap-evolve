@@ -141,9 +141,11 @@ python "$A/act.py" finalize --run-dir "$R" --project "$P" --n-confirm 3
 python "$S/phases/report/scripts/run.py" --run-dir "$R"
 ```
 
-Confirms the champion on full val with fresh seeds (the confirmation is judged on those fresh trials
-only, never pooled with the selection-era trials that picked it; the pooled verdict is recorded as a
-secondary field `pooled_verdict_vs_seed`), tests it against the seed, seals test ONCE, writes
+Confirms the champion on full val with fresh seeds (with `cost_gating` on, the default, the
+confirmation is judged on those fresh trials only, not pooled with the selection-era trials that
+picked it, and the pooled verdict is recorded as a secondary field `pooled_verdict_vs_seed`; with
+`cost_gating` off the confirmation stays pooled, uses the posterior judge, is marked
+`fresh_only: false`, and records no `pooled_verdict_vs_seed`), tests it against the seed, seals test ONCE, writes
 `final.json`. If the confirm does not accept, finalize refuses to seal (`--seal-anyway REASON` records
 "no accepted change"). Report refusals unsoftened: `best_id == seed` is a null result with a diagnosed
 cause; an empty split is `empty`, not 0.0; a no-holdout spec is a FIT metric. No finalize, no result.
