@@ -711,7 +711,7 @@ class RunDir:
         """Warn (never refuse) when another run folder already scored the same test ids.
 
         Keeps ``test_ledger.jsonl`` beside the runs; logs a ``test_reuse`` event and stamps
-        ``test_reuse_count`` (0 when none) into final.json.
+        ``test_reuse_count`` (only when > 0) into final.json.
         """
         try:
             th = hashlib.sha256(json.dumps(sorted(map(str, splits.test))).encode()).hexdigest()
@@ -734,7 +734,7 @@ class RunDir:
                 self.log_event("test_reuse", count=len(earlier), runs=earlier,
                                msg="this test split was already scored by another run")
             final = self.root / "final.json"
-            if final.is_file():
+            if earlier and final.is_file():
                 payload = json.loads(final.read_text(encoding="utf-8"))
                 if isinstance(payload, dict):
                     payload["test_reuse_count"] = len(earlier)

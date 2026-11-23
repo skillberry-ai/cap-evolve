@@ -22,7 +22,7 @@ def _events(rd, kind):
 
 
 def _count(rd):
-    return json.loads((rd.root / "final.json").read_text())["test_reuse_count"]
+    return json.loads((rd.root / "final.json").read_text()).get("test_reuse_count", 0)
 
 
 def test_second_run_with_same_test_ids_is_warned(tmp_path):
