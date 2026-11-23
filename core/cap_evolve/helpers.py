@@ -199,9 +199,87 @@ _DYN_MODULES = {"importlib", "imp", "runpy", "builtins", "code", "codeop"}
 _OS_MODULES = {"os", "posix", "nt"}
 _PROC_ATTRS = {"system", "popen", "execv", "execve", "execl", "execlp", "execvp", "spawnl", "spawnv",
                "spawnlp", "spawnvp", "posix_spawn", "fork", "forkpty", "startfile"}
-_ID_NAME = re.compile(r"(?i)(^|_)(task|sample|instance|problem|example|case|row|sheet)_?(id|name|idx|index)$"
+# Names that identify WHICH task is running. ``sheet`` and ``row`` are not here: a sheet name or a row index is
+# an ordinary workbook argument, and comparing one is spreadsheet work, not a branch on the task (#912).
+_ID_NAME = re.compile(r"(?i)(^|_)(task|sample|instance|problem|example|case)_?(id|name|idx|index)$"
                       r"|^(tid|sid|task)$")
 _TABLE_MIN = 20  # constants in one literal collection before it is "a lookup table"
+#: Calls whose (nested) string arguments are file paths. A string there is always checked, even inside a message
+#: (``raise E(open("gold/x").read())``).
+_PATH_CALLS = {"open", "Path", "PurePath", "PosixPath", "join", "joinpath", "glob", "iglob", "rglob", "listdir",
+               "scandir", "walk", "exists", "isfile", "isdir", "stat", "load_workbook", "read_excel", "read_csv",
+               "read_json", "read_text", "read_bytes", "copy", "copyfile", "copy2", "copytree", "ExcelFile"}
+#: Message calls: ``print(...)`` / ``warn(...)``, and logger-style methods (``log.info(...)``, ``logger.error(...)``).
+_MESSAGE_FUNCS = {"print", "warn"}
+_MESSAGE_METHODS = {"debug", "info", "warning", "warn", "error", "exception", "critical", "log"}
+
+
+def _prose_strings(tree) -> set[int]:
+    """Ids of string constants that are prose, not data: docstrings, the text of exception messages and of message
+    calls, and ``__all__`` entries that name something the module defines.
+
+    A protected pattern (gold, answer, split) in prose is a word, not a path: the task template's own field is
+    called ``answer_position``, and a helper's error message names it (#912). Every OTHER string is still checked,
+    wherever it sits (a bare ``D = "gold"`` used later in a path is refused, as before), and a string inside a file
+    call is never prose."""
+    prose, path = set(), set()
+
+    def under(node, into):
+        for n in ast.walk(node):
+            if isinstance(n, ast.Constant) and isinstance(n.value, str):
+                into.add(id(n))
+
+    def message(node):
+        """The message text itself, never what another call computes (review of #1008): a constant, an
+        f-string's literal parts, and constants joined by ``%``/``+``, a tuple of ``%`` args, or ``.format``.
+        ``print(rd("gold/x"))`` and ``print(r, d := "gold")`` are not prose: a string handed to any other
+        call, or bound to a name, stays checked."""
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            prose.add(id(node))
+        elif isinstance(node, ast.JoinedStr):
+            for v in node.values:
+                if isinstance(v, ast.Constant):
+                    prose.add(id(v))
+        elif isinstance(node, ast.BinOp) and isinstance(node.op, (ast.Mod, ast.Add)):
+            message(node.left)
+            message(node.right)
+        elif isinstance(node, ast.Tuple):
+            for e in node.elts:
+                message(e)
+        elif isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "format" \
+                and isinstance(node.func.value, (ast.Constant, ast.JoinedStr)):
+            message(node.func.value)
+            for a in node.args:
+                message(a)
+
+    defined = {n.name for n in ast.walk(tree) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))}
+    defined |= {t.id for n in ast.walk(tree) if isinstance(n, ast.Assign) for t in n.targets if isinstance(t, ast.Name)}
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and node.body:
+            first = node.body[0]
+            if isinstance(first, ast.Expr) and isinstance(first.value, ast.Constant) \
+                    and isinstance(first.value.value, str):
+                prose.add(id(first.value))
+        elif isinstance(node, ast.Raise) and isinstance(node.exc, ast.Call):
+            for a in [*node.exc.args, *(k.value for k in node.exc.keywords)]:     # raise E(<message>)
+                message(a)
+        elif isinstance(node, (ast.Assign, ast.AugAssign)):
+            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+            if any(isinstance(t, ast.Name) and t.id == "__all__" for t in targets) \
+                    and isinstance(node.value, (ast.List, ast.Tuple)):
+                prose |= {id(e) for e in node.value.elts if isinstance(e, ast.Constant)
+                          and isinstance(e.value, str) and e.value in defined}
+        elif isinstance(node, ast.Call):
+            f = node.func
+            args = [*node.args, *(k.value for k in node.keywords)]
+            if _name_of(f) in _PATH_CALLS:
+                for a in args:
+                    under(a, path)
+            elif (isinstance(f, ast.Name) and f.id in _MESSAGE_FUNCS) or \
+                    (isinstance(f, ast.Attribute) and f.attr in _MESSAGE_METHODS):
+                for a in args:
+                    message(a)
+    return prose - path
 
 
 def _id_matchers(cfg: dict) -> tuple[set[str], list[str]]:
@@ -210,6 +288,11 @@ def _id_matchers(cfg: dict) -> tuple[set[str], list[str]]:
         ids |= {ln.strip() for ln in Path(cfg["ids_file"]).read_text(encoding="utf-8").splitlines()
                 if ln.strip()}
     return ids, [str(x) for x in cfg.get("forbidden_literals") or [] if str(x).strip()]
+
+
+def _is_value_literal(node) -> bool:
+    """A string or number constant: what a branch on a task id compares with (None and booleans are not)."""
+    return isinstance(node, ast.Constant) and node.value is not None and not isinstance(node.value, bool)
 
 
 def _name_of(node) -> str:
@@ -254,6 +337,7 @@ def lint_source(src: str, rel: str, cfg: dict) -> list[str]:
     prot = [re.compile(p) for p in (cfg.get("protected_patterns") or DEFAULT_PROTECTED)]
     out: list[str] = []
     os_names = _os_aliases(tree)
+    prose_nodes = _prose_strings(tree)
 
     def add(node, msg):
         out.append(f"{rel}:{getattr(node, 'lineno', 0)}: {msg}")
@@ -291,16 +375,19 @@ def lint_source(src: str, rel: str, cfg: dict) -> list[str]:
                 add(node, f"{f.id}() hides what the helper does from this lint")
         elif isinstance(node, ast.Compare):
             names = [_name_of(n) for n in [node.left, *node.comparators]]
-            consts = [n for n in [node.left, *node.comparators] if isinstance(n, ast.Constant)]
+            # A task-identity branch compares with a string or number literal; `x is None` / `== True` is not one.
+            consts = [n for n in [node.left, *node.comparators] if _is_value_literal(n)]
             if consts and any(_ID_NAME.search(n) for n in names if n):
                 add(node, "branches on task identity (compares a task/sample id to a constant)")
             for c in [n for n in [node.left, *node.comparators] if isinstance(n, (ast.Tuple, ast.List, ast.Set))]:
-                if any(isinstance(e, ast.Constant) for e in c.elts) and any(_ID_NAME.search(n) for n in names if n):
+                if any(_is_value_literal(e) for e in c.elts) and any(_ID_NAME.search(n) for n in names if n):
                     add(node, "branches on task identity (membership in a constant id set)")
         elif isinstance(node, ast.Match):
             if _ID_NAME.search(_name_of(node.subject) or ""):
                 add(node, "branches on task identity (match on a task/sample id)")
-        elif isinstance(node, (ast.Dict, ast.List, ast.Tuple, ast.Set)):
+        elif isinstance(node, (ast.Dict, ast.List, ast.Tuple)):
+            # A literal SET is not a lookup table: it answers only "is x in it?" and stores no values (e.g. the
+            # Excel functions that need an _xlfn. prefix). Task ids in it are still refused one by one below.
             elts = list(node.values if isinstance(node, ast.Dict) else node.elts)
             consts = [e for e in elts if isinstance(e, ast.Constant) or
                       (isinstance(e, (ast.Tuple, ast.List)) and e.elts and all(isinstance(x, ast.Constant) for x in e.elts))]
@@ -313,7 +400,7 @@ def lint_source(src: str, rel: str, cfg: dict) -> list[str]:
                 and not isinstance(node.value, bool):
             v = node.value
             sv = str(v)
-            if isinstance(v, str):
+            if isinstance(v, str) and id(node) not in prose_nodes:
                 for pat in prot:
                     if pat.search(v):
                         add(node, f"names an evaluator/gold/split path ({v[:60]!r})")
