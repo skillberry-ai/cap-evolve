@@ -694,7 +694,7 @@ def _prepare(adapter, run_dir, evaluator, ctx, params, view, cid, cl, *, incumbe
         shutil.rmtree(wd)
     wd.parent.mkdir(parents=True, exist_ok=True)
     shutil.copytree(incumbent_dir, wd)
-    ctx.inject(adapter, run_dir, wd, split=evaluator.proposer_split)
+    ctx.inject(adapter, run_dir, wd, split=evaluator.proposer_split, parent_dir=incumbent_dir)
     shown = write_cluster_context(wd, cluster=cl, failed=failed, traces=traces, params=params,
                                   confirm_ids=c_ids, others=others,
                                   limit=params.broad_max if role == "broad" else None)

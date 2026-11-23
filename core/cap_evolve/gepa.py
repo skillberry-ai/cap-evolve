@@ -620,7 +620,7 @@ def gepa_loop(
         # trajectories are tagged with THIS parent's minibatch eval — gepa's parent is a
         # frontier member, not the run's best, so the untruncated traces behind
         # REFLECTION.md are the ones to hand over.
-        ctx.inject(adapter, run_dir, workdir, split="train", tag=f"mb_p_{n:04d}")
+        ctx.inject(adapter, run_dir, workdir, split="train", tag=f"mb_p_{n:04d}", parent_dir=parent_dir)
         budget = feedback_digest.Budget()      # ONE feedback budget: reflection + failure index
         refl_summary = _write_reflection(workdir, parent_mb, run_dir=run_dir, optimizer=optimizer,
                                          budget=budget)

@@ -300,7 +300,7 @@ def test_the_self_check_accepts_what_the_gate_accepts(tmp_path):
     from cap_evolve import helper_gate
     rd = _run_with_seed(tmp_path, SEED)
     wd = _workdir_from_seed(rd)
-    assert helper_gate.write_self_check(rd, wd)                       # as inject does, before any edit
+    assert helper_gate.write_self_check(rd, wd, parent_dir=rd.candidate_dir("seed"))   # as run_step's inject does
     # framework scratch the optimizer's working dir holds: never part of the candidate
     for rel in (".claude/skills/n/scripts/a.py", "trajectories/t.py", "prior_iterations/c/x.py"):
         (wd / rel).parent.mkdir(parents=True, exist_ok=True)
@@ -314,7 +314,7 @@ def test_the_self_check_refuses_what_the_gate_refuses(tmp_path, capsys):
     from cap_evolve import helper_gate
     rd = _run_with_seed(tmp_path, SEED)
     wd = _workdir_from_seed(rd)
-    helper_gate.write_self_check(rd, wd)
+    helper_gate.write_self_check(rd, wd, parent_dir=rd.candidate_dir("seed"))
     (wd / "skills/s/scripts/h.py").write_text(CHEAT)
     (wd / "tools.py").write_text(CLEAN)                               # a new executable outside the declared dirs
     gate = helper_gate.check_candidate(rd, wd, parent_dir=rd.candidate_dir("seed"), parent_id="seed")
@@ -376,3 +376,55 @@ def test_run_step_and_hc2_use_one_refusal_prefix(tmp_path):
     step = harness.run_step(adapter, run_dir=rd, parent_dir=rd.candidate_dir("seed"), optimizer=opt,
                             instructions="x", current_val=base, gate_kwargs={"mode": "significant", "k_se": 1.0})
     assert step["decision"]["reason"].startswith(helper_gate.INDECISIVE_PREFIX)
+
+
+# ---- review round 2 of #1009: symlinks, what the copies hold, and the agent-optimize case -------------------
+
+def test_a_symlinked_helper_is_refused_by_the_gate_and_the_self_check(tmp_path):
+    import os
+    from cap_evolve import helper_gate
+    rd = _run_with_seed(tmp_path, SEED)
+    wd = _workdir_from_seed(rd)
+    helper_gate.write_self_check(rd, wd, parent_dir=rd.candidate_dir("seed"))
+    outside = tmp_path / "outside_h.py"
+    outside.write_text(CLEAN)
+    os.symlink(outside, wd / "skills/s/scripts/h.py")
+    r = helper_gate.check_candidate(rd, wd, parent_dir=rd.candidate_dir("seed"), parent_id="seed")
+    assert r is not None and "symlink" in r.result["failure"]
+    assert helper_gate.main([str(wd), "--config", str(wd / helper_gate.SELF_CHECK_CONFIG)]) == 1
+
+
+def test_a_dangling_symlink_is_refused_not_a_crash(tmp_path):
+    import os
+    from cap_evolve import helper_gate
+    rd = _run_with_seed(tmp_path, SEED)
+    wd = _workdir_from_seed(rd)
+    helper_gate.write_self_check(rd, wd, parent_dir=rd.candidate_dir("seed"))
+    os.symlink(tmp_path / "does_not_exist.py", wd / "skills/s/scripts/dang.py")
+    r = helper_gate.check_candidate(rd, wd, parent_dir=rd.candidate_dir("seed"), parent_id="seed")
+    assert r is not None and "symlink" in r.result["failure"]
+    assert helper_gate.main([str(wd), "--config", str(wd / helper_gate.SELF_CHECK_CONFIG)]) == 1
+
+
+def test_the_parent_and_seed_copies_hold_only_executable_files(tmp_path):
+    from cap_evolve import helper_gate
+    big = {**SEED, "data/table.xlsx": "x" * 10000, "notes.md": "n\n"}
+    rd = _run_with_seed(tmp_path, big)
+    wd = _workdir_from_seed(rd)
+    helper_gate.write_self_check(rd, wd, parent_dir=rd.candidate_dir("seed"))
+    for part in ("parent", "seed"):
+        got = sorted(p.relative_to(wd / helper_gate.SELF_CHECK_DIR / part).as_posix()
+                     for p in (wd / helper_gate.SELF_CHECK_DIR / part).rglob("*") if p.is_file())
+        assert got == ["reference/data_model.py", "skills/s/scripts/old.py"], (part, got)
+
+
+def test_without_a_parent_there_is_no_parent_copy(tmp_path):
+    # agent-optimize's working dir is a session dir, not a copy of one parent: no parent copy is made, so the CLI
+    # checks every helper file unless the agent passes --parent
+    from cap_evolve import helper_gate
+    rd = _run_with_seed(tmp_path, SEED)
+    wd = tmp_path / "session"
+    wd.mkdir()
+    assert helper_gate.write_self_check(rd, wd)
+    assert not (wd / helper_gate.SELF_CHECK_DIR / "parent").exists()
+    assert (wd / helper_gate.SELF_CHECK_DIR / "seed").is_dir()
