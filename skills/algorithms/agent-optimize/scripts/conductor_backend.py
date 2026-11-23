@@ -520,7 +520,11 @@ class RealBackend(P2Port, conductor.Backend):
                       f"{(evidence or {}).get('confirmation', 'accept')}" + (" (val = feedback-stratum estimate)" if per_task else "")]
         else:
             extra += ["--val", "0.0"]
-        rc, res = act.commit(self.ctx, tag, "accept", "conductor: " + json.dumps(evidence, default=str)[:200], extra)
+        try:
+            rc, res = act.commit(self.ctx, tag, "accept", "conductor: " + json.dumps(evidence, default=str)[:200], extra)
+        except act.Refused as e:
+            # e.g. the eval-surface tamper guard: a refusal that a relaunch cannot clear, so exit 2, not a crash
+            raise conductor.Refused(f"accept of {tag} blocked: {e}") from e
         if rc != 0:
             raise RuntimeError(f"commit.py refused the accept of {tag}: {res}")
         self._rediagnose(tag)

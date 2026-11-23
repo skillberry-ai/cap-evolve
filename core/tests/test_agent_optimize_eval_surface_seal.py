@@ -165,3 +165,36 @@ def test_a_project_with_no_eval_surface_files_refuses_promote_and_finalize(tmp_p
     rc, out = _act(monkeypatch, capsys, ["finalize", "--n-confirm", "0", *_args(rd, project)], sh)
     assert rc == 2 and out["verdict"] == "tamper" and "TAMPER-UNKNOWN" in out["error"], out
     assert not RunDir.open(rd.root).read_splits().test_used
+
+
+def test_conductor_commit_accept_turns_a_tamper_refusal_into_a_clean_conductor_refusal(tmp_path, monkeypatch):
+    """On the conductor path the tamper guard in act.commit raises act.Refused; RealBackend.commit_accept must
+    re-raise it as conductor.Refused so the conductor exits 2 (refused) and the supervisor does not relaunch."""
+    import argparse
+    import types
+
+    import act
+    import conductor
+    import conductor_backend
+    import pytest
+    from cap_evolve import harness
+
+    rd, project, _, val = _run(tmp_path)
+    _covered(rd, val)
+    ctx = act.Ctx(argparse.Namespace(run_dir=str(rd.root), project=str(project), strict=False))
+    adapter = project / "adapters" / "adapter.py"
+    adapter.write_text(adapter.read_text() + "\n# always score 1.0\n")
+    sh = Sh(**{"commit.py": (0, "{}", "")})
+    monkeypatch.setattr(act, "sh", sh)
+    monkeypatch.setattr(harness, "split_result_from_rollouts",
+                        lambda *a, **k: types.SimpleNamespace(per_task={"t": 1.0}, reward=1.0))
+    be = types.SimpleNamespace(run_dir=RunDir.open(rd.root), ctx=ctx, cfg=types.SimpleNamespace(p2=False),
+                               _rediagnose=lambda tag: None)
+    with pytest.raises(conductor.Refused, match="tamper|changed"):
+        conductor_backend.RealBackend.commit_accept(be, "cand_1", {"confirmation": "accept"})
+    assert not any(c[1].endswith("commit.py") for c in sh.calls), "nothing committed"
+    assert RunDir.open(rd.root).best_id == "cur"
+    spawns = []
+    assert conductor.supervise([], max_restarts=3, sleep_s=0, sleep=lambda s: None,
+                               spawn=lambda a: spawns.append(1) or conductor.EXIT_REFUSED) == conductor.EXIT_REFUSED
+    assert len(spawns) == 1, "a refusal is not relaunched"
