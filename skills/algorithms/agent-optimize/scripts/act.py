@@ -827,6 +827,24 @@ def complete_finalize(ctx, intent: dict) -> dict:
     return payload
 
 
+def _keep_rescore_mark(ctx, out):
+    """Carry the seal-bypass mark into the final.json we are about to write (#799).
+
+    commit_test stamps it on the on-disk final.json and state.json records every use,
+    but the payloads from the finalize phase and complete_finalize lack it."""
+    uses = RunDir.open(ctx.root).test_rescore_overrides()
+    if uses:
+        out["test_rescore_override"] = {"used": True, "count": len(uses), "uses": uses}
+        return
+    try:
+        prev = json.loads((ctx.root / "final.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        prev = None
+    mark = prev.get("test_rescore_override") if isinstance(prev, dict) else None
+    if isinstance(mark, dict) and mark.get("used"):
+        out["test_rescore_override"] = mark
+
+
 def finalize(a, ctx):
     run_dir = ctx.run_dir
     project = ctx.need_project()
@@ -838,6 +856,7 @@ def finalize(a, ctx):
     if intent_path.exists() and (run_dir.rollouts / "test").is_dir() and any((run_dir.rollouts / "test").glob("*.json")):
         out = {"final": complete_finalize(ctx, jload(intent_path.read_text(encoding="utf-8")) or {}),
                "champion": ctx.champion(), "completed_from_existing": True}
+        _keep_rescore_mark(ctx, out)
         final_path.write_text(json.dumps(out, indent=2, default=str), encoding="utf-8")
         return 0, out
     champ = ctx.champion()
@@ -886,19 +905,7 @@ def finalize(a, ctx):
     if rc != 0:
         raise Refused(f"finalize phase failed rc={rc}", stderr=(se or so)[-500:])
     out["final"] = jload(so) or so[-500:]
-    # Keep the seal-bypass mark: the phase stamped it into the on-disk final.json (commit_test),
-    # but its printed payload lacks it and we are about to overwrite that file (#799).
-    uses = RunDir.open(ctx.root).test_rescore_overrides()
-    if uses:
-        out["test_rescore_override"] = {"used": True, "count": len(uses), "uses": uses}
-    else:
-        try:
-            prev = json.loads((ctx.root / "final.json").read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            prev = None
-        mark = prev.get("test_rescore_override") if isinstance(prev, dict) else None
-        if isinstance(mark, dict) and mark.get("used"):
-            out["test_rescore_override"] = mark
+    _keep_rescore_mark(ctx, out)
     (ctx.root / "final.json").write_text(json.dumps(out, indent=2, default=str), encoding="utf-8")
     ctx.decision("finalize", champ, verdict=(out.get("confirm") or {}).get("verdict_vs_seed"))
     return 0, out

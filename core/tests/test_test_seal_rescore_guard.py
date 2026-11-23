@@ -173,3 +173,31 @@ def test_act_finalize_keeps_the_override_mark_in_final_json(tmp_path, capsys, mo
     assert final["final"] == {"test": {"reward": 1.0}, "best_id": "cur"}
     assert final["test_rescore_override"]["used"] is True
     assert final["test_rescore_override"]["count"] == 1
+
+
+def test_act_finalize_completion_path_keeps_the_override_mark(tmp_path, capsys, monkeypatch):
+    """An override attempt re-scored test, then died before final.json; the next `act finalize`
+    completes from the existing rollouts and must still mark final.json (#799)."""
+    import sys
+    sys.path.insert(0, str(Path(__file__).parent))
+    from test_digest_and_act_verbs import Sh, _act, _args, _run as _act_run
+
+    monkeypatch.setenv("CAPEVOLVE_ALLOW_TEST_RESCORE", "1")
+    rd, project, _, _ = _act_run(tmp_path)
+    d = rd.rollouts / "test"
+    d.mkdir(parents=True, exist_ok=True)
+    for tag in ("FINAL", "FINAL_seed"):
+        for t in rd.read_splits().ids("test"):
+            (d / f"{t}__{tag}__t0.json").write_text(json.dumps({"input": None,
+                "rollout": {"task_id": t, "output": "", "error": None},
+                "score": {"task_id": t, "reward": 1.0, "feedback": "", "n": 1, "stderr": 0.0,
+                          "trial_rewards": [1.0], "raw": {}}}), encoding="utf-8")
+    RunDir.open(rd.root).begin_test_attempt()  # records the override use, then the process dies
+    (rd.root / "finalize.intent").write_text(json.dumps({"champion": "seed"}), encoding="utf-8")
+    monkeypatch.delenv("CAPEVOLVE_ALLOW_TEST_RESCORE")
+
+    _act(monkeypatch, capsys, ["finalize", "--n-confirm", "0", *_args(rd, project)], Sh())
+    final = json.loads((rd.root / "final.json").read_text(encoding="utf-8"))
+    assert final["completed_from_existing"] is True
+    assert final["test_rescore_override"]["used"] is True
+    assert final["test_rescore_override"]["count"] == 1
