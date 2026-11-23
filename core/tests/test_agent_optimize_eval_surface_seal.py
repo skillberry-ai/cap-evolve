@@ -98,3 +98,70 @@ def test_finalize_pooled_confirm_gate_is_advisory(tmp_path, capsys, monkeypatch)
     assert len(gates) == 2
     assert "--advisory" not in gates[0], "the fresh-trial confirmation is the real gate record"
     assert gates[1][gates[1].index("--advisory") + 1] == "pooled_confirm"
+
+
+def _promote_after_edit(tmp_path, capsys, monkeypatch, rd, project, real_adapter):
+    _first_call(monkeypatch, capsys, rd, project)
+    man = integrity.read_manifest(Path(rd.private_dir) / integrity.EVAL_SURFACE_MANIFEST)
+    assert "adapters/adapter.py" in man["files"], man
+    assert man["targets"]["adapters/adapter.py"] == str(real_adapter.resolve()), "resolved path recorded"
+    sh = Sh(**{"gate_check.py": _gate("accept"), "commit.py": (0, "{}", "")})
+    real_adapter.write_text(real_adapter.read_text() + "\n# always score 1.0\n")
+    rc, out = _act(monkeypatch, capsys, ["promote", "cand_1", *_args(rd, project)], sh)
+    assert rc == 2 and out["verdict"] == "tamper" and "adapters/adapter.py" in out["changed"], out
+    assert RunDir.open(rd.root).best_id == "cur"
+    assert not any(c[1].endswith("commit.py") for c in sh.calls)
+
+
+def test_a_symlinked_adapters_folder_is_sealed_by_content(tmp_path, capsys, monkeypatch):
+    rd, project, _, val = _run(tmp_path)
+    _covered(rd, val)
+    shared = tmp_path / "shared_adapters"  # outside the project, as the parsec scaffolds do
+    (project / "adapters").rename(shared)
+    (project / "adapters").symlink_to(shared, target_is_directory=True)
+    _promote_after_edit(tmp_path, capsys, monkeypatch, rd, project, shared / "adapter.py")
+
+
+def test_a_symlinked_adapter_file_outside_the_project_is_sealed_by_content(tmp_path, capsys, monkeypatch):
+    rd, project, _, val = _run(tmp_path)
+    _covered(rd, val)
+    outside = tmp_path / "elsewhere" / "adapter.py"
+    outside.parent.mkdir()
+    (project / "adapters" / "adapter.py").rename(outside)
+    (project / "adapters" / "adapter.py").symlink_to(outside)
+    _promote_after_edit(tmp_path, capsys, monkeypatch, rd, project, outside)
+
+
+def test_retargeting_a_symlinked_adapter_is_tamper(tmp_path, capsys, monkeypatch):
+    rd, project, _, val = _run(tmp_path)
+    _covered(rd, val)
+    a, b = tmp_path / "a.py", tmp_path / "b.py"
+    a.write_text("X = 1\n")
+    b.write_text("X = 1\n")  # same content, different file
+    link = project / "adapters" / "adapter.py"
+    link.unlink()
+    link.symlink_to(a)
+    _first_call(monkeypatch, capsys, rd, project)
+    link.unlink()
+    link.symlink_to(b)
+    sh = Sh(**{"gate_check.py": _gate("accept"), "commit.py": (0, "{}", "")})
+    rc, out = _act(monkeypatch, capsys, ["promote", "cand_1", *_args(rd, project)], sh)
+    assert rc == 2 and out["verdict"] == "tamper" and out["changed"] == ["adapters/adapter.py"], out
+
+
+def test_a_project_with_no_eval_surface_files_refuses_promote_and_finalize(tmp_path, capsys, monkeypatch):
+    import shutil
+    rd, project, _, val = _run(tmp_path)
+    _covered(rd, val)
+    shutil.rmtree(project / "adapters")
+    for p in project.iterdir():
+        assert not any(__import__("fnmatch").fnmatch(p.name, g) for g in integrity.EVAL_SURFACE_FILES)
+    _first_call(monkeypatch, capsys, rd, project)
+    sh = Sh(**{"gate_check.py": _gate("accept"), "commit.py": (0, "{}", ""),
+               "run.py": (0, json.dumps({"test_reward": 0.5}), "")})
+    rc, out = _act(monkeypatch, capsys, ["promote", "cand_1", *_args(rd, project)], sh)
+    assert rc == 2 and out["verdict"] == "tamper" and "TAMPER-UNKNOWN" in out["error"], out
+    assert RunDir.open(rd.root).best_id == "cur"
+    rc, out = _act(monkeypatch, capsys, ["finalize", "--n-confirm", "0", *_args(rd, project)], sh)
+    assert rc == 2 and out["verdict"] == "tamper" and "TAMPER-UNKNOWN" in out["error"], out
+    assert not RunDir.open(rd.root).read_splits().test_used

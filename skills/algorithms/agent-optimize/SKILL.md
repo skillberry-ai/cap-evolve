@@ -156,9 +156,13 @@ Enforced by the scripts: test is scored once, by `finalize` only (the split seal
 confirmation gate read val only. Eval-surface guard: the first `act.py` call that names `--project`
 hashes the project's `adapters/` and `tasks/` folders and its top-level `adapter.py`, `*scorer*.py`
 and `tasks*` files into the run's private area; `promote` (and every accept) and `finalize` re-hash
-them and refuse with a `tamper` event naming the changed files if any was edited, added or removed
-(`best_id` and the test seal untouched). Not covered: files elsewhere in the project, and a run whose
-manifest was itself edited. Yours: never hand a subset result to
+them and refuse with a `tamper` event naming the changed files if any was edited, added, removed or
+re-pointed (`best_id` and the test seal untouched). Symlinks (a linked `adapters/` folder or a linked
+`adapter.py`, also to outside the project) are followed: the target's content and resolved path are
+sealed. A project with none of these files refuses promote/finalize as tamper-unknown (rc 2). Not
+covered: files elsewhere in the project (or imported from outside these folders), `__pycache__`/`.pyc`,
+and a run whose manifest (`private/eval_surface.json`) was itself edited or deleted (a deleted one is
+re-recorded from the current files). Yours: never hand a subset result to
 `gate_check.py`; every round leaves run-dir artifacts (JOURNAL.md entry in `work/TAG`, DIAGNOSIS.json);
 report a broken framework file, do not work around it. Wait for finalize to exit or the seal is wasted.
 
