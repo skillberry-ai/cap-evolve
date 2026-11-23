@@ -4496,6 +4496,75 @@ def _failures_block(always_fail, flaky, errored, run_dir=None, optimizer=None,
     return "\n".join(lines)
 
 
+def _last_reject_block(steps, current_val: SplitResult, run_dir=None, optimizer=None,
+                       budget: "feedback_digest.Budget | None" = None) -> str:
+    """The previous step's REJECTED candidate set against the current best, task by task.
+
+    Hill-climb's prompt is built from the best's results only, and a rejected candidate's
+    edits are reverted, so the next proposal never saw what its predecessor's edit actually
+    did to the judge's verdicts: the rejected candidate's own feedback reached it only as raw
+    trial files under ``./prior_iterations/<id>/trajectories/``. This block puts that feedback
+    in the prompt for every task the candidate measurably moved (``movement`` — the same
+    rule LEDGER.md uses): worse first, worst first, then better. The best's own feedback on
+    the same tasks is in the failure index, so the two can be read side by side.
+
+    It takes at most HALF of what is left of the prompt's feedback ``budget``
+    (``feedback_digest.fit``, condensed + linked like the failure index); the failure index
+    rendered after it gets the rest. Empty unless the last step was a measured reject. Only
+    rows on the proposer-visible split are used, so a pooled run's confirm stratum never
+    reaches the optimizer.
+    """
+    if not steps:
+        return ""
+    last = steps[-1]
+    if last.get("accepted") or not last.get("candidate_val"):
+        return ""
+    cid = str(last.get("candidate_id") or "the last candidate")
+    cand_val = SplitResult.from_dict(last["candidate_val"])
+    cand_rows = list(cand_val.per_task or [])
+    if run_dir is not None:
+        try:
+            visible = set(map(str, run_dir.read_splits().ids(gate_split(run_dir))))
+            cand_rows = [pt for pt in cand_rows if str(pt.get("task_id")) in visible]
+        except (OSError, ValueError, KeyError):
+            pass
+    mv = movement(current_val.per_task, cand_rows)
+    if not mv["n_shared"]:
+        return ""
+    by_id = {str(pt.get("task_id")): pt for pt in cand_rows}
+    vals = mv["values"]
+    worse = sorted(mv["broke"] + mv["regressed"], key=lambda t: vals[t][1] - vals[t][0])
+    better = sorted(mv["fixed"] + mv["improved"], key=lambda t: vals[t][0] - vals[t][1])
+    fd = feedback_digest
+    budget = budget if budget is not None else fd.Budget()
+    rows = [by_id[t] for t in worse + better]
+    got = fd.fit(rows, budget.left // 2,
+                 head=lambda pt: (f"- {pt.get('task_id')} (best {vals[str(pt.get('task_id'))][0]:.2f}"
+                                  f" → {cid} {vals[str(pt.get('task_id'))][1]:.2f}): "),
+                 run_dir=run_dir, optimizer=optimizer)
+    budget.spend(got.used)
+    listed = lambda ids: [got.entries[t] for t in ids if t in got.entries]
+    lines = [
+        f"## Last rejected candidate `{cid}` vs the current best — ITS OWN judge feedback",
+        f"`{cid}` scored {cand_val.reward:.3f} against the best's {current_val.reward:.3f} and "
+        "was rejected; its edit was reverted. Below is ITS feedback on every task it moved by "
+        "more than 2·SE (parent → candidate reward in each head). The current best's feedback "
+        "on the same tasks is in the failure index; compare the two to see which part of the "
+        f"edit did what. Its diff and every trial are in `./prior_iterations/{cid}/`.",
+        "",
+        f"### Measurably WORSE than the best ({len(worse)}) — find what the edit broke here",
+    ]
+    lines += listed(worse) or ["- (none)"]
+    lines += ["", f"### Measurably BETTER than the best ({len(better)}) — keep what caused these"]
+    lines += listed(better) or ["- (none)"]
+    if got.rest:
+        lines += ["", got.rest_line]
+    if mv["unresolved"]:
+        lines += ["", f"Moved by less than 2·SE (no claim either way): "
+                      + ", ".join(str(t) for t in mv["unresolved"][:40])]
+    return "\n".join(lines)
+
+
 def _optimizer_parallel(optimizer_name: str | None) -> bool:
     """Whether the resolved optimizer's harness can spawn parallel subagents.
 
@@ -5424,9 +5493,14 @@ def hill_climb_loop(
         else:
             focus_ids, label = None, focus
         parent_dir = run_dir.candidate_dir(run_dir.best_id)
+        # ONE feedback budget: the last reject's per-task comparison, then the failure index.
+        budget = feedback_digest.Budget()
+        reject_block = _last_reject_block(steps, current_val, run_dir=run_dir,
+                                          optimizer=optimizer, budget=budget)
         instructions = ctx.instructions(current_val, focus_ids, label,
                                         algorithm=algorithm, parent_dir=parent_dir, run_dir=run_dir,
-                                        optimizer=optimizer)
+                                        optimizer=optimizer, extra=reject_block,
+                                        feedback_budget=budget)
         if convergence:
             # Pure: recomputed from the steps so far, so a resumed run rebuilding the
             # same observation list gets the identical signal.
