@@ -76,7 +76,7 @@ def test_flat_briefing_paths_exist(tmp_path, monkeypatch):
     for n in names:
         assert (a / n).is_file(), n
     # "Read this first" must name a file that exists in the flat install too.
-    legacy = skills / "agent-optimize" / "references" / "legacy-SKILL.md"
+    legacy = skills / "agent-optimize" / "references" / "legacy" / "legacy-SKILL.md"
     legacy.parent.mkdir(exist_ok=True)
     shutil.copy(REPO / "docs/archive/agent-optimize-legacy/legacy-SKILL.md", legacy)
     host = _load("host", skills / "agent-optimize" / "scripts", monkeypatch)
@@ -93,10 +93,16 @@ def test_install_sh_ships_legacy_doc(tmp_path, monkeypatch):
     dest = tmp_path / "inst"
     r = subprocess.run(["bash", str(src / "install.sh"), "--dest", str(dest)],
                        capture_output=True, text=True, cwd=src)
-    assert (dest / "agent-optimize" / "references" / "legacy-SKILL.md").is_file(), r.stdout + r.stderr
+    assert (dest / "agent-optimize" / "references" / "legacy" / "legacy-SKILL.md").is_file(), r.stdout + r.stderr
     monkeypatch.setenv("CAPEVOLVE_SKILLS_DIR", str(dest))
     host = _load("host", dest / "agent-optimize" / "scripts", monkeypatch)
-    assert host.LEGACY_DOC == dest / "agent-optimize" / "references" / "legacy-SKILL.md"
+    assert host.LEGACY_DOC == dest / "agent-optimize" / "references" / "legacy" / "legacy-SKILL.md"
+    import re
+    doc = host.LEGACY_DOC
+    for target in re.findall(r"\]\(([^)#\s]+)(?:#[^)]*)?\)", doc.read_text()):
+        if "://" in target or target.startswith("mailto:"):
+            continue
+        assert (doc.parent / target).exists(), target
 
 
 def test_source_checkout_briefing_paths_exist(tmp_path, monkeypatch):
@@ -136,7 +142,7 @@ def test_installed_docs_script_paths_resolve(tmp_path, monkeypatch):
     text = _render_briefing(host, tmp_path)
     env = dict(re.findall(r'^([A-Z]+)="([^"]*)"', text, re.M))
     docs = [dest / "agent-optimize" / "SKILL.md",
-            dest / "agent-optimize" / "references" / "legacy-SKILL.md"]
+            dest / "agent-optimize" / "references" / "legacy" / "legacy-SKILL.md"]
     for doc in docs:
         assert doc.is_file(), r.stdout + r.stderr
         body = doc.read_text()
