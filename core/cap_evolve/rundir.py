@@ -717,7 +717,8 @@ class RunDir:
             th = hashlib.sha256(json.dumps(sorted(map(str, splits.test))).encode()).hexdigest()
             ledger = self.root.parent / "test_ledger.jsonl"
             earlier: list = []
-            if ledger.is_file():
+            # An empty test split scored nothing: no ledger entry, no warning (count 0).
+            if splits.test and ledger.is_file():
                 for line in ledger.read_text(encoding="utf-8").splitlines():
                     try:
                         e = json.loads(line)
@@ -725,8 +726,9 @@ class RunDir:
                         continue
                     if isinstance(e, dict) and e.get("test_hash") == th and e.get("run") != self.root.name:
                         earlier.append(e["run"])
-            with ledger.open("a", encoding="utf-8") as f:
-                f.write(json.dumps({"test_hash": th, "run": self.root.name, "time": time.time()}) + "\n")
+            if splits.test:
+                with ledger.open("a", encoding="utf-8") as f:
+                    f.write(json.dumps({"test_hash": th, "run": self.root.name, "time": time.time()}) + "\n")
             earlier = sorted(set(earlier))
             if earlier:
                 self.log_event("test_reuse", count=len(earlier), runs=earlier,

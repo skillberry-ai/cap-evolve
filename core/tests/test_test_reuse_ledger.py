@@ -65,3 +65,18 @@ def test_act_finalize_keeps_test_reuse_count(tmp_path, capsys, monkeypatch):
     _act(monkeypatch, capsys, ["finalize", "--n-confirm", "0", *_args(rd, project)],
          Sh(**{"run.py": fake_finalize}))
     assert _count(rd) == 1
+
+
+def test_empty_test_splits_are_not_flagged_as_reuse(tmp_path):
+    from cap_evolve.splits import Splits
+    runs = []
+    for ts in ("e1", "e2"):
+        rd = RunDir.create(tmp_path, ts=ts)
+        rd.write_splits(Splits(train=["x"], val=["x"], test=[]))
+        (rd.root / "final.json").write_text("{}", encoding="utf-8")
+        rd.begin_test_attempt()
+        rd.reserve_test()
+        rd.commit_test()
+        runs.append(rd)
+    assert all(_events(r, "test_reuse") == [] for r in runs)
+    assert _count(runs[1]) == 0
