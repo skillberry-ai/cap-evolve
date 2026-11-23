@@ -259,9 +259,14 @@ def test_act_commit_cancels_promote_gate_on_refusal(tmp_path):
         sys.path.insert(0, str(_S))
     import act
     r = _Real(tmp_path)
+    proj = tmp_path / "proj"
+    (proj / "adapters").mkdir(parents=True)
+    (proj / "adapters" / "adapter.py").write_text("class Adapter: pass\n", encoding="utf-8")
 
     class Ctx:
         root = str(r.rd.root)
+        run_dir = r.rd
+        project = str(proj)
 
         def work(self, tag):
             return str(r.rd.root / "work" / tag)
