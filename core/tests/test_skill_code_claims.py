@@ -257,6 +257,8 @@ def test_gate_check_pareto_wiring_actually_reaches_gate_decide(tmp_path, monkeyp
             return _S()
         def candidate_dir(self, tag):
             return tmp_path / tag
+        def log_event(self, *a, **k):
+            pass
 
     monkeypatch.setattr(gate_check.RunDir, "open", staticmethod(lambda p: _FakeRunDir()))
 
