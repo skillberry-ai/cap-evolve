@@ -24,7 +24,11 @@ One trace is not enough. Name the traces in the hypothesis.
 size caps), `helper_lint`, and `helper_smoke` (the helper imports, two runs give identical output, it writes only
 its declared outputs, no network, no gold). All three run, so the reason lists every finding. A failure makes
 the step indecisive: the candidate is not measured, no budget is spent, and the reason is filed in the rejected
-memory you read next step; fix it and propose again.
+memory you read next step (and in LEDGER.md under "Not scored"); fix it and propose again.
+
+**Check before you finish.** Run the same checks yourself: `python -m cap_evolve.helper_gate . --config
+guidance/helper_gate/config.json` prints `helper gate: ok` or each finding with its file and line. It does not know the
+task ids, so the gate can still refuse a helper that holds one.
 
 **What a helper crash costs.** A rollout that fails because the candidate's own helper raised is scored 0
 (`error_kind=candidate`), not treated as missing. A flaky helper is worse than prose.

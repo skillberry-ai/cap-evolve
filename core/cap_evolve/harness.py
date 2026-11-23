@@ -3712,7 +3712,7 @@ def run_step(
     # ``ctx`` is the SHARED assembler every algorithm passes; an absent one (a bare
     # unit-test call) injects the unconditional pieces only.
     ctx = ctx or OptimizerContext()
-    ctx.inject(adapter, run_dir, workdir, split=eval_split)
+    ctx.inject(adapter, run_dir, workdir, split=eval_split, parent_dir=parent_dir)
 
     instructions = ctx.augment_instructions(instructions, workdir, run_dir)
     # The ./feedback_full/ files the prompt links to: written BEFORE the seal below.
@@ -5202,8 +5202,11 @@ class OptimizerContext:
     # ---- the two things every algorithm needs --------------------------------
 
     def inject(self, adapter, run_dir: RunDir, workdir: Path, *, split: str,
-               tag: str | None = None) -> None:
-        """Copy this context into ``workdir`` (trajectories + guidance + native skills)."""
+               tag: str | None = None, parent_dir: Path | None = None) -> None:
+        """Copy this context into ``workdir`` (trajectories + guidance + native skills).
+
+        ``parent_dir``: the candidate ``workdir`` was copied from, for the helper gate's self-check (its lint and
+        smoke compare against the parent). Callers whose ``workdir`` is not a copy of one parent pass None."""
         _inject_optimizer_context(adapter, run_dir, workdir, split=split,
                                   capabilities=list(self.capabilities),
                                   optimizer_name=self.optimizer_name,
@@ -5212,10 +5215,18 @@ class OptimizerContext:
                                   memory_skill=self.memory_skill)
         if self.memory_skill and self.memory_skill != "md-files":
             _inject_memory_skill_guidance(run_dir, workdir, self.memory_skill)
+        # The helper gate's config for the optimizer's own check (nothing is written when the gate is off).
+        from . import helper_gate
+        helper_gate.write_self_check(run_dir, workdir, self.project_dir, parent_dir=parent_dir)
 
     def augment_instructions(self, instructions: str, workdir: Path, run_dir: RunDir) -> str:
-        """Seed this run's chosen ``memory_skill``'s files and append its pointer text."""
-        return resolve_memory(self.memory_skill).augment_instructions(instructions, workdir, run_dir)
+        """Seed this run's chosen ``memory_skill``'s files and append its pointer text, and, when ``inject`` wrote
+        the helper gate's self-check config, the note that tells the optimizer to run it."""
+        from . import helper_gate
+        text = resolve_memory(self.memory_skill).augment_instructions(instructions, workdir, run_dir)
+        if (Path(workdir) / helper_gate.SELF_CHECK_CONFIG).is_file():
+            text = f"{text}\n\n{helper_gate.SELF_CHECK_NOTE}"
+        return text
 
     def write_handover(self, run_dir: RunDir, workdir: Path, cid: str, **kwargs) -> None:
         """Record this iteration's handover the way the chosen ``memory_skill`` wants it."""

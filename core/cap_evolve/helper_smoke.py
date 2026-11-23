@@ -58,10 +58,15 @@ def fixture_traces(rollouts_dir: Path, tag: str, splits=("feedback", "train")) -
     bad = set(splits) & helpers.FIXTURE_SPLITS_FORBIDDEN
     if bad:
         raise ValueError(f"fixtures never come from {sorted(bad)}")
-    out: list[Path] = []
+    out: set[Path] = set()
     for sp in splits:
-        out += sorted((Path(rollouts_dir) / sp).glob(f"*__{tag}__t*.json"))
-    return out
+        d = Path(rollouts_dir) / sp
+        # ``<task>__<tag>__t<n>.json`` (the hill-climb and baseline evaluations), and the P2 evaluator's
+        # ``<task>__<round>__<tag>__<stage>_<i>__t<n>.json`` (HC-2 rungs, incumbent draws, champion top-ups).
+        # ``__`` delimits the tag on both sides, so ``cand_0001`` never matches ``cand_00012``.
+        out.update(d.glob(f"*__{tag}__t*.json"))
+        out.update(d.glob(f"*__{tag}__*__t*.json"))
+    return sorted(out)
 
 
 def fixtures_from_traces(traces) -> list[dict]:

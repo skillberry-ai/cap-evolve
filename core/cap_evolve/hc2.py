@@ -40,7 +40,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
-from . import feedback_digest
+from . import feedback_digest, helper_gate
 from .evaluator import thread_map
 from .types import NON_CAPABILITY_DIRS
 
@@ -694,7 +694,7 @@ def _prepare(adapter, run_dir, evaluator, ctx, params, view, cid, cl, *, incumbe
         shutil.rmtree(wd)
     wd.parent.mkdir(parents=True, exist_ok=True)
     shutil.copytree(incumbent_dir, wd)
-    ctx.inject(adapter, run_dir, wd, split=evaluator.proposer_split)
+    ctx.inject(adapter, run_dir, wd, split=evaluator.proposer_split, parent_dir=incumbent_dir)
     shown = write_cluster_context(wd, cluster=cl, failed=failed, traces=traces, params=params,
                                   confirm_ids=c_ids, others=others,
                                   limit=params.broad_max if role == "broad" else None)
@@ -999,7 +999,10 @@ def _status(pend, cid, v1, v2, cv):
     """(status, reason, indecisive) for one candidate. Only the C verdict BIT is ever written."""
     if cid in pend["dropped"]:
         why = pend["dropped"][cid]
-        return "dropped", (why if why.startswith("the helper gate") else f"hc2 diversity gate: {why}"), True
+        # A helper-gate refusal is "not scored", as in run_step: the prefix puts it in LEDGER.md's "Not scored"
+        # section with its finding, and _record files it in rejected memory, so the next proposer can fix it.
+        return "dropped", (f"{helper_gate.INDECISIVE_PREFIX}{why}" if why.startswith("the helper gate")
+                           else f"hc2 diversity gate: {why}"), True
     if cv is not None:
         return cv.status, f"P2 confirmation {cv.bit()}", cv.status == "unconfirmed"
     rv = v2 or v1
@@ -1014,7 +1017,9 @@ def _rejected_notes(run_dir, n: int) -> list:
         recs = [json.loads(x) for x in p.read_text(encoding="utf-8").splitlines() if x.strip()]
     except (OSError, ValueError):
         return []
-    return [f"{r.get('candidate_id')}: {r.get('summary', '')[:160]} ({r.get('reason', '')[:120]})"
+    # An unscored candidate's reason IS the fix (e.g. the lint finding); 120 characters cut it before the finding.
+    return [f"{r.get('candidate_id')}: {r.get('summary', '')[:160]} "
+            f"({r.get('reason', '')[:500 if str(r.get('reason', '')).startswith('indecisive') else 120]})"
             for r in recs[-n:]]
 
 
@@ -1033,6 +1038,9 @@ def _record(run_dir, harness, cid, parent_id, workdir, status, reason, *, indeci
             history.add(cid, summary, getattr(rv, "mean", 0.0) or 0.0)
     elif not indecisive and rejected is not None:
         rejected.add(cid, summary, reason, getattr(rv, "mean", None))
+    elif rejected is not None and reason.startswith(helper_gate.INDECISIVE_PREFIX):
+        # never measured, so it stays indecisive (no stall step), but the finding is what the proposer needs
+        rejected.add(cid, f"candidate {cid} (not scored: helper gate)", reason, None)
     if not indecisive and not accepted and diff is not None:
         rdiffs.add(cid, diff)
     if store is not None and not indecisive:
