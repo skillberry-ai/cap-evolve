@@ -316,7 +316,8 @@ def lint_source(src: str, rel: str, cfg: dict) -> list[str]:
             sv = str(v)
             if isinstance(v, str):
                 for pat in prot:
-                    if pat.search(v) and not (pat.pattern == DEFAULT_PROTECTED[2] and re.search(r"\s", v)):
+                    if pat.search(v) and not (pat.pattern == DEFAULT_PROTECTED[2] and re.search(r"\s", v)
+                                                   and not re.search(r"[/\\]|\.\w+$", v)):
                         add(node, f"names an evaluator/gold/split path ({v[:60]!r})")
                         break
             if sv in ids or any(len(i) >= 4 and re.search(rf"(?<![\w.]){re.escape(i)}(?![\w.])", sv)

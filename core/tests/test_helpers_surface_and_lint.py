@@ -483,3 +483,4 @@ def test_lint_sheet_name_none_and_answer_position_message_pass():
     assert lint("def f(x):\n    return float(str(x).replace(',', ''))\n") == []
     assert lint("def f(task_id):\n    if task_id == '10452':\n        return 42\n")
     assert lint("def f():\n    return open('/data/1_10452_golden.xlsx')\n")
+    assert lint('def f():\n    return open("/data/answers/1 2.json")\n')
