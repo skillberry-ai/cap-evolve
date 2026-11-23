@@ -67,7 +67,7 @@ echo "  from: $SRC"
 echo "  to:   $DEST"
 
 shopt -s nullglob
-COMPONENTS=(orchestrate phases capabilities algorithms optimizers interventions)
+COMPONENTS=(orchestrate phases capabilities algorithms optimizers interventions memory)
 for comp in "${COMPONENTS[@]}"; do
   # A skill dir is one that HOLDS a meta.yaml — found at any depth, because a component
   # may group its skills in sub-directories (interventions/llm-proxies/blackbox). A fixed
