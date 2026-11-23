@@ -444,6 +444,22 @@ def _gate_row(run_dir: RunDir, candidate_id: str) -> dict | None:
     return None
 
 
+def _reference_is_champion(run_dir, ref_ids) -> bool:
+    """True if every tag in the reference is the current champion or a byte-identical copy of it."""
+    best = str(run_dir.best_id)
+    if not ref_ids or any(not t for t in ref_ids):
+        return False
+    if all(t == best for t in ref_ids):
+        return True
+    from cap_evolve import eval_index
+    hashes = {}
+    for r in eval_index.rows(run_dir):
+        if r.get("tag") and r.get("cap_hash"):
+            hashes.setdefault(r["tag"], r["cap_hash"])
+    want = hashes.get(best)
+    return want is not None and all(t == best or hashes.get(t) == want for t in ref_ids)
+
+
 def _newest_gate_record(run_dir: RunDir, candidate_id: str) -> dict | None:
     """The NEWEST non-advisory gate record for a candidate, across every kind (#763).
 
@@ -736,13 +752,14 @@ def main(argv=None) -> int:
         rec = _newest_gate_record(run_dir, args.candidate_id)
         # The newest gate record must be an accept AND must have compared against the champion
         # as it stands NOW; a gate against an older/weaker reference proves nothing.
-        # A pooled reference ("seed,seed_rep", or a list) counts when it CONTAINS the champion;
-        # a list of only control copies does not.
+        # A pooled reference ("seed,seed_rep", or a list) counts only if EVERY tag in it is the
+        # champion or has the champion's cap_hash (a byte-identical copy). Pooling the champion
+        # with a weaker candidate would lower the bar; a tag with no known hash does not count.
         ref = rec.get("reference") if rec else None
         ref_ids = ([str(x).strip() for x in ref] if isinstance(ref, (list, tuple))
                    else [p.strip() for p in str(ref).split(",")]) if ref is not None else []
         passing = bool(rec and rec.get("verdict") == "accept" and ref is not None
-                       and str(run_dir.best_id) in ref_ids)
+                       and _reference_is_champion(run_dir, ref_ids))
         if rec:
             gate_verdict = rec.get("verdict")
         gate_reference = rec.get("reference") if rec else None

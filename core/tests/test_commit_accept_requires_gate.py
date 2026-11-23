@@ -151,12 +151,42 @@ def test_pooled_reference_containing_champion_counts(tmp_path):
     assert r.best() == "candA"
 
 
-def test_pooled_reference_of_only_control_copies_refused(tmp_path):
+def test_pooled_reference_of_identical_copies_of_champion_counts(tmp_path):
     r = _Real(tmp_path)
-    r.mk("ctl_a", 3)
+    r.mk("ctl_a", 3)  # same bytes as seed
     r.mk("ctl_b", 3)
     w = r.mk("candA", 12)
     assert r.gate("candA", "--current", "ctl_a,ctl_b") == "accept"
+    assert r.commit("candA", w).returncode == 0
+    assert r.best() == "candA"
+
+
+def test_pooled_reference_with_different_bytes_refused(tmp_path):
+    r = _Real(tmp_path)
+    r.mk("ctl_a", 3)
+    r.mk("ctl_b", 4)  # not a copy of the champion
+    w = r.mk("candA", 12)
+    assert r.gate("candA", "--current", "ctl_a,ctl_b") == "accept"
+    assert r.commit("candA", w).returncode == 2
+    assert r.best() == "seed"
+
+
+def test_pooling_champion_with_weaker_candidate_does_not_let_loser_in(tmp_path):
+    r = _Real(tmp_path)
+    wa = r.mk("candA", 12)
+    assert r.gate("candA") == "accept"
+    assert r.commit("candA", wa).returncode == 0
+    wb = r.mk("candB", 9)
+    assert r.gate("candB") == "reject"
+    r.gate("candB", "--current", "candA,seed")
+    assert r.commit("candB", wb).returncode == 2
+    assert r.best() == "candA"
+
+
+def test_pooled_reference_with_unknown_hash_refused(tmp_path):
+    r = _Real(tmp_path)
+    w = r.mk("candA", 12)
+    r.run("gate_check.py", "--candidate", "candA", "--k-se", "1.0", "--current", "seed,ghost")
     assert r.commit("candA", w).returncode == 2
     assert r.best() == "seed"
 
