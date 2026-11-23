@@ -99,7 +99,8 @@ def test_a_rejected_round_lands_in_the_memory_the_dashboard_publishes(tmp_path):
 def test_an_accepted_round_lands_in_history(tmp_path):
     run_dir, work = _staged(tmp_path, cid="cand_2")
     _commit(run_dir, work, "--missing-handover-justification",
-            "fixture: journal handover not under test", cid="cand_2", decision="accept",
+            "fixture: journal handover not under test",
+            "--accept-without-gate", "fixture: gate not under test", cid="cand_2", decision="accept",
             val="0.54")
 
     hist = _jsonl(Path(run_dir.history_path))

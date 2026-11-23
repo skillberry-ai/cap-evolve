@@ -136,7 +136,8 @@ def _run_agent_optimize(tmp_path):
         out = subprocess.run(
             [sys.executable, str(AGENT_COMMIT), "--run-dir", str(run_dir.root),
              "--candidate-id", cid, "--from-dir", str(work), "--decision", decision,
-             "--val", val, "--val-unverified", "fixture: val not under test", "--note", f"{decision} via commit.py"],
+             "--val", val, "--val-unverified", "fixture: val not under test", "--note", f"{decision} via commit.py",
+             *(["--accept-without-gate", "fixture: gate not under test"] if decision == "accept" else [])],
             capture_output=True, text=True, env=env, cwd=str(AGENT_COMMIT.parent))
         assert out.returncode == 0, out.stdout + out.stderr
     return run_dir

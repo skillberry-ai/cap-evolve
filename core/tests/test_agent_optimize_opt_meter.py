@@ -53,6 +53,7 @@ def _commit(rd, cfg, work, cid, decision, extra=()):
                CLAUDE_CONFIG_DIR=str(cfg), CAPEVOLVE_HOST_METER="1")
     p = subprocess.run([sys.executable, str(SCRIPTS / "commit.py"), "--run-dir", str(rd.root),
                         "--candidate-id", cid, "--from-dir", str(work), "--decision", decision,
+                        *(["--accept-without-gate", "fixture: gate not under test"] if decision == "accept" else []),
                         "--missing-handover-justification", "fixture",
                         "--missing-ranked-issues-justification", "fixture",
                         "--missing-diagnosis-justification", "fixture: not under test here",
@@ -107,6 +108,7 @@ def test_unhosted_commit_is_unchanged(tmp_path):
     env.pop("CAPEVOLVE_HOST_METER", None)
     p = subprocess.run([sys.executable, str(SCRIPTS / "commit.py"), "--run-dir", str(rd.root),
                         "--candidate-id", "c", "--from-dir", str(work), "--decision", "accept",
+                        "--accept-without-gate", "fixture: gate not under test",
                         "--missing-handover-justification", "fixture",
                         "--missing-ranked-issues-justification", "fixture",
                         "--missing-diagnosis-justification", "fixture: not under test here"],

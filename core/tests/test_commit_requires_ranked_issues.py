@@ -141,6 +141,7 @@ def test_disjoint_targets_and_non_refutations_need_no_justification(tmp_path):
     assert _commit(run_dir, "cand_2", _work(run_dir, "cand_2", tasks=("t9",)))[0] == 0
     # An ACCEPTED prior on the same tasks is no refutation either.
     assert _commit(run_dir, "cand_3", _work(run_dir, "cand_3", tasks=("t7",)),
+                   "--accept-without-gate", "fixture: gate not under test",
                    decision="accept")[0] == 0
     assert _commit(run_dir, "cand_4", _work(run_dir, "cand_4", tasks=("t7",)))[0] == 0
     # An infra reject is missing data, not a judgement.

@@ -444,6 +444,23 @@ def _gate_row(run_dir: RunDir, candidate_id: str) -> dict | None:
     return None
 
 
+def _promote_gate_verdict(run_dir: RunDir, candidate_id: str) -> str | None:
+    """Verdict of the newest ``promote_gate`` event ``act.py promote`` logs before committing."""
+    out = None
+    try:
+        with run_dir.events_path.open(encoding="utf-8") as f:
+            for line in f:
+                try:
+                    ev = json.loads(line)
+                except Exception:  # noqa: BLE001
+                    continue
+                if ev.get("kind") == "promote_gate" and str(ev.get("candidate")) == str(candidate_id):
+                    out = ev.get("verdict")
+    except FileNotFoundError:
+        return None
+    return out
+
+
 def _gate_verdict(run_dir: RunDir, candidate_id: str) -> str | None:
     row = _gate_row(run_dir, candidate_id)
     return row.get("verdict") if row else None
@@ -575,6 +592,10 @@ def main(argv=None) -> int:
     # has 2+ parents this script has no other way to learn — those scripts produce a
     # merged artifact dir, not a commit. An ordinary edit's single parent is already
     # known (best_id at gate time, below) and needs no flag.
+    p.add_argument("--accept-without-gate", default=None, metavar="REASON",
+                   help="explicit escape: book --decision accept for a candidate with NO passing "
+                        "gate record. REASON is recorded in events.jsonl and on the decision. "
+                        "Without a passing gate row (round table or act.py promote) accept exits 2.")
     p.add_argument("--parents", default=None,
                    help="comma-separated parent candidate ids, for a MERGE candidate "
                         "(2+ parents). Omit for an ordinary edit.")
@@ -678,6 +699,24 @@ def main(argv=None) -> int:
     # "the gate rejected it" makes events.jsonl assert a judgement no measurement supports.
     gate_verdict = _gate_verdict(run_dir, args.candidate_id)
     overrode_gate = bool(args.decision == "reject" and gate_verdict == "accept")
+    # #763: an accept moves the champion, so it needs a passing gate record for THIS candidate
+    # (a round-table row, or the promote_gate event act.py promote writes). Else exit 2.
+    accepted_without_gate = None
+    if accepted:
+        passing = "accept" in (gate_verdict, _promote_gate_verdict(run_dir, args.candidate_id))
+        if not passing:
+            if not args.accept_without_gate:
+                print(json.dumps({
+                    "error": f"--decision accept for {args.candidate_id}, but it has no passing "
+                             "gate record (no round-table row with verdict accept, no promote gate)",
+                    "gate_verdict": gate_verdict,
+                    "fix": "gate it first (round.py / gate_check.py, or act.py promote), or pass "
+                           "--accept-without-gate REASON to override on the record",
+                }, indent=2))
+                return 2
+            accepted_without_gate = args.accept_without_gate
+            run_dir.log_event("accept_without_gate", candidate=args.candidate_id,
+                              reason=accepted_without_gate, gate_verdict=gate_verdict)
     # ``gate_verdict is None`` means no round table has a row for this candidate at all — no
     # gate ever ran. ``--reject-basis gate`` asserts a gate rejection happened; with no gate
     # row to back that up, that assertion is exactly as unsupported as the accept/inconclusive
@@ -926,6 +965,7 @@ def main(argv=None) -> int:
     run_dir.log_event(args.decision, candidate=args.candidate_id, val=args.val,
                       val_unverified=args.val_unverified,
                       gate_verdict=gate_verdict, overrode_gate=overrode_gate,
+                      accepted_without_gate=accepted_without_gate,
                       note=args.note,
                       reject_basis=args.reject_basis,
                       bypassed_screen_and_gate=bypassed_screen_and_gate,
