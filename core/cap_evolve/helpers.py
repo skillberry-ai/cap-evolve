@@ -204,28 +204,33 @@ _PROC_ATTRS = {"system", "popen", "execv", "execve", "execl", "execlp", "execvp"
 _ID_NAME = re.compile(r"(?i)(^|_)(task|sample|instance|problem|example|case)_?(id|name|idx|index)$"
                       r"|^(tid|sid|task)$")
 _TABLE_MIN = 20  # constants in one literal collection before it is "a lookup table"
-#: Calls whose (nested) string arguments are file paths: the protected-path patterns apply to those strings
-#: even without a separator in them (``os.path.join(root, "gold", name)``).
+#: Calls whose (nested) string arguments are file paths. A string there is always checked, even inside a message
+#: (``raise E(open("gold/x").read())``).
 _PATH_CALLS = {"open", "Path", "PurePath", "PosixPath", "join", "joinpath", "glob", "iglob", "rglob", "listdir",
                "scandir", "walk", "exists", "isfile", "isdir", "stat", "load_workbook", "read_excel", "read_csv",
                "read_json", "read_text", "read_bytes", "copy", "copyfile", "copy2", "copytree", "ExcelFile"}
-#: Calls whose string arguments are messages for a person, not paths: an error text that mentions
-#: ``answer_position`` does not name a gold file.
-_MESSAGE_CALLS = {"print", "warn", "warning", "info", "debug", "error", "exception", "critical", "log"}
-_FILE_SUFFIX = re.compile(r"\.[A-Za-z0-9]{1,5}$")
+#: Message calls: ``print(...)`` / ``warn(...)``, and logger-style methods (``log.info(...)``, ``logger.error(...)``).
+_MESSAGE_FUNCS = {"print", "warn"}
+_MESSAGE_METHODS = {"debug", "info", "warning", "warn", "error", "exception", "critical", "log"}
 
 
-def _string_roles(tree) -> tuple[set[int], set[int]]:
-    """``(path_nodes, prose_nodes)``: ids of string constants used as file paths, and of string constants that are
-    docstrings or messages. A protected pattern (gold, answer, split) is a finding only in a path (#912): in prose
-    it is a word, and the template's own field is called ``answer_position``."""
-    path, prose = set(), set()
+def _prose_strings(tree) -> set[int]:
+    """Ids of string constants that are prose, not data: docstrings, exception messages, the arguments of message
+    calls, and ``__all__`` entries that name something the module defines.
+
+    A protected pattern (gold, answer, split) in prose is a word, not a path: the task template's own field is
+    called ``answer_position``, and a helper's error message names it (#912). Every OTHER string is still checked,
+    wherever it sits (a bare ``D = "gold"`` used later in a path is refused, as before), and a string inside a file
+    call is never prose."""
+    prose, path = set(), set()
 
     def under(node, into):
         for n in ast.walk(node):
             if isinstance(n, ast.Constant) and isinstance(n.value, str):
                 into.add(id(n))
 
+    defined = {n.name for n in ast.walk(tree) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))}
+    defined |= {t.id for n in ast.walk(tree) if isinstance(n, ast.Assign) for t in n.targets if isinstance(t, ast.Name)}
     for node in ast.walk(tree):
         if isinstance(node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and node.body:
             first = node.body[0]
@@ -234,23 +239,23 @@ def _string_roles(tree) -> tuple[set[int], set[int]]:
                 prose.add(id(first.value))
         elif isinstance(node, ast.Raise) and node.exc is not None:
             under(node.exc, prose)
+        elif isinstance(node, (ast.Assign, ast.AugAssign)):
+            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+            if any(isinstance(t, ast.Name) and t.id == "__all__" for t in targets) \
+                    and isinstance(node.value, (ast.List, ast.Tuple)):
+                prose |= {id(e) for e in node.value.elts if isinstance(e, ast.Constant)
+                          and isinstance(e.value, str) and e.value in defined}
         elif isinstance(node, ast.Call):
-            name = _name_of(node.func)
-            if name in _PATH_CALLS:
-                for a in [*node.args, *(k.value for k in node.keywords)]:
+            f = node.func
+            args = [*node.args, *(k.value for k in node.keywords)]
+            if _name_of(f) in _PATH_CALLS:
+                for a in args:
                     under(a, path)
-            elif name in _MESSAGE_CALLS:
-                for a in [*node.args, *(k.value for k in node.keywords)]:
+            elif (isinstance(f, ast.Name) and f.id in _MESSAGE_FUNCS) or \
+                    (isinstance(f, ast.Attribute) and f.attr in _MESSAGE_METHODS):
+                for a in args:
                     under(a, prose)
-        elif isinstance(node, ast.BinOp) and isinstance(node.op, ast.Div):
-            for side in (node.left, node.right):      # Path(root) / "gold" / name
-                if isinstance(side, ast.Constant) and isinstance(side.value, str):
-                    path.add(id(side))
-    return path, prose - path
-
-
-def _looks_like_path(v: str) -> bool:
-    return "/" in v or "\\" in v or bool(_FILE_SUFFIX.search(v))
+    return prose - path
 
 
 def _id_matchers(cfg: dict) -> tuple[set[str], list[str]]:
@@ -308,7 +313,7 @@ def lint_source(src: str, rel: str, cfg: dict) -> list[str]:
     prot = [re.compile(p) for p in (cfg.get("protected_patterns") or DEFAULT_PROTECTED)]
     out: list[str] = []
     os_names = _os_aliases(tree)
-    path_nodes, prose_nodes = _string_roles(tree)
+    prose_nodes = _prose_strings(tree)
 
     def add(node, msg):
         out.append(f"{rel}:{getattr(node, 'lineno', 0)}: {msg}")
@@ -371,7 +376,7 @@ def lint_source(src: str, rel: str, cfg: dict) -> list[str]:
                 and not isinstance(node.value, bool):
             v = node.value
             sv = str(v)
-            if isinstance(v, str) and id(node) not in prose_nodes and (id(node) in path_nodes or _looks_like_path(v)):
+            if isinstance(v, str) and id(node) not in prose_nodes:
                 for pat in prot:
                     if pat.search(v):
                         add(node, f"names an evaluator/gold/split path ({v[:60]!r})")

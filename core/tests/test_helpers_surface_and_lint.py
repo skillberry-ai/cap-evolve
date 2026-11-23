@@ -485,8 +485,8 @@ _EXCEL_NAMES = ", ".join(f"'F{i}'" for i in range(30))
     "def check(answer_position):\n    if not answer_position:\n"
     "        raise ValueError('answer_position must be a non-empty string')\n",
     "def check(p):\n    raise ValueError(f'answer_position {p!r} is empty')\n",
-    "__all__ = ['parse_answer_position']\n",
-    "def f(cells):\n    return {'answer_position': cells}\n",
+    "__all__ = ['parse_answer_position']\n\ndef parse_answer_position(s):\n    return s\n",
+    "import logging\nlog = logging.getLogger(__name__)\n\ndef f(p):\n    log.warning('answer_position %r is empty', p)\n",
     # a docstring that mentions the words, with a slash (main's lint refused it as a path)
     '"""Fill the range named by task/answer_position; see the split/notes section."""\n',
     # a sheet name or row index compared with None (exp895: 7 candidates)
@@ -514,6 +514,17 @@ def test_ordinary_spreadsheet_code_passes_the_lint(src):
     ("def f():\n    return open('answer.json').read()\n", "evaluator/gold"),
     ("G = 'data/1_10452_golden.xlsx'\n", "evaluator/gold"),
     ("def f(p):\n    return open(f'{p}/splits/test.json')\n", "evaluator/gold"),
+    # ... and when the protected word is held in a variable and joined later (review of #1008)
+    ("D = 'gold'\n\ndef f(r, n):\n    return open(r + '/' + D + '/' + n)\n", "evaluator/gold"),
+    ("D = 'golden'\n\ndef f(n):\n    return open(D + n)\n", "evaluator/gold"),
+    ("G = ['ground_truth', 'x']\n\ndef f(r):\n    import os\n    return open(os.path.join(r, *G))\n",
+     "evaluator/gold"),
+    ("def f(r):\n    d = 'splits'\n    return open(r + '/' + d + '/x')\n", "evaluator/gold"),
+    # prose exemptions do not cover a path: a file call inside a raise, a user function named like a logger
+    # method, an __all__ entry the module does not define
+    ("def f():\n    raise ValueError(open('/d/gold/x').read())\n", "evaluator/gold"),
+    ("def error(p):\n    return open(p)\n\ndef f():\n    return error('/data/gold/x.xlsx')\n", "evaluator/gold"),
+    ("__all__ = ['golden']\n", "evaluator/gold"),
     # task-identity branches are still refused when they compare with a real literal
     ("def f(task_id):\n    if task_id == '10452':\n        return 42\n", "task identity"),
     ("def f(sample_id):\n    return 1 if sample_id in ('a1', 'b2') else 0\n", "task identity"),
