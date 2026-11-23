@@ -100,6 +100,16 @@ for comp in "${COMPONENTS[@]}"; do
   done
 done
 
+# The agent-optimize briefing tells the agent to read the legacy algorithm doc, which
+# lives under docs/ in the repo. Ship a copy inside the installed skill. (Link mode
+# resolves back to the repo, where docs/ already exists, so nothing to copy.)
+LEGACY="$SRC/../docs/archive/agent-optimize-legacy/legacy-SKILL.md"
+if [[ "$LINK" -ne 1 && -f "$LEGACY" && -d "$DEST/agent-optimize" ]]; then
+  mkdir -p "$DEST/agent-optimize/references"
+  cp "$LEGACY" "$DEST/agent-optimize/references/legacy-SKILL.md"
+  echo "  + agent-optimize/references/legacy-SKILL.md"
+fi
+
 # (Re)build the manifest for both the repo (component layout) and the installed
 # tree (flat layout). build_manifest handles either, so `cap-evolve run` works whether
 # it points at the repo skills or the installed dir.

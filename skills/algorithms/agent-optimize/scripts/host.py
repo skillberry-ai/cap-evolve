@@ -98,7 +98,9 @@ import meter
 HERE = Path(__file__).resolve().parent
 SKILL_DIR = HERE.parent
 SKILLS = harness.skills_root()
-LEGACY_DOC = SKILL_DIR.parents[2] / "docs/archive/agent-optimize-legacy/legacy-SKILL.md"
+_INSTALLED_LEGACY_DOC = SKILL_DIR / "references" / "legacy-SKILL.md"
+_CHECKOUT_LEGACY_DOC = SKILL_DIR.parents[2] / "docs/archive/agent-optimize-legacy/legacy-SKILL.md"
+LEGACY_DOC = _INSTALLED_LEGACY_DOC if _INSTALLED_LEGACY_DOC.is_file() else _CHECKOUT_LEGACY_DOC
 RUN_OPTIMIZER = harness.skills_path("optimizers", "run-optimizer", SKILLS) / "scripts" / "run.py"
 REGISTRY = harness._optimizer_registry_path()
 

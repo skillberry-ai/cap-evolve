@@ -75,6 +75,28 @@ def test_flat_briefing_paths_exist(tmp_path, monkeypatch):
     assert {"spend.py", "gate_check.py", "commit.py", "measure.py"} <= names
     for n in names:
         assert (a / n).is_file(), n
+    # "Read this first" must name a file that exists in the flat install too.
+    legacy = skills / "agent-optimize" / "references" / "legacy-SKILL.md"
+    legacy.parent.mkdir(exist_ok=True)
+    shutil.copy(REPO / "docs/archive/agent-optimize-legacy/legacy-SKILL.md", legacy)
+    host = _load("host", skills / "agent-optimize" / "scripts", monkeypatch)
+    (tmp_path / "run").rmdir(), (tmp_path / "proj").rmdir()
+    text = _render_briefing(host, tmp_path)
+    assert str(legacy) in text and host.LEGACY_DOC == legacy
+
+
+def test_install_sh_ships_legacy_doc(tmp_path, monkeypatch):
+    import subprocess
+    src = tmp_path / "src"
+    shutil.copytree(REPO, src, ignore=shutil.ignore_patterns(
+        ".git", ".symcc", ".scratch", "node_modules", "__pycache__", "dashboard", "benchmarks", ".venv"))
+    dest = tmp_path / "inst"
+    r = subprocess.run(["bash", str(src / "install.sh"), "--dest", str(dest)],
+                       capture_output=True, text=True, cwd=src)
+    assert (dest / "agent-optimize" / "references" / "legacy-SKILL.md").is_file(), r.stdout + r.stderr
+    monkeypatch.setenv("CAPEVOLVE_SKILLS_DIR", str(dest))
+    host = _load("host", dest / "agent-optimize" / "scripts", monkeypatch)
+    assert host.LEGACY_DOC == dest / "agent-optimize" / "references" / "legacy-SKILL.md"
 
 
 def test_source_checkout_briefing_paths_exist(tmp_path, monkeypatch):
