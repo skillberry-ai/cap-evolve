@@ -22,6 +22,7 @@ import json
 import os
 import shutil
 import time
+import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -38,7 +39,9 @@ def _atomic_write(path: Path, text: str) -> None:
     partial one. ``fsync`` before the replace so the bytes are durable first.
     """
     path = Path(path)
-    tmp = path.with_name(f".{path.name}.tmp.{os.getpid()}")
+    # Unique per call (not only per process): two threads writing the same file at once
+    # must not share a temp file, or one's replace moves it away under the other.
+    tmp = path.with_name(f".{path.name}.tmp.{os.getpid()}.{uuid.uuid4().hex}")
     try:
         with tmp.open("w", encoding="utf-8") as f:
             f.write(text)
