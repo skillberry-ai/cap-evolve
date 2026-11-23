@@ -841,15 +841,19 @@ def _keep_rescore_mark(ctx, out):
 
     commit_test stamps it on the on-disk final.json and state.json records every use,
     but the payloads from the finalize phase and complete_finalize lack it."""
-    uses = RunDir.open(ctx.root).test_rescore_overrides()
-    if uses:
-        out["test_rescore_override"] = {"used": True, "count": len(uses), "uses": uses}
-        return
     try:
         prev = json.loads((ctx.root / "final.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
         prev = None
-    mark = prev.get("test_rescore_override") if isinstance(prev, dict) else None
+    if not isinstance(prev, dict):
+        prev = {}
+    if "test_reuse_count" in prev:     # test split already scored by another run (#761)
+        out["test_reuse_count"] = prev["test_reuse_count"]
+    uses = RunDir.open(ctx.root).test_rescore_overrides()
+    if uses:
+        out["test_rescore_override"] = {"used": True, "count": len(uses), "uses": uses}
+        return
+    mark = prev.get("test_rescore_override")
     if isinstance(mark, dict) and mark.get("used"):
         out["test_rescore_override"] = mark
 
