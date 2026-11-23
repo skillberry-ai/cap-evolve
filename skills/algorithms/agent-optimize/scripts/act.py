@@ -854,8 +854,8 @@ def finalize(a, ctx):
             return 0, {"already_finalized": True, "final": jload(final_path.read_text(encoding="utf-8"))}
         raise Refused("test is already sealed (scored once) but final.json is missing: a second finalize is refused")
     if intent_path.exists() and (run_dir.rollouts / "test").is_dir() and any((run_dir.rollouts / "test").glob("*.json")):
-        out = {"final": complete_finalize(ctx, jload(intent_path.read_text(encoding="utf-8")) or {}),
-               "champion": ctx.champion(), "completed_from_existing": True}
+        flat = complete_finalize(ctx, jload(intent_path.read_text(encoding="utf-8")) or {})
+        out = {**flat, "champion": ctx.champion(), "completed_from_existing": True, "final": flat}
         _keep_rescore_mark(ctx, out)
         final_path.write_text(json.dumps(out, indent=2, default=str), encoding="utf-8")
         return 0, out
@@ -904,7 +904,13 @@ def finalize(a, ctx):
                      "--project", project, "--n-trials", str(n_trials)])
     if rc != 0:
         raise Refused(f"finalize phase failed rc={rc}", stderr=(se or so)[-500:])
-    out["final"] = jload(so) or so[-500:]
+    flat = jload(so)
+    if isinstance(flat, dict):
+        # the phase result goes at the TOP level (report/dashboard read final.json["test"]);
+        # "final" keeps a copy for older readers
+        out = {**flat, **out, "final": flat}
+    else:
+        out["final"] = flat or so[-500:]
     _keep_rescore_mark(ctx, out)
     (ctx.root / "final.json").write_text(json.dumps(out, indent=2, default=str), encoding="utf-8")
     ctx.decision("finalize", champ, verdict=(out.get("confirm") or {}).get("verdict_vs_seed"))

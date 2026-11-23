@@ -201,3 +201,41 @@ def test_act_finalize_completion_path_keeps_the_override_mark(tmp_path, capsys, 
     assert final["completed_from_existing"] is True
     assert final["test_rescore_override"]["used"] is True
     assert final["test_rescore_override"]["count"] == 1
+
+
+def test_act_finalize_result_is_readable_by_report_and_dashboard(tmp_path, capsys, monkeypatch):
+    """final.json written by `act finalize` keeps the test score at the TOP level, so the report
+    does not say NOT FINALIZED and the dashboard sees the held-out reward (T-79)."""
+    import subprocess
+    import sys
+    sys.path.insert(0, str(Path(__file__).parent))
+    from test_digest_and_act_verbs import Sh, _act, _args, _run as _act_run
+    from cap_evolve import dashboard
+
+    monkeypatch.delenv("CAPEVOLVE_ALLOW_TEST_RESCORE", raising=False)
+    rd, project, _, _ = _act_run(tmp_path)
+    d = rd.rollouts / "test"
+    d.mkdir(parents=True, exist_ok=True)
+    for tag in ("FINAL", "FINAL_seed"):
+        for t in rd.read_splits().ids("test"):
+            (d / f"{t}__{tag}__t0.json").write_text(json.dumps({"input": None,
+                "rollout": {"task_id": t, "output": "", "error": None},
+                "score": {"task_id": t, "reward": 1.0, "feedback": "", "n": 1, "stderr": 0.0,
+                          "trial_rewards": [1.0], "raw": {}}}), encoding="utf-8")
+    (rd.root / "finalize.intent").write_text(json.dumps({"champion": "seed"}), encoding="utf-8")
+    _act(monkeypatch, capsys, ["finalize", "--n-confirm", "0", *_args(rd, project)], Sh())
+
+    final = json.loads((rd.root / "final.json").read_text(encoding="utf-8"))
+    assert final["test"]["reward"] == 1.0 and final["best_id"] == "seed"
+    assert final["champion"] and final["completed_from_existing"] is True
+    assert final["final"]["test"] == final["test"]
+
+    repo = Path(__file__).resolve().parents[2]
+    r = subprocess.run([sys.executable, str(repo / "skills/phases/report/scripts/run.py"),
+                        "--run-dir", str(rd.root), "--no-dashboard"], capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+    md = (rd.root / "report.md").read_text(encoding="utf-8")
+    assert "NOT FINALIZED" not in md
+    assert "1.0" in md or "1.000" in md
+    run = dashboard.reduce_run(RunDir.open(rd.root))
+    assert run["summary"]["test_reward"] is not None
