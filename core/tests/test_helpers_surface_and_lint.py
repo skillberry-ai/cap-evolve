@@ -472,3 +472,14 @@ def test_a_missing_seed_snapshot_stops_the_round_pregate_not_fail_open(monkeypat
     monkeypatch.setattr(rnd, "spec_for_run", lambda run_dir, project: {"helpers": {"enabled": True}})
     with pytest.raises(helper_gate.GateConfigError, match="seed"):
         rnd.pregate_failure(rd, tmp_path, "parent", cand, None)
+
+
+def test_lint_sheet_name_none_and_answer_position_message_pass():
+    cfg = helpers.resolve({"helpers": {"enabled": True}})
+    lint = lambda src: helpers.lint_source(src, "f.py", cfg)
+    assert lint("def f(wb, sheet_name):\n    if sheet_name is None:\n        return wb.active\n") == []
+    assert lint("def f(wb, sheet_name):\n    return wb[sheet_name] if sheet_name is not None else wb.active\n") == []
+    assert lint("def f(a):\n    raise ValueError('answer_position must be a non-empty string')\n") == []
+    assert lint("def f(x):\n    return float(str(x).replace(',', ''))\n") == []
+    assert lint("def f(task_id):\n    if task_id == '10452':\n        return 42\n")
+    assert lint("def f():\n    return open('/data/1_10452_golden.xlsx')\n")

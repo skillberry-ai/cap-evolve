@@ -199,7 +199,7 @@ _DYN_MODULES = {"importlib", "imp", "runpy", "builtins", "code", "codeop"}
 _OS_MODULES = {"os", "posix", "nt"}
 _PROC_ATTRS = {"system", "popen", "execv", "execve", "execl", "execlp", "execvp", "spawnl", "spawnv",
                "spawnlp", "spawnvp", "posix_spawn", "fork", "forkpty", "startfile"}
-_ID_NAME = re.compile(r"(?i)(^|_)(task|sample|instance|problem|example|case|row|sheet)_?(id|name|idx|index)$"
+_ID_NAME = re.compile(r"(?i)(^|_)(task|sample|instance|problem|example|case|row)_?(id|name|idx|index)$"
                       r"|^(tid|sid|task)$")
 _TABLE_MIN = 20  # constants in one literal collection before it is "a lookup table"
 
@@ -292,6 +292,7 @@ def lint_source(src: str, rel: str, cfg: dict) -> list[str]:
         elif isinstance(node, ast.Compare):
             names = [_name_of(n) for n in [node.left, *node.comparators]]
             consts = [n for n in [node.left, *node.comparators] if isinstance(n, ast.Constant)]
+            consts = [c for c in consts if c.value is not None]  # `x is None` is not task identity
             if consts and any(_ID_NAME.search(n) for n in names if n):
                 add(node, "branches on task identity (compares a task/sample id to a constant)")
             for c in [n for n in [node.left, *node.comparators] if isinstance(n, (ast.Tuple, ast.List, ast.Set))]:
@@ -315,7 +316,7 @@ def lint_source(src: str, rel: str, cfg: dict) -> list[str]:
             sv = str(v)
             if isinstance(v, str):
                 for pat in prot:
-                    if pat.search(v):
+                    if pat.search(v) and not (pat.pattern == DEFAULT_PROTECTED[2] and re.search(r"\s", v)):
                         add(node, f"names an evaluator/gold/split path ({v[:60]!r})")
                         break
             if sv in ids or any(len(i) >= 4 and re.search(rf"(?<![\w.]){re.escape(i)}(?![\w.])", sv)
