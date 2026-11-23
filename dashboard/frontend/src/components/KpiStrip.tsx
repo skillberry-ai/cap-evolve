@@ -171,14 +171,18 @@ export function KpiStrip({ summary, nodes }: { summary: RunSummaryDetail; nodes?
         </Kpi>
 
         <Kpi
-          label={summary.test_sealed ? 'sealed test' : 'test — not sealed yet'}
+          label={summary.test_rescore_override ? `test (re-scored ${summary.test_rescore_override.count} time(s))` : summary.test_sealed ? 'sealed test' : 'test — not sealed yet'}
           tone={summary.test_reward == null ? 'text-muted' : 'text-primary'}
           hint={
             summary.test_reward == null
               ? 'scored once by `cap-evolve finalize`, on data the optimizer never saw'
               : `${testHint}${trainHint}`
           }
-          title="Scored exactly once on data the optimizer never saw. This is the honest headline."
+          title={
+            summary.test_rescore_override
+              ? 'WARNING: the test split was re-scored (seal override), so this is not a single clean held-out score.'
+              : 'Scored exactly once on data the optimizer never saw. This is the honest headline.'
+          }
         >
           <CountUp value={summary.test_reward} format={pct} />
         </Kpi>

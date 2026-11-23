@@ -479,6 +479,7 @@ export interface RunSummaryDetail {
   test_reward: number | null
   test_stderr?: number | null
   test_sealed?: boolean
+  test_rescore_override?: { used: boolean; count: number }
   /** The SEED's score on the same sealed test split, and best − seed on test. A sealed
    *  test number means nothing without it: `test_delta === 0` is the normal reading for
    *  a run whose best candidate is the seed. */

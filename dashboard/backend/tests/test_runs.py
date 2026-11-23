@@ -75,3 +75,13 @@ def test_resolve_run_rejects_non_run_prefix(tmp_base):
     (tmp_base / "notarun" / "events.jsonl").write_text("{}\n", encoding="utf-8")
     with pytest.raises(runs.RunNotFound):
         runs.resolve_run(tmp_base, "notarun")
+
+
+def test_load_run_passes_through_test_rescore_override(tmp_base, make_run):
+    from capevolve_dashboard import runs
+    make_run("run_ov", events=BASE_EVENTS, baseline={"val": {"reward": 0.25}, "best_id": "seed"},
+             final={"test": {"reward": 0.5}, "test_rescore_override": {"used": True, "count": 2}})
+    make_run("run_ok", events=BASE_EVENTS, baseline={"val": {"reward": 0.25}, "best_id": "seed"},
+             final={"test": {"reward": 0.5}})
+    assert runs.load_run(tmp_base, "run_ov")["summary"]["test_rescore_override"] == {"used": True, "count": 2}
+    assert "test_rescore_override" not in runs.load_run(tmp_base, "run_ok")["summary"]
