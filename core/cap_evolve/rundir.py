@@ -17,6 +17,7 @@ accounting can't be bypassed by a skill. Pure stdlib.
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import json
 import os
 import shutil
@@ -703,7 +704,41 @@ class RunDir:
             splits.mark_test_used()  # raises TestSealError if already used (double commit)
             self.write_splits(splits)
         self._mark_final_with_overrides()
+        self._record_test_reuse(splits)
         return splits
+
+    def _record_test_reuse(self, splits: Splits) -> None:
+        """Warn (never refuse) when another run folder already scored the same test ids.
+
+        Keeps ``test_ledger.jsonl`` beside the runs; logs a ``test_reuse`` event and stamps
+        ``test_reuse_count`` (0 when none) into final.json.
+        """
+        try:
+            th = hashlib.sha256(json.dumps(sorted(map(str, splits.test))).encode()).hexdigest()
+            ledger = self.root.parent / "test_ledger.jsonl"
+            earlier: list = []
+            if ledger.is_file():
+                for line in ledger.read_text(encoding="utf-8").splitlines():
+                    try:
+                        e = json.loads(line)
+                    except ValueError:
+                        continue
+                    if isinstance(e, dict) and e.get("test_hash") == th and e.get("run") != self.root.name:
+                        earlier.append(e["run"])
+            with ledger.open("a", encoding="utf-8") as f:
+                f.write(json.dumps({"test_hash": th, "run": self.root.name, "time": time.time()}) + "\n")
+            earlier = sorted(set(earlier))
+            if earlier:
+                self.log_event("test_reuse", count=len(earlier), runs=earlier,
+                               msg="this test split was already scored by another run")
+            final = self.root / "final.json"
+            if final.is_file():
+                payload = json.loads(final.read_text(encoding="utf-8"))
+                if isinstance(payload, dict):
+                    payload["test_reuse_count"] = len(earlier)
+                    _atomic_write(final, json.dumps(payload, indent=2))
+        except Exception:  # noqa: BLE001 - a warning aid must never break finalize
+            pass
 
     # Back-compat shim: ``consume_test`` flipped+persisted the seal BEFORE scoring,
     # which permanently burned the headline number on a transient finalize crash.
