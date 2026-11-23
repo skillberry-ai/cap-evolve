@@ -141,6 +141,26 @@ def test_stale_reference_gate_does_not_let_a_loser_replace_champion(tmp_path):
     assert r.best() == "candA"
 
 
+def test_pooled_reference_containing_champion_counts(tmp_path):
+    r = _Real(tmp_path)
+    r.mk("seed_rep", 3)
+    w = r.mk("candA", 12)
+    assert r.gate("candA", "--current", "seed,seed_rep") == "accept"
+    p = r.commit("candA", w)
+    assert p.returncode == 0, p.stdout + p.stderr
+    assert r.best() == "candA"
+
+
+def test_pooled_reference_of_only_control_copies_refused(tmp_path):
+    r = _Real(tmp_path)
+    r.mk("ctl_a", 3)
+    r.mk("ctl_b", 3)
+    w = r.mk("candA", 12)
+    assert r.gate("candA", "--current", "ctl_a,ctl_b") == "accept"
+    assert r.commit("candA", w).returncode == 2
+    assert r.best() == "seed"
+
+
 def test_real_gate_check_reject_then_commit_accept_refused(tmp_path):
     r = _Real(tmp_path)
     w = r.mk("candC", 1)

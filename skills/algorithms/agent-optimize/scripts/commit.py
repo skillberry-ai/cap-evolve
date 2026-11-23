@@ -736,8 +736,13 @@ def main(argv=None) -> int:
         rec = _newest_gate_record(run_dir, args.candidate_id)
         # The newest gate record must be an accept AND must have compared against the champion
         # as it stands NOW; a gate against an older/weaker reference proves nothing.
-        passing = bool(rec and rec.get("verdict") == "accept" and rec.get("reference") is not None
-                       and str(rec["reference"]) == str(run_dir.best_id))
+        # A pooled reference ("seed,seed_rep", or a list) counts when it CONTAINS the champion;
+        # a list of only control copies does not.
+        ref = rec.get("reference") if rec else None
+        ref_ids = ([str(x).strip() for x in ref] if isinstance(ref, (list, tuple))
+                   else [p.strip() for p in str(ref).split(",")]) if ref is not None else []
+        passing = bool(rec and rec.get("verdict") == "accept" and ref is not None
+                       and str(run_dir.best_id) in ref_ids)
         if rec:
             gate_verdict = rec.get("verdict")
         gate_reference = rec.get("reference") if rec else None
