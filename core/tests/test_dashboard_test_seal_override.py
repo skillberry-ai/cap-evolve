@@ -15,7 +15,7 @@ def test_override_dashboard_shows_warning(tmp_path, monkeypatch):
     # template but only on the branch taken when the summary has no override field.
     assert "S.test_rescore_override?'re-scored '" in html
     assert "S.test_rescore_override?' · re-scored '" in html
-    assert "S.test_rescore_override\n           ?'" in html
+    assert "(S.test_rescore_override||S.test_reuse_count)\n           ?'" in html
     assert "WARNING: the test split was re-scored" in html
     assert "re-scored '+S.test_rescore_override.count+' time(s)" in html
     assert '"test_rescore_override": {"used": true, "count": 1}' in html

@@ -103,6 +103,23 @@ def main(argv=None) -> int:
     except (TypeError, ValueError):
         override_count = 1
 
+    try:
+        reuse_count = int(final.get("test_reuse_count") or 0)
+    except (TypeError, ValueError):
+        reuse_count = 0
+    reuse_runs: list = []
+    if reuse_count > 0:
+        try:
+            for ln in run_dir.events_path.read_text(encoding="utf-8").splitlines():
+                try:
+                    ev = json.loads(ln)
+                except ValueError:
+                    continue
+                if isinstance(ev, dict) and ev.get("kind") == "test_reuse":
+                    reuse_runs = [str(r) for r in ev.get("runs") or []]
+        except OSError:
+            pass
+
     summary = {
         "run_dir": str(run_dir.root),
         "best_id": run_dir.best_id,
@@ -123,6 +140,8 @@ def main(argv=None) -> int:
     }
     if override:
         summary["test_rescore_override"] = override
+    if reuse_count > 0:
+        summary["test_reuse_count"] = reuse_count
 
     # pass^k for k > n_trials is UNDEFINED, so aggregate_scores omits it (see
     # loop.aggregate_scores) — never 0.0, which would read as "0% reliable" instead
@@ -148,6 +167,11 @@ def main(argv=None) -> int:
     if override:
         md += ["> **WARNING: the sealed test split was re-scored.** The test number below is "
                "not a single clean look at held-out data.", ""]
+    if reuse_count > 0:
+        _names = f" ({', '.join('`' + r + '`' for r in reuse_runs)})" if reuse_runs else ""
+        md += [f"> **WARNING: this test split was already scored by {reuse_count} other "
+               f"run(s){_names}.** The test number below is not a first, clean look at "
+               "held-out data.", ""]
     md += [
         f"- Best candidate: `{run_dir.best_id}`",
         f"- Baseline val: {_pm(base_val, base_val_obj.get('stderr'))}",
@@ -192,6 +216,15 @@ def main(argv=None) -> int:
             "seal override, so the test number is not a single clean look at held-out data. "
             "Treat it as optimistic."
         )
+    if reuse_count > 0 and not override:
+        sealed_note = (
+            f"WARNING: this test split was already scored by {reuse_count} other run(s), "
+            "so the test number is not a first, clean look at held-out data. "
+            "Treat it as optimistic."
+        )
+    elif reuse_count > 0:
+        sealed_note += (f" Also, this test split was already scored by {reuse_count} "
+                        "other run(s).")
     if finalized:
         md += ["", sealed_note]
     (run_dir.root / "report.md").write_text("\n".join(md) + "\n", encoding="utf-8")
