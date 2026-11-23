@@ -110,7 +110,7 @@ if [ -f "$AW_EVAL/lint_cache.json" ] && [ -d "$AW_EVAL/root_opt/data" ]; then
 else
   "$PY" "$EX/scripts/make_roots.py" || die "make_roots.py failed"
 fi
-if [ -f "$AW_EVAL/reference/api_index.md" ]; then
+if [ -f "$AW_EVAL/reference/api_index.md" ] && [ -f "$AW_EVAL/reference/react_agent_notes_blackbox.md" ]; then
   echo "  reference docs already written"
 else
   "$PY" "$EX/scripts/make_reference.py" "$AW_EVAL/reference" || die "make_reference.py failed"

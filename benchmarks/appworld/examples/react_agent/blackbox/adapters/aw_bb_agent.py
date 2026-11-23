@@ -4,14 +4,24 @@ Run as a script, one episode per process (AppWorld allows one live world per pro
 
     python aw_bb_agent.py SPEC_JSON OUT_JSON
 
-SPEC_JSON holds task_id, experiment_name, appworld_root, random_seed, client_prompt (AppWorld's own
-stock react_code_agent/instructions.txt) and headers (the skillberry-context-* headers,
-appworld_tailoring.context_headers). OUT_JSON gets the same gold-free episode record the direct
-approach writes, so the adapter scores both alike.
+SPEC_JSON (written by the adapter) holds the task_id, experiment_name, appworld_root and random_seed;
+client_prompt (AppWorld's own stock react_code_agent/instructions.txt); spa_url and headers (the
+skillberry-context-* headers, appworld_tailoring.context_headers); remote_environment_url (the
+trial's own AppWorld environment server, or none for an in-process world); and repl_code.
 
-The candidate never reaches this process: it lives in the Skillberry Store as SKILL.md and the proxy
-injects it. This worker sends AppWorld's stock prompt unchanged; the proxy drops it up to the real
-task turn (history_start_regex) and puts the rendered SKILL.md in its place.
+The episode:
+  1. builds AppWorld's stock SimplifiedReActCodeAgent, its model the proxy, its LLM calls carrying the
+     headers. It sends AppWorld's stock prompt unchanged; the proxy drops it up to the real task turn
+     (history_start_regex) and puts the candidate's rendered SKILL.md in its place;
+  2. creates the world (on the trial's server when given) and, when repl_code is set, runs it with
+     ``world.execute`` before the agent starts, as the direct approach does: the candidate's tools
+     (its helpers and API-note wrappers, ``aw_agent.setup_snippet``). The agent's ``initialize`` does
+     not touch the REPL;
+  3. runs the stock step loop, evaluates the world, and disconnects the episode from the proxy.
+
+OUT_JSON gets the same gold-free episode record the direct approach writes, so the adapter scores both
+alike, plus ``setup_output`` (what the REPL printed for repl_code) and ``native`` (the agent's own
+message list, which the adapter moves to native_sims/).
 
 Reused from the direct approach's harness (``aw_agent.py``, copied into the project by
 scripts/setup_project.sh): the hardened code guard, gold-free evaluation fields, error redaction and
@@ -100,7 +110,17 @@ def run_episode(spec: dict[str, Any]) -> dict[str, Any]:
     try:
         with AppWorld.initializer(update_defaults=True, experiment_name=spec["experiment_name"],
                                   random_seed=int(spec["random_seed"]), raise_on_extra_parameters=True):
-            with AppWorld(task_id=task_id, experiment_name=spec["experiment_name"]) as world:
+            # The remote REPL: with remote_environment_url (a constructor argument of the WORLD, not the
+            # agent) the world, its databases and its REPL live in this trial's own environment server,
+            # and world.execute / evaluate / task_completed go to it over HTTP. The agent stays stock.
+            remote = {"remote_environment_url": spec["remote_environment_url"]} if spec.get("remote_environment_url") else {}
+            with AppWorld(task_id=task_id, experiment_name=spec["experiment_name"], **remote) as world:
+                if spec.get("repl_code"):
+                    # The candidate's tools, as in the direct approach: its REPL code
+                    # (aw_agent.setup_snippet), run once with world.execute before step 1. The stock agent
+                    # is not involved; its initialize() below does not touch the REPL.
+                    setup_output = world.execute(spec["repl_code"])
+                    record["setup_output"] = (setup_output or "")[:500]   # as direct records it
                 core.set_phase("episode")
                 agent.usage_tracker.reset(task_id)
                 agent.initialize(world)

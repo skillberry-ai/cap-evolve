@@ -1,4 +1,5 @@
-"""Candidate lints for the blackbox approach: the candidate is one store skill, ``SKILL.md``.
+"""Candidate lints for the blackbox approach. A candidate is the seed folder: ``my_skill/SKILL.md``
+(the store skill) and the tools capability in ``tools/helpers.py`` and ``tools/api_notes.json``.
 
     python bb_lints.py CANDIDATE_DIR    # prints {"ok": bool, "violations": [...]}; exit 1 on violation,
                                         # exit 2 when the lint data is unavailable
@@ -8,11 +9,15 @@ feedback), as in the direct approach. Reused from the direct approach's ``lints.
 project by scripts/setup_project.sh): the lint cache, the 8-gram / supervisor-contact leak check
 (AppWorld's rule against task-specific hints) and the token counter.
 
-SKILL.md rules (README: Lints):
-- No skill-package additions (``scripts/``, ``references/``, ``assets/``): a script would become a
-  tool, and this approach optimizes the system prompt only. Other files in the candidate folder are
-  the harness's own (INSTRUCTIONS.md, guidance/, JOURNAL.md, ...) and are never deployed: the
-  tailoring stages SKILL.md alone for the store.
+Candidate-folder rules (README: Lints):
+- ``my_skill/`` holds ``SKILL.md`` only: the store would import any other file in it as an injected
+  text or a tool the model is offered.
+- ``tools/`` holds ``helpers.py`` and ``api_notes.json`` only, and they follow the direct approach's
+  rules for the same files (``lints.lint_helpers`` / ``lint_notes``).
+- Other files in the candidate folder are the harness's own (INSTRUCTIONS.md, guidance/, JOURNAL.md,
+  ...) and are never deployed.
+
+SKILL.md rules:
 - Frontmatter ``name: my_skill``.
 - The body is a Jinja template whose ONLY variable is ``main_user``, with only the fields
   first_name, last_name, email and phone_number. Every placeholder of the seed stays (each field
@@ -35,7 +40,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import lints as direct_lints  # noqa: E402
 
 SKILL_NAME = "my_skill"
-PACKAGE_DIRS = ("scripts", "references", "assets")  # skill-package parts the store would import
+TOOLS_DIR = "tools"
+TOOLS_FILES = ("helpers.py", "api_notes.json")
 SKILL_MAX_TOKENS = 8500  # the direct prompt's 8,000 plus the rendered app list (~350 tokens)
 MAIN_USER_FIELDS = {"first_name", "last_name", "email", "phone_number"}
 PLACEHOLDER_RE = re.compile(r"\{\{(.*?)\}\}", re.DOTALL)
@@ -105,17 +111,43 @@ def lint_skill_md(text: str) -> list[str]:
     return out + direct_lints._leaks(body, WHAT)
 
 
-def lint_candidate(cdir: Path) -> list[str]:
-    cdir = Path(cdir)
-    skill = cdir / "SKILL.md"
-    if not skill.is_file():
-        return [f"{WHAT}: missing"]
+def lint_tools(cdir: Path) -> list[str]:
+    """The tools capability: tools/helpers.py and tools/api_notes.json, under the direct approach's rules."""
+    d = Path(cdir) / TOOLS_DIR
     out = []
-    others = sorted(str(p.relative_to(cdir)) for sub in PACKAGE_DIRS for p in (cdir / sub).rglob("*")
-                    if p.is_file() and "__pycache__" not in p.parts)
-    if others:
-        out.append(f"the skill must be SKILL.md only (system-prompt capability); found {others}")
-    return out + lint_skill_md(skill.read_text(encoding="utf-8"))
+    helpers = (d / "helpers.py").read_text(encoding="utf-8") if (d / "helpers.py").is_file() else ""
+    notes_raw = (d / "api_notes.json").read_text(encoding="utf-8") if (d / "api_notes.json").is_file() else ""
+    if helpers:
+        out += direct_lints.lint_helpers(helpers)
+    if notes_raw.strip():
+        out += direct_lints.lint_notes(notes_raw)
+    return out
+
+
+def _files_under(d: Path) -> list[Path]:
+    return [p for p in d.rglob("*") if p.is_file() and "__pycache__" not in p.parts] if d.is_dir() else []
+
+
+def lint_candidate(cdir: Path) -> list[str]:
+    """All lints for one candidate: the seed-folder layout, SKILL.md, and the tools files."""
+    cdir = Path(cdir)
+    skill = cdir / SKILL_NAME / "SKILL.md"
+    if not skill.is_file():
+        return [f"{WHAT}: missing (expected {SKILL_NAME}/SKILL.md)"]
+    out = []
+
+    extra_in_skill = sorted(p.relative_to(cdir).as_posix() for p in _files_under(cdir / SKILL_NAME)
+                            if p != skill)
+    if extra_in_skill:
+        out.append(f"{SKILL_NAME}/ holds SKILL.md only (the store would import any other file as a prompt "
+                   f"text or a tool); found {extra_in_skill}")
+
+    extra_in_tools = sorted(p.relative_to(cdir).as_posix() for p in _files_under(cdir / TOOLS_DIR)
+                            if p.relative_to(cdir / TOOLS_DIR).as_posix() not in TOOLS_FILES)
+    if extra_in_tools:
+        out.append(f"{TOOLS_DIR}/ holds {', '.join(TOOLS_FILES)} only; found {extra_in_tools}")
+
+    return out + lint_skill_md(skill.read_text(encoding="utf-8")) + lint_tools(cdir)
 
 
 if __name__ == "__main__":

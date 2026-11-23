@@ -2,15 +2,15 @@
 # scripts/setup_project.sh renders @OPT_MODEL@, @INSTRUCTIONS@ and @AW_EVAL@ and copies this into the project.
 # Search settings match ../capevolve.yaml, so the two approaches are comparable.
 
-# --- how the capability reaches the agent -----------------------------------
-intervention: blackbox                   # the Skillberry Store holds it, the Proxy-Agent injects it
-skill_name: my_skill
+intervention: blackbox                   # Skillberry proxy delivery (skills/interventions/llm-proxies/blackbox)
+skill_name: my_skill                     # the ONE skill the proxy serves; preflight needs it
 
-# --- what to optimize -------------------------------------------------------
-capabilities: [system-prompt]            # SKILL.md = the ReAct policy + few-shot demo, injected as the system prompt
-capability_path: seed_capability/my_skill
+# --- what to optimize ----------------------------------------------------------
+capabilities: [system-prompt, tools]     # my_skill/SKILL.md (the ReAct policy + demo) + tools/helpers.py, tools/api_notes.json
+capability_path: seed_capability         # the seed dir (a copy is optimized)
 actions: [edit]
 capability_sources: [reference/api_index.md, reference/react_agent_notes.md]
+protected_paths: [default]                # the optimizer may not edit these
 runner_repo_path: @AW_EVAL@/reference
 
 # --- who proposes edits -----------------------------------------------------
@@ -46,5 +46,4 @@ max_metric_calls: 1050                   # 147 baseline (scored once, train = va
 max_optimizer_usd: 120.0
 
 # --- iteration store --------------------------------------------------------
-protected_paths: [default]
 store: git
