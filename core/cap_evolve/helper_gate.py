@@ -26,6 +26,7 @@ fail open, because failing open would run the experiment with the check silently
 
 from __future__ import annotations
 
+import json
 import os
 import sys
 from pathlib import Path
@@ -226,3 +227,77 @@ def check_candidate(run_dir, cand: Path, *, parent_dir: Path | None = None, pare
     run_dir.log_event("helper_gate", candidate=Path(cand).name, parent=parent_id, ok=res["ok"],
                       checks={c["name"]: c["ok"] for c in res["checks"]}, failure=res["failure"][:500])
     return None if res["ok"] else Refusal(res)
+
+
+# ---- the optimizer's own check, before it submits --------------------------------------------------
+#
+# The gate refuses a candidate only after the optimizer has finished it. The optimizer can run the same checks
+# itself first and fix the findings, at no rollout cost (#895: optimizers guessed at refusals they could not see).
+# Its copy of the config leaves out what it must not see: the task ids and answer literals the lint compares
+# against, the gold paths the smoke denies, and the fixtures file. So its check is a little weaker than the gate
+# (no task-id finding) and, with no parent, it checks every helper file, not only the changed ones.
+
+SELF_CHECK_CONFIG = "guidance/helper_gate.json"
+_WITHHELD = {"task_ids": [], "ids_file": None, "forbidden_literals": [], "deny_roots": [], "fixtures": None}
+SELF_CHECK_NOTE = (
+    "## Check your helper scripts before you finish\n"
+    "Before this candidate is measured, the helper gate checks its helper scripts: where they are, a lint (no task "
+    "ids, no answer tables, no gold or split paths, no network or subprocess) and a smoke test (each changed helper "
+    "imports and gives the same output twice). A candidate it refuses is not measured. Run the same checks first "
+    "and fix every finding:\n\n"
+    "    python -m cap_evolve.helper_gate . --config " + SELF_CHECK_CONFIG + "\n\n"
+    "It prints `helper gate: ok`, or each finding with its file and line. It does not know the task ids, so also "
+    "make sure no helper contains one. If `cap_evolve` cannot be imported where you run commands, skip this step.\n")
+
+
+def write_self_check(run_dir, workdir: Path, project: Path | None = None) -> bool:
+    """When the gate is on for this run, write ``SELF_CHECK_CONFIG`` into ``workdir`` and return True.
+
+    ``guidance/`` is framework scratch (``types.NON_CAPABILITY_DIRS``): it is never part of the candidate, its
+    snapshot or its diff. A run without helpers, or with the gate off, writes nothing."""
+    cfg = for_run(run_dir, project)
+    if cfg is None:
+        return False
+    p = Path(workdir) / SELF_CHECK_CONFIG
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps({**cfg, **_WITHHELD}, indent=1, sort_keys=True, default=str), encoding="utf-8")
+    return True
+
+
+def main(argv=None) -> int:
+    """``python -m cap_evolve.helper_gate CANDIDATE [--config FILE] [--parent DIR] [--seed DIR]``.
+
+    Runs the gate on CANDIDATE and prints the verdict. Exit 0 = ok, 1 = refused, 2 = the check cannot run.
+    ``--config`` is a resolved helper config (JSON), e.g. the ``SELF_CHECK_CONFIG`` the framework writes into the
+    optimizer's working dir; without it the defaults are used with helpers on."""
+    import argparse
+    ap = argparse.ArgumentParser(prog="python -m cap_evolve.helper_gate", description=main.__doc__)
+    ap.add_argument("candidate", type=Path)
+    ap.add_argument("--config", type=Path)
+    ap.add_argument("--parent", type=Path, help="the dir the candidate was edited from (default: none, so every "
+                                                "helper file is checked)")
+    ap.add_argument("--seed", type=Path)
+    a = ap.parse_args(argv)
+    try:
+        if a.config:
+            cfg = {**helpers.resolve({"helpers": {"enabled": True}}),
+                   **json.loads(a.config.read_text(encoding="utf-8")), "enabled": True}
+        else:
+            cfg = helpers.resolve({"helpers": {"enabled": True}})
+        cfg["gate"] = True
+        res = gate(a.candidate, {**cfg}, parent=a.parent, seed=a.seed)
+    except (OSError, ValueError, GateConfigError) as e:
+        print(f"helper gate: cannot run: {e}", file=sys.stderr)
+        return 2
+    if res["ok"]:
+        print("helper gate: ok (" + ", ".join(c["name"] for c in res["checks"]) + ")")
+        return 0
+    print("helper gate: REFUSED")
+    for c in res["checks"]:
+        if not c["ok"]:
+            print(f"  [{c['name']}] {c['detail']}")
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

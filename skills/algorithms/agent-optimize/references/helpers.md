@@ -22,7 +22,8 @@ One trace is not enough. Name the traces in the hypothesis.
 **The checks (free, in the pregate; the same helper gate every algorithm runs).** `helper_surface` (executable
 files only in declared dirs, size caps), `helper_lint`, and `helper_smoke` (the helper imports, two runs give
 identical output, it writes only its declared outputs, no network, no gold). All three run; a failure leaves the
-candidate `proposed` with every finding; fix it and propose again.
+candidate `proposed` with every finding; fix it and propose again. Check first:
+`python -m cap_evolve.helper_gate <cand> --config guidance/helper_gate.json`.
 
 **What a helper crash costs.** A rollout that fails because the candidate's own helper raised is scored 0
 (`error_kind=candidate`), not treated as missing. A flaky helper is worse than prose.

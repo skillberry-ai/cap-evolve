@@ -2056,14 +2056,15 @@ class Adapter(CapabilityAdapter):
             # path as well, or a long run accumulates one stale dir per failed rollout
             # inside SPREADSHEETBENCH_DATA_DIR.
             _cleanup_output_dir(rollout)
-            return Score(
-                task_id=task.id,
-                reward=0.0,
-                feedback=(
-                    f"Rollout failed: {rollout.error}. Infrastructure error, not a "
-                    "prompt defect; do not optimize against it."
-                ),
-            )
+            if (rollout.metadata or {}).get("error_kind") == "candidate":
+                # The candidate's own fault (a broken template, refused or crashing helpers): the optimizer must
+                # read it as something to fix. Calling it an infrastructure error told it the opposite (#895).
+                feedback = (f"Rollout failed because of the candidate itself: {rollout.error}. This is a fault "
+                            "in the candidate, not an infrastructure error, and it scores 0: fix it.")
+            else:
+                feedback = (f"Rollout failed: {rollout.error}. Infrastructure error, not a "
+                            "prompt defect; do not optimize against it.")
+            return Score(task_id=task.id, reward=0.0, feedback=feedback)
 
         entry = _entries_by_id().get(task.id)
         if entry is None:

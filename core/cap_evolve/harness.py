@@ -5212,10 +5212,18 @@ class OptimizerContext:
                                   memory_skill=self.memory_skill)
         if self.memory_skill and self.memory_skill != "md-files":
             _inject_memory_skill_guidance(run_dir, workdir, self.memory_skill)
+        # The helper gate's config for the optimizer's own check (nothing is written when the gate is off).
+        from . import helper_gate
+        helper_gate.write_self_check(run_dir, workdir, self.project_dir)
 
     def augment_instructions(self, instructions: str, workdir: Path, run_dir: RunDir) -> str:
-        """Seed this run's chosen ``memory_skill``'s files and append its pointer text."""
-        return resolve_memory(self.memory_skill).augment_instructions(instructions, workdir, run_dir)
+        """Seed this run's chosen ``memory_skill``'s files and append its pointer text, and, when ``inject`` wrote
+        the helper gate's self-check config, the note that tells the optimizer to run it."""
+        from . import helper_gate
+        text = resolve_memory(self.memory_skill).augment_instructions(instructions, workdir, run_dir)
+        if (Path(workdir) / helper_gate.SELF_CHECK_CONFIG).is_file():
+            text = f"{text}\n\n{helper_gate.SELF_CHECK_NOTE}"
+        return text
 
     def write_handover(self, run_dir: RunDir, workdir: Path, cid: str, **kwargs) -> None:
         """Record this iteration's handover the way the chosen ``memory_skill`` wants it."""
