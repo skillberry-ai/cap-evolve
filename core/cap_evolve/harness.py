@@ -4528,9 +4528,11 @@ def _last_reject_block(steps, current_val: SplitResult, run_dir=None, optimizer=
       * a pooled run's confirm stratum never reaches the prompt: only the proposer-visible
         split's rows are used, and if the splits cannot be read the block is dropped.
 
-    It takes at most HALF of what is left of the prompt's feedback ``budget``
+    It takes about HALF of what is left of the prompt's feedback ``budget``
     (``feedback_digest.fit``, condensed + linked like the failure index), its own header lines
-    included; the failure index rendered after it gets the rest. It sees only the steps of
+    included and charged; ``fit`` always lists at least one row, so a very small budget can be
+    exceeded by that one entry. The failure index rendered after it gets ``budget.left``, so
+    the prompt's feedback as a whole stays inside the budget. It sees only the steps of
     this ``hill_climb_loop`` call, so the first iteration after a resume has no block.
     """
     if not steps or not history_enabled():
@@ -4541,7 +4543,7 @@ def _last_reject_block(steps, current_val: SplitResult, run_dir=None, optimizer=
     cid = str(last.get("candidate_id") or "the last candidate")
     cand_val = SplitResult.from_dict(last["candidate_val"])
     cand_rows = list(cand_val.per_task or [])
-    guard, min_trials = False, 0
+    guard, min_trials, cfg_unread = False, 0, False
     if run_dir is not None:
         try:
             visible = set(map(str, run_dir.read_splits().ids(gate_split(run_dir))))
@@ -4551,8 +4553,8 @@ def _last_reject_block(steps, current_val: SplitResult, run_dir=None, optimizer=
         try:
             gcfg = gatecfg.GateConfig.for_run(run_dir)
             guard, min_trials = bool(gcfg.ledger_noise_guard), int(gcfg.ledger_min_trials)
-        except Exception:  # noqa: BLE001 — no spec: the guard is off, as in GateConfig's defaults
-            guard = False
+        except Exception:  # noqa: BLE001 — unreadable spec: assume the guard is on (no causal claim)
+            cfg_unread = True
     mv = movement(current_val.per_task, cand_rows)
     if not mv["n_shared"]:
         return ""
@@ -4561,7 +4563,7 @@ def _last_reject_block(steps, current_val: SplitResult, run_dir=None, optimizer=
     shared = [t for t in by_id if t in par_by_id and has_valid_trials(by_id[t])
               and has_valid_trials(par_by_id[t])]
     n_min = min([min(_trials_of(by_id[t]), _trials_of(par_by_id[t])) for t in shared] or [1])
-    causal = not (guard and n_min < min_trials)
+    causal = not (cfg_unread or (guard and n_min < min_trials))
     rew = lambda rows, t: float(rows[t].get("reward", 0.0) or 0.0)
     vals = dict(mv["values"])
     if causal:
@@ -4588,8 +4590,10 @@ def _last_reject_block(steps, current_val: SplitResult, run_dir=None, optimizer=
         "tasks is in the failure index; compare the two to see which part of the edit did "
         f"what. Its diff and every trial are in `./prior_iterations/{cid}/`.",
     ]
-    unres_line = ("Moved by less than 2·SE (no claim either way): "
-                  + ", ".join(str(t) for t in mv["unresolved"][:40])) if causal and mv["unresolved"] else ""
+    unres_ids = ", ".join(str(t) for t in mv["unresolved"][:40])
+    unres_line = (("Moved by less than 2·SE (no claim either way): "
+                   + (unres_ids if len(unres_ids) <= 1500 else f"{len(mv['unresolved'])} task(s)"))
+                  if causal and mv["unresolved"] else "")
     fixed_cost = fd._size("\n".join(head_lines + [unres_line])) + 400   # + headings / rest line
     rows = [by_id[t] for g in groups for t in g]
     got = fd.fit(rows, max(0, room - fixed_cost),
@@ -4606,9 +4610,10 @@ def _last_reject_block(steps, current_val: SplitResult, run_dir=None, optimizer=
                       "keep what caused these"]
         lines += listed(groups[1]) or ["- (none)"]
     else:
-        lines.append(f"### Changed vs the best ({len(groups[0])}) — n={n_min} trial(s) per task is "
-                     f"below ledger_min_trials={min_trials}, so NO causal claim: read these as "
-                     "context, not as what the edit broke or fixed")
+        why = ("the run's gate config could not be read" if cfg_unread else
+               f"n={n_min} trial(s) per task is below ledger_min_trials={min_trials}")
+        lines.append(f"### Changed vs the best ({len(groups[0])}) — {why}, so NO causal claim: "
+                     "read these as context, not as what the edit broke or fixed")
         lines += listed(groups[0]) or ["- (none)"]
     if got.rest:
         lines += ["", f"(+{len(got.rest)} more moved task(s) not listed, over the feedback budget "

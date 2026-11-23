@@ -185,9 +185,31 @@ def test_rows_over_the_budget_point_at_the_rejects_own_trials_and_the_header_is_
     budget = feedback_digest.Budget(total=feedback_digest.MIN_BUDGET)
     text = harness._last_reject_block([_reject_step()], BEST, budget=budget)
     assert budget.used == feedback_digest._size(text)          # every byte of the block charged
-    if "more moved task(s) not listed" in text:
-        assert "./prior_iterations/cand_0001/trajectories/" in text
-        assert "failing task(s)" not in text
+
+    # 200 movers with 3 KB of feedback each cannot all be listed in MIN_BUDGET: the left-out
+    # line must exist and point at the REJECT's trials, not the best's ./trajectories/.
+    best = SplitResult.from_dict({"split": "val", "reward": 0.7, "stderr": 0.01,
+                                  "per_task": [_pt(f"t{i:03d}", 0.70, "b" * 3000) for i in range(200)]})
+    step = {"candidate_id": "cand_0009", "accepted": False, "candidate_val": SplitResult.from_dict(
+        {"split": "val", "reward": 0.3, "stderr": 0.01,
+         "per_task": [_pt(f"t{i:03d}", 0.30, "c" * 3000) for i in range(200)]}).to_dict()}
+    big = feedback_digest.Budget(total=feedback_digest.MIN_BUDGET)
+    text = harness._last_reject_block([step], best, budget=big)
+    assert "more moved task(s) not listed" in text, text[-600:]
+    assert "./prior_iterations/cand_0009/trajectories/" in text
+    assert "failing task(s)" not in text
+    assert big.used == feedback_digest._size(text)
+
+
+def test_an_unreadable_gate_config_withholds_causal_claims(monkeypatch):
+    from cap_evolve import gatecfg
+
+    def boom(cls, rd):
+        raise ValueError("bad capevolve.yaml")
+    monkeypatch.setattr(gatecfg.GateConfig, "for_run", classmethod(boom))
+    text = harness._last_reject_block([_reject_step()], BEST, run_dir=_ValRun())
+    assert "NO causal claim" in text and "Measurably WORSE" not in text
+    assert "gate config could not be read" in text
 
 
 def test_skillopt_does_not_call_missing_data_a_regression():
