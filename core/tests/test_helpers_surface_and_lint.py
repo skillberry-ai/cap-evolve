@@ -472,3 +472,55 @@ def test_a_missing_seed_snapshot_stops_the_round_pregate_not_fail_open(monkeypat
     monkeypatch.setattr(rnd, "spec_for_run", lambda run_dir, project: {"helpers": {"enabled": True}})
     with pytest.raises(helper_gate.GateConfigError, match="seed"):
         rnd.pregate_failure(rd, tmp_path, "parent", cand, None)
+
+
+# ---- #912: ordinary spreadsheet code is not a task-id branch or a gold path ---------------------------
+# Each case is a line the lint refused in exp895 (issue #895), shortened. None of them reads gold or
+# branches on which task is running, so a helper that contains it must pass.
+_EXCEL_NAMES = ", ".join(f"'F{i}'" for i in range(30))
+
+
+@pytest.mark.parametrize("src", [
+    # a parameter named after the task template's own field, in an error message (exp895: 13 candidates)
+    "def check(answer_position):\n    if not answer_position:\n"
+    "        raise ValueError('answer_position must be a non-empty string')\n",
+    "def check(p):\n    raise ValueError(f'answer_position {p!r} is empty')\n",
+    "__all__ = ['parse_answer_position']\n",
+    "def f(cells):\n    return {'answer_position': cells}\n",
+    # a docstring that mentions the words, with a slash (main's lint refused it as a path)
+    '"""Fill the range named by task/answer_position; see the split/notes section."""\n',
+    # a sheet name or row index compared with None (exp895: 7 candidates)
+    "def ws_of(wb, sheet_name=None):\n    if sheet_name is None:\n        return wb.active\n    return wb[sheet_name]\n",
+    "def ws_of(wb, sheet_name):\n    return wb[sheet_name] if sheet_name is not None else wb.active\n",
+    "def r(row_idx=None):\n    if row_idx is None:\n        return 1\n    return row_idx\n",
+    # a set of Excel function names: membership only, it stores no answers (exp895: 1 candidate)
+    "_NEW = {" + _EXCEL_NAMES + "}\n\ndef needs_prefix(fn):\n    return fn.upper() in _NEW\n",
+    # the helpers the shared #895 guidance itself suggests
+    "def write_range(ws, answer_position, values):\n"
+    "    if ':' not in answer_position:\n        raise ValueError('answer_position must be a range like A1:B2')\n",
+    "def verify_output(path, answer_position):\n    import openpyxl\n"
+    "    wb = openpyxl.load_workbook(path)\n    return wb, answer_position\n",
+])
+def test_ordinary_spreadsheet_code_passes_the_lint(src):
+    assert _lint(src) == []
+
+
+@pytest.mark.parametrize("src,needle", [
+    # gold paths are still refused, however the path is built
+    ("def f(root):\n    return open(root + '/gold/x.xlsx')\n", "evaluator/gold"),
+    ("import os\n\ndef f(root, n):\n    return open(os.path.join(root, 'gold', n))\n", "evaluator/gold"),
+    ("from pathlib import Path\n\ndef f(r):\n    return (Path(r) / 'answers' / 'a.xlsx').read_bytes()\n",
+     "evaluator/gold"),
+    ("def f():\n    return open('answer.json').read()\n", "evaluator/gold"),
+    ("G = 'data/1_10452_golden.xlsx'\n", "evaluator/gold"),
+    ("def f(p):\n    return open(f'{p}/splits/test.json')\n", "evaluator/gold"),
+    # task-identity branches are still refused when they compare with a real literal
+    ("def f(task_id):\n    if task_id == '10452':\n        return 42\n", "task identity"),
+    ("def f(sample_id):\n    return 1 if sample_id in ('a1', 'b2') else 0\n", "task identity"),
+    # answer tables are still refused: a dict and a list store values
+    ("T = {" + ", ".join(f"'k{i}': 'v{i}'" for i in range(25)) + "}\n", "lookup table"),
+    ("T = [" + _EXCEL_NAMES + "]\n", "lookup table"),
+])
+def test_real_findings_are_still_refused(src, needle):
+    out = _lint(src)
+    assert out and any(needle in x for x in out), out
