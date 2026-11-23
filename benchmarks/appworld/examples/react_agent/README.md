@@ -191,7 +191,9 @@ bash run.sh --blackbox              # blackbox: the full search
 ```
 
 The 10 fixed tasks were drawn once from train + dev with seed 0 and are the same in both approaches,
-so their runs compare directly. The steps underneath:
+so their runs compare directly. `fix10_split.json` also holds 5 test tasks, the same in both
+approaches: drawn with seed 1 from train + dev scenarios that none of the 10 comes from (one task per
+scenario), never shown to the optimizer, and scored once on the best candidate when the run ends. The steps underneath:
 
 ```
 bash scripts/check_optimizer_isolation.sh sandbox            # must PASS (or namespace, with AW_ISOLATION=namespace)

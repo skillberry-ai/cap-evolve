@@ -33,7 +33,7 @@ memory_skill: md-files
 # --- data + splits ----------------------------------------------------------
 dataset_source: adapter
 split_seed: 0
-split_ids_file: fix10_split.json                # 10 fixed train+dev tasks (drawn once, seed 0); test = [] (rule S2)
+split_ids_file: fix10_split.json                # 10 fixed train+dev tasks (seed 0) + 5 held-out test tasks from other train+dev scenarios (seed 1), never shown to the optimizer
 
 # --- scoring ----------------------------------------------------------------
 num_trials: 5

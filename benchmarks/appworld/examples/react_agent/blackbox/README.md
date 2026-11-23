@@ -38,7 +38,8 @@ scripts/provision_stack.py       the store and proxy at the pinned commits in th
 scripts/launch.sh                runs (or resumes) a run with the optimizer isolated
 capevolve.yaml                   the run spec: the full search (search settings = the direct example's, ..)
 capevolve.smoke.yaml, smoke_split.json   1 task, 1 trial, 1 iteration
-capevolve.fix10.yaml, fix10_split.json   the 10 fixed tasks shared with the direct approach, 5 trials, 3 iterations
+capevolve.fix10.yaml, fix10_split.json   the 10 fixed tasks (+ 5 held-out test tasks) shared with the direct
+                                         approach, 5 trials, 3 iterations
 PROJECT.template.md              the project's PROJECT.md (resolved inputs), rendered by setup_project.sh
 tests/test_blackbox.py           offline tests (no AppWorld, store, proxy or model needed)
 ```

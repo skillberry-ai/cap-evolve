@@ -129,3 +129,12 @@ if [ "$APPROACH" = blackbox ]; then
 else
   bash "$EX/scripts/setup_project.sh" || die "scripts/setup_project.sh failed"
 fi
+
+# What to run next, for the approach just set up (run.sh's own modes).
+FLAG=""
+[ "$APPROACH" = blackbox ] && FLAG="--blackbox "
+printf '\n\033[1;32mSETUP DONE (%s).\033[0m  Run it with:\n' "$APPROACH"
+printf '  bash %s/run.sh %s--smoke   # 1 task, 1 trial, 1 iteration\n' "$EX" "$FLAG"
+printf '  bash %s/run.sh %s--fix10   # the 10 fixed tasks + 5 held-out test tasks (same in both approaches)\n' "$EX" "$FLAG"
+printf '  bash %s/run.sh %s          # the full search\n' "$EX" "$FLAG"
+printf '  (the optimizer isolation must PASS first: bash %s/scripts/check_optimizer_isolation.sh $AW_ISOLATION)\n' "$EX"

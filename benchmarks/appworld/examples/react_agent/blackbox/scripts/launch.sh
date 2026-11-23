@@ -52,7 +52,7 @@ export CAPEVOLVE_SKILLS_DIR="$REPO/skills"
 export LITELLM_LOCAL_MODEL_COST_MAP=True
 export AW_SECRETS_FILE="${AW_SECRETS_FILE:-$REPO/.env}"
 export AW_EXPERIMENT="$TS"
-export AW_WORKERS="${AW_WORKERS:-24}"                     # episodes in parallel
+export AW_WORKERS="${AW_WORKERS:-5}"                      # episodes in parallel (each with its own environment server)
 export AW_EVAL
 export AW_LINT_CACHE="$AW_EVAL/lint_cache.json"
 export AW_APP_DESCRIPTIONS="$AW_EVAL/app_descriptions.json"

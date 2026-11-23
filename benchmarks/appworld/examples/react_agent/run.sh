@@ -9,7 +9,8 @@
 #   bash run.sh --blackbox              # blackbox: the full search
 #
 # The 10 fixed tasks (fix10_split.json, drawn once from train + dev with seed 0) are the same in
-# both approaches, so their runs compare directly. Each run lands in a new run_<YYYYMMDD_HHMMSS>
+# both approaches, so their runs compare directly. Its 5 test tasks (other train + dev scenarios,
+# seed 1) are never shown to the optimizer: cap-evolve scores the best candidate on them once, at the end. Each run lands in a new run_<YYYYMMDD_HHMMSS>
 # under $AW_EVAL/.capevolve (direct) or $AW_EVAL/.capevolve-blackbox; the smoke under
 # $AW_EVAL/.capevolve-itest/run_itest (direct).
 #

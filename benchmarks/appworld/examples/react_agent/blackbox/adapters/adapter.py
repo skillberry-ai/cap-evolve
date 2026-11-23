@@ -312,7 +312,7 @@ class Adapter(CapabilityAdapter):
             return {t.id: [Rollout(task_id=t.id, error=err, metadata={"cost_source": "unpriced", "infra_error": err})
                            for _ in range(n_trials)] for t in tasks}
         repl_code = tailoring.repl_code(cdir)   # the same for every episode of this candidate
-        workers = int(os.environ.get("AW_WORKERS", "24"))
+        workers = int(os.environ.get("AW_WORKERS", "5"))
         scratch = Path(os.environ.get("AW_SCRATCH", str(EVAL / "scratch")))
         scratch.mkdir(parents=True, exist_ok=True)
         workdir = Path(tempfile.mkdtemp(prefix="aw_bb_eps_", dir=scratch))
