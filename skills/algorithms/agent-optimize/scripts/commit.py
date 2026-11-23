@@ -454,7 +454,7 @@ def _promote_gate_verdict(run_dir: RunDir, candidate_id: str) -> str | None:
                     ev = json.loads(line)
                 except Exception:  # noqa: BLE001
                     continue
-                if ev.get("kind") == "promote_gate" and str(ev.get("candidate")) == str(candidate_id):
+                if ev.get("kind") in ("promote_gate", "gate_check") and str(ev.get("candidate")) == str(candidate_id):
                     out = ev.get("verdict")
     except FileNotFoundError:
         return None

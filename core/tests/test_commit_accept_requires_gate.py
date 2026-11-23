@@ -60,3 +60,20 @@ def test_accept_without_gate_escape_records_reason(tmp_path):
     assert evs and evs[0]["reason"] == "gate infra down"
     acc = [e for e in _events(run_dir) if e["kind"] == "accept"]
     assert acc[-1]["accepted_without_gate"] == "gate infra down"
+
+
+def test_gate_check_event_accept_then_commit_accepts(tmp_path):
+    run_dir, work = _staged(tmp_path)
+    run_dir.log_event("gate_check", candidate="cand_2", verdict="accept", mode="paired")
+    p = base._commit(run_dir, work, decision="accept")
+    assert p.returncode == 0, p.stdout + p.stderr
+    assert _best(run_dir) == "cand_2"
+
+
+def test_gate_check_event_reject_then_commit_accept_refused(tmp_path):
+    run_dir, work = _staged(tmp_path)
+    run_dir.log_event("gate_check", candidate="cand_2", verdict="reject", mode="paired")
+    before = _best(run_dir)
+    p = base._commit(run_dir, work, decision="accept")
+    assert p.returncode == 2, p.stdout + p.stderr
+    assert _best(run_dir) == before
