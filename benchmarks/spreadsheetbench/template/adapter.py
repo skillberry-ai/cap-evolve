@@ -454,6 +454,17 @@ def _data_dir() -> Path:
 _dataset_cache: list[dict] | None = None
 
 
+def _check_task_id(raw) -> str:
+    """A task id is joined into host paths (<dir>/spreadsheet/<id>) at build AND scoring time, so it must be one
+    plain path segment: no separators, no '.'/'..', no NUL. Otherwise dataset.json could steer the scorer (or the
+    input lookup) outside the dataset, e.g. at a gold tree (#782)."""
+    sid = str(raw) if raw is not None else ""
+    if (not sid or sid in (".", "..") or "/" in sid or "\\" in sid or "\x00" in sid
+            or Path(sid).is_absolute()):
+        raise RuntimeError(f"dataset.json task id {raw!r} is not a plain directory name; refusing it")
+    return sid
+
+
 def _load_dataset() -> list[dict]:
     global _dataset_cache
     if _dataset_cache is not None:
@@ -461,6 +472,8 @@ def _load_dataset() -> list[dict]:
 
     d = _data_dir()
     entries = json.loads((d / "dataset.json").read_text(encoding="utf-8"))
+    for e in entries:
+        _check_task_id(e.get("id") if isinstance(e, dict) else None)
     if TASK_IDS:
         want = set(TASK_IDS)
         entries = [e for e in entries if str(e["id"]) in want]
