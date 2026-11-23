@@ -265,3 +265,114 @@ def test_with_the_gate_off_nothing_is_written(tmp_path):
     wd = tmp_path / "work"
     wd.mkdir()
     assert helper_gate.write_self_check(rd, wd) is False
+
+
+# ---- review of #1009: the self-check is never stricter than the gate, and never fails open ------------------
+
+def _run_with_seed(tmp_path, seed_files: dict, spec_text="surface:\n  executable_dirs: ['skills/*/scripts']\n"
+                                                         "helpers:\n  enabled: true\n"):
+    from cap_evolve import Budget, RunDir
+    seed = tmp_path / "seed_src"
+    for rel, text in seed_files.items():
+        (seed / rel).parent.mkdir(parents=True, exist_ok=True)
+        (seed / rel).write_text(text)
+    rd = RunDir.create(tmp_path / ".capevolve", ts="sc", budget=Budget(max_iterations=2))
+    spec = tmp_path / "capevolve.yaml"
+    spec.write_text(spec_text)
+    rd.log_event("spec_resolved", spec=str(spec), project=str(tmp_path))
+    rd.snapshot("seed", seed)
+    return rd
+
+
+def _workdir_from_seed(rd):
+    import shutil
+    wd = rd.root / "work" / "cand_0001"
+    shutil.copytree(rd.candidate_dir("seed"), wd)
+    return wd
+
+
+SEED = {"prompt.md": "p\n", "skills/s/SKILL.md": "s\n",
+        "reference/data_model.py": "X = 1\n",                       # seed-owned, outside the helper dirs
+        "skills/s/scripts/old.py": "import socket\n"}               # seed helper the gate never lints (unchanged)
+
+
+def test_the_self_check_accepts_what_the_gate_accepts(tmp_path):
+    from cap_evolve import helper_gate
+    rd = _run_with_seed(tmp_path, SEED)
+    wd = _workdir_from_seed(rd)
+    assert helper_gate.write_self_check(rd, wd)                       # as inject does, before any edit
+    # framework scratch the optimizer's working dir holds: never part of the candidate
+    for rel in (".claude/skills/n/scripts/a.py", "trajectories/t.py", "prior_iterations/c/x.py"):
+        (wd / rel).parent.mkdir(parents=True, exist_ok=True)
+        (wd / rel).write_text("import socket\n")
+    (wd / "skills/s/scripts/h.py").write_text(CLEAN)
+    assert helper_gate.check_candidate(rd, wd, parent_dir=rd.candidate_dir("seed"), parent_id="seed") is None
+    assert helper_gate.main([str(wd), "--config", str(wd / helper_gate.SELF_CHECK_CONFIG)]) == 0
+
+
+def test_the_self_check_refuses_what_the_gate_refuses(tmp_path, capsys):
+    from cap_evolve import helper_gate
+    rd = _run_with_seed(tmp_path, SEED)
+    wd = _workdir_from_seed(rd)
+    helper_gate.write_self_check(rd, wd)
+    (wd / "skills/s/scripts/h.py").write_text(CHEAT)
+    (wd / "tools.py").write_text(CLEAN)                               # a new executable outside the declared dirs
+    gate = helper_gate.check_candidate(rd, wd, parent_dir=rd.candidate_dir("seed"), parent_id="seed")
+    assert gate is not None
+    capsys.readouterr()
+    assert helper_gate.main([str(wd), "--config", str(wd / helper_gate.SELF_CHECK_CONFIG)]) == 1
+    out = capsys.readouterr().out
+    gate_failed = {c["name"] for c in gate.result["checks"] if not c["ok"]}
+    self_failed = {n for n in ("helper_surface", "helper_lint", "helper_smoke") if f"[{n}]" in out}
+    assert self_failed and self_failed <= gate_failed                # never a finding the gate does not have
+
+
+@pytest.mark.parametrize("var", ["CAPEVOLVE_HELPER_GATE", "CAPEVOLVE_HELPERS"])
+def test_the_cli_never_says_ok_without_checking(tmp_path, monkeypatch, var):
+    from cap_evolve import helper_gate
+    monkeypatch.setenv(var, "0")
+    assert helper_gate.main([str(_cand(tmp_path, CHEAT))]) == 1
+
+
+def test_a_broken_config_does_not_fail_proposer_setup_but_still_stops_the_gate(tmp_path):
+    from cap_evolve import helper_gate
+    rd = _run_with_seed(tmp_path, SEED, spec_text=f"helpers:\n  enabled: true\n  ids_file: {tmp_path / 'nope'}\n")
+    wd = _workdir_from_seed(rd)
+    assert helper_gate.write_self_check(rd, wd) is False                # inject must not raise
+    with pytest.raises(helper_gate.GateConfigError, match="ids_file"):
+        helper_gate.check_candidate(rd, wd, parent_dir=rd.candidate_dir("seed"), parent_id="seed")
+
+
+def test_a_gate_turned_off_leaves_no_stale_self_check(tmp_path):
+    from cap_evolve import harness, helper_gate
+    rd = _run_with_seed(tmp_path, SEED)
+    wd = _workdir_from_seed(rd)
+    assert helper_gate.write_self_check(rd, wd)
+    (tmp_path / "capevolve.yaml").write_text("helpers:\n  enabled: true\n  gate: false\n")
+    assert helper_gate.write_self_check(rd, wd) is False
+    assert not (wd / helper_gate.SELF_CHECK_DIR).exists()
+    ctx = harness.OptimizerContext()
+    assert "python -m cap_evolve.helper_gate" not in ctx.augment_instructions("x", wd, rd)
+
+
+def test_run_step_and_hc2_use_one_refusal_prefix(tmp_path):
+    # harness._tamper_step writes f"indecisive ({kind}): ", HC-2 uses helper_gate.INDECISIVE_PREFIX
+    import importlib.util
+    from cap_evolve import RunDir, Budget, harness, helper_gate
+    import shutil
+    spec = importlib.util.spec_from_file_location("toy_fb", EXAMPLE / "adapter.py")
+    toy = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(toy)
+    adapter = toy.Adapter()
+    seed = tmp_path / "seed_capability"
+    shutil.copytree(EXAMPLE / "capability", seed)
+    rd = RunDir.create(tmp_path / ".capevolve", ts="px", budget=Budget(max_iterations=2, stall=5))
+    harness.ensure_splits(adapter, rd, seed=0)
+    base = harness.baseline(adapter, seed, run_dir=rd)
+
+    def opt(workdir, instructions):
+        _cand(Path(workdir), CHEAT)
+
+    step = harness.run_step(adapter, run_dir=rd, parent_dir=rd.candidate_dir("seed"), optimizer=opt,
+                            instructions="x", current_val=base, gate_kwargs={"mode": "significant", "k_se": 1.0})
+    assert step["decision"]["reason"].startswith(helper_gate.INDECISIVE_PREFIX)

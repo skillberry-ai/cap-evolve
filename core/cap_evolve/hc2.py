@@ -40,7 +40,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
-from . import feedback_digest
+from . import feedback_digest, helper_gate
 from .evaluator import thread_map
 from .types import NON_CAPABILITY_DIRS
 
@@ -995,16 +995,13 @@ def _snap_ignore(harness):
     return tuple(harness._SNAPSHOT_IGNORE) + ("contrast", "notes", "cross_trace_summary.md")
 
 
-_HELPER_GATE_PREFIX = "indecisive (helper_gate): "   # the same prefix harness._tamper_step writes
-
-
 def _status(pend, cid, v1, v2, cv):
     """(status, reason, indecisive) for one candidate. Only the C verdict BIT is ever written."""
     if cid in pend["dropped"]:
         why = pend["dropped"][cid]
         # A helper-gate refusal is "not scored", as in run_step: the prefix puts it in LEDGER.md's "Not scored"
         # section with its finding, and _record files it in rejected memory, so the next proposer can fix it.
-        return "dropped", (f"{_HELPER_GATE_PREFIX}{why}" if why.startswith("the helper gate")
+        return "dropped", (f"{helper_gate.INDECISIVE_PREFIX}{why}" if why.startswith("the helper gate")
                            else f"hc2 diversity gate: {why}"), True
     if cv is not None:
         return cv.status, f"P2 confirmation {cv.bit()}", cv.status == "unconfirmed"
@@ -1041,7 +1038,7 @@ def _record(run_dir, harness, cid, parent_id, workdir, status, reason, *, indeci
             history.add(cid, summary, getattr(rv, "mean", 0.0) or 0.0)
     elif not indecisive and rejected is not None:
         rejected.add(cid, summary, reason, getattr(rv, "mean", None))
-    elif rejected is not None and reason.startswith(_HELPER_GATE_PREFIX):
+    elif rejected is not None and reason.startswith(helper_gate.INDECISIVE_PREFIX):
         # never measured, so it stays indecisive (no stall step), but the finding is what the proposer needs
         rejected.add(cid, f"candidate {cid} (not scored: helper gate)", reason, None)
     if not indecisive and not accepted and diff is not None:

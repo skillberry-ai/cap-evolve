@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import sys
 from pathlib import Path
 
@@ -223,7 +224,14 @@ def check_candidate(run_dir, cand: Path, *, parent_dir: Path | None = None, pare
         return None
     traces = (helper_smoke.fixture_traces(run_dir.rollouts, parent_id or "seed", cfg["fixture_splits"])
               if cfg.get("smoke", True) else [])
-    res = gate(cand, cfg, parent=parent_dir, seed=run_dir.candidate_dir("seed"), traces=traces)
+    # The candidate as its snapshot will be: the optimizer's working dir also holds framework scratch
+    # (``guidance/``, ``trajectories/``, ``.claude/`` ...), which is never part of the candidate and must not be
+    # judged as if it were. The optimizer's self-check (``main``) checks the same view.
+    import tempfile
+    with tempfile.TemporaryDirectory(prefix=".helper_gate_view_", dir=run_dir.root) as tmp:
+        view = Path(tmp) / Path(cand).name
+        shutil.copytree(cand, view, ignore=_snapshot_ignore())
+        res = gate(view, cfg, parent=parent_dir, seed=run_dir.candidate_dir("seed"), traces=traces)
     run_dir.log_event("helper_gate", candidate=Path(cand).name, parent=parent_id, ok=res["ok"],
                       checks={c["name"]: c["ok"] for c in res["checks"]}, failure=res["failure"][:500])
     return None if res["ok"] else Refusal(res)
@@ -233,11 +241,17 @@ def check_candidate(run_dir, cand: Path, *, parent_dir: Path | None = None, pare
 #
 # The gate refuses a candidate only after the optimizer has finished it. The optimizer can run the same checks
 # itself first and fix the findings, at no rollout cost (#895: optimizers guessed at refusals they could not see).
-# Its copy of the config leaves out what it must not see: the task ids and answer literals the lint compares
-# against, the gold paths the smoke denies, and the fixtures file. So its check is a little weaker than the gate
-# (no task-id finding) and, with no parent, it checks every helper file, not only the changed ones.
+#
+# The self-check must never be STRICTER than the gate, or the optimizer is told to "fix" what the gate accepts. So it
+# checks what the gate checks: the candidate as its snapshot will be (framework scratch excluded), against the same
+# parent and seed. ``inject`` puts copies of both next to the config, under ``guidance/`` (framework scratch,
+# never part of a candidate), because the optimizer may not see the run dir. The config leaves out what the
+# optimizer must not see: the task ids and answer literals the lint compares against, the gold paths the smoke test
+# denies, and the fixtures file. That only makes the self-check weaker (no task-id finding), never stricter.
 
-SELF_CHECK_CONFIG = "guidance/helper_gate.json"
+INDECISIVE_PREFIX = "indecisive (helper_gate): "     # the reason prefix of a refused step, in every loop
+SELF_CHECK_DIR = "guidance/helper_gate"
+SELF_CHECK_CONFIG = SELF_CHECK_DIR + "/config.json"
 _WITHHELD = {"task_ids": [], "ids_file": None, "forbidden_literals": [], "deny_roots": [], "fixtures": None}
 SELF_CHECK_NOTE = (
     "## Check your helper scripts before you finish\n"
@@ -250,52 +264,89 @@ SELF_CHECK_NOTE = (
     "make sure no helper contains one. If `cap_evolve` cannot be imported where you run commands, skip this step.\n")
 
 
-def write_self_check(run_dir, workdir: Path, project: Path | None = None) -> bool:
-    """When the gate is on for this run, write ``SELF_CHECK_CONFIG`` into ``workdir`` and return True.
+def _snapshot_ignore():
+    from .harness import _SNAPSHOT_IGNORE          # what RunDir.snapshot leaves out of a candidate
+    return shutil.ignore_patterns(*_SNAPSHOT_IGNORE, ".git")
 
-    ``guidance/`` is framework scratch (``types.NON_CAPABILITY_DIRS``): it is never part of the candidate, its
-    snapshot or its diff. A run without helpers, or with the gate off, writes nothing."""
-    cfg = for_run(run_dir, project)
+
+def write_self_check(run_dir, workdir: Path, project: Path | None = None) -> bool:
+    """Prepare the optimizer's self-check in ``workdir`` when the gate is on for this run; True if it did.
+
+    Call it right after ``workdir`` was copied from the candidate's parent and before the optimizer edits it: the
+    parent copy is taken from ``workdir`` itself. Writes ``SELF_CHECK_CONFIG`` and the ``parent`` and ``seed`` copies
+    next to it. Any earlier copy is removed first, so a run that turns the gate off leaves no stale note.
+
+    Never raises: a gate that cannot run (an invalid ``helpers:`` table, an unreadable ``ids_file``) is reported
+    where the gate runs, by ``check_candidate``, which stops the run. Proposer set-up must not fail on it first."""
+    d = Path(workdir) / SELF_CHECK_DIR
+    shutil.rmtree(d, ignore_errors=True)
+    try:
+        cfg = for_run(run_dir, project)
+    except (GateConfigError, ValueError):
+        return False
     if cfg is None:
         return False
-    p = Path(workdir) / SELF_CHECK_CONFIG
-    p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(json.dumps({**cfg, **_WITHHELD}, indent=1, sort_keys=True, default=str), encoding="utf-8")
+    d.mkdir(parents=True)
+    shutil.copytree(workdir, d / "parent", ignore=_snapshot_ignore())
+    seed = run_dir.candidate_dir("seed")
+    if Path(seed).is_dir():
+        shutil.copytree(seed, d / "seed", ignore=_snapshot_ignore())
+    (d / "config.json").write_text(json.dumps({**cfg, **_WITHHELD}, indent=1, sort_keys=True, default=str),
+                                   encoding="utf-8")
     return True
+
+
+def _cli_config(path: Path | None) -> dict:
+    """The config the CLI checks with. Helpers are ON and the gate ACTIVE whatever the environment says
+    (CAPEVOLVE_HELPERS / CAPEVOLVE_HELPER_GATE): asking the CLI is asking for the check, so it never reports ok
+    without having run it."""
+    base = helpers.resolve({"helpers": {"enabled": True},
+                            "surface": {"executable_dirs": list(helpers.DEFAULT_EXECUTABLE_DIRS)}})
+    if path is not None:
+        base.update(json.loads(Path(path).read_text(encoding="utf-8")))
+    base.update(enabled=True, gate=True)
+    return base
 
 
 def main(argv=None) -> int:
     """``python -m cap_evolve.helper_gate CANDIDATE [--config FILE] [--parent DIR] [--seed DIR]``.
 
-    Runs the gate on CANDIDATE and prints the verdict. Exit 0 = ok, 1 = refused, 2 = the check cannot run.
-    ``--config`` is a resolved helper config (JSON), e.g. the ``SELF_CHECK_CONFIG`` the framework writes into the
-    optimizer's working dir; without it the defaults are used with helpers on."""
+    Runs the gate's checks on CANDIDATE as its snapshot will be (framework scratch such as ``guidance/``,
+    ``trajectories/`` and ``.claude/`` excluded) and prints the verdict. Exit 0 = ok, 1 = refused, 2 = the check
+    cannot run. ``--config`` is a resolved helper config (JSON); with the ``SELF_CHECK_CONFIG`` the framework writes,
+    ``--parent`` and ``--seed`` default to the copies next to it. Without ``--parent`` every helper file is
+    checked, not only the changed ones."""
     import argparse
+    import tempfile
     ap = argparse.ArgumentParser(prog="python -m cap_evolve.helper_gate", description=main.__doc__)
     ap.add_argument("candidate", type=Path)
     ap.add_argument("--config", type=Path)
-    ap.add_argument("--parent", type=Path, help="the dir the candidate was edited from (default: none, so every "
-                                                "helper file is checked)")
+    ap.add_argument("--parent", type=Path)
     ap.add_argument("--seed", type=Path)
     a = ap.parse_args(argv)
+    if a.config is not None:
+        for name in ("parent", "seed"):
+            beside = a.config.parent / name
+            if getattr(a, name) is None and beside.is_dir():
+                setattr(a, name, beside)
     try:
-        if a.config:
-            cfg = {**helpers.resolve({"helpers": {"enabled": True}}),
-                   **json.loads(a.config.read_text(encoding="utf-8")), "enabled": True}
-        else:
-            cfg = helpers.resolve({"helpers": {"enabled": True}})
-        cfg["gate"] = True
-        res = gate(a.candidate, {**cfg}, parent=a.parent, seed=a.seed)
+        cfg = _cli_config(a.config)
+        if a.seed is not None and not a.seed.is_dir():
+            raise GateConfigError(f"seed dir {str(a.seed)!r} does not exist")
+        with tempfile.TemporaryDirectory(prefix="helper_gate_view_") as tmp:
+            view = Path(tmp) / "candidate"
+            shutil.copytree(a.candidate, view, ignore=_snapshot_ignore())
+            checks = [run_check(n, view, cfg, parent=a.parent, seed=a.seed) for n in enabled_checks(cfg)]
     except (OSError, ValueError, GateConfigError) as e:
         print(f"helper gate: cannot run: {e}", file=sys.stderr)
         return 2
-    if res["ok"]:
-        print("helper gate: ok (" + ", ".join(c["name"] for c in res["checks"]) + ")")
+    failed = [c for c in checks if not c["ok"]]
+    if not failed:
+        print("helper gate: ok (" + ", ".join(c["name"] for c in checks) + ")")
         return 0
     print("helper gate: REFUSED")
-    for c in res["checks"]:
-        if not c["ok"]:
-            print(f"  [{c['name']}] {c['detail']}")
+    for c in failed:
+        print(f"  [{c['name']}] {c['detail']}")
     return 1
 
 

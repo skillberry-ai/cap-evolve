@@ -444,6 +444,8 @@ def _changed_components(parent_dir: Path, workdir: Path) -> int:
             if rel.name in ("INSTRUCTIONS.md", "MEMORY.md", "STATE.md",
                             "LEDGER.md", "JOURNAL.md", "PROCESS.md", "RUNMAP.md"):
                 continue
+            if rel.parts[:2] == ("guidance", "helper_gate"):   # the helper gate's self-check copies (#895)
+                continue
             seen.add(rel)
             pf = parent_dir / rel
             if not pf.exists() or pf.read_bytes() != f.read_bytes():

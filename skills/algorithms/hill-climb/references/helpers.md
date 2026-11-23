@@ -27,7 +27,7 @@ the step indecisive: the candidate is not measured, no budget is spent, and the 
 memory you read next step (and in LEDGER.md under "Not scored"); fix it and propose again.
 
 **Check before you finish.** Run the same checks yourself: `python -m cap_evolve.helper_gate . --config
-guidance/helper_gate.json` prints `helper gate: ok` or each finding with its file and line. It does not know the
+guidance/helper_gate/config.json` prints `helper gate: ok` or each finding with its file and line. It does not know the
 task ids, so the gate can still refuse a helper that holds one.
 
 **What a helper crash costs.** A rollout that fails because the candidate's own helper raised is scored 0
