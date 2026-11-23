@@ -42,7 +42,7 @@ from cap_evolve.specfile import spec_for_run
 
 HERE = Path(__file__).resolve().parent
 SKILLS = act.SKILLS
-RUN_OPTIMIZER = SKILLS / "optimizers" / "run-optimizer" / "scripts" / "run.py"
+RUN_OPTIMIZER = act.harness.skills_path("optimizers", "run-optimizer", SKILLS) / "scripts" / "run.py"
 SELF = "conductor"
 
 
@@ -535,7 +535,7 @@ class RealBackend(P2Port, conductor.Backend):
 
     def _rediagnose(self, tag) -> None:
         """Rebuild clusters.json from the NEW champion's val traces, so proposals target what it still fails."""
-        rc, out, err = act.sh([act.PY, SKILLS / "phases" / "diagnose" / "scripts" / "run.py", "--run-dir", self.root,
+        rc, out, err = act.sh([act.PY, act.harness.skills_path("phases", "diagnose", SKILLS) / "scripts" / "run.py", "--run-dir", self.root,
                                "--tag", tag, "--project", self.project, "--split", "val", "--cluster", "v2"])
         if rc != 0:
             self.run_dir.log_event("infra_warning", msg=f"diagnose for {tag} failed: {(err or out)[-200:]}")

@@ -61,7 +61,7 @@ from cap_evolve import helpers as helpers_mod
 from cap_evolve.specfile import spec_for_run
 
 HERE = Path(__file__).resolve().parent
-SKILLS = Path(os.environ.get("CAPEVOLVE_SKILLS_DIR", HERE.parents[2]))
+SKILLS = harness.skills_root()
 PY = sys.executable
 CLAIM_STALE_S = 2 * 3600   # an in-progress evaluation claim older than this is stolen
 DECISION = {"propose": "propose", "probe": "screen", "promote": "promote", "prune": "kill",
@@ -967,7 +967,7 @@ def finalize(a, ctx):
     n_trials = a.n_trials or int(ctx.spec.get("num_trials") or 1)
     guard_eval_surface(ctx, "finalize")   # again, right before test is scored
     intent_path.write_text(json.dumps({"champion": champ, "n_trials": n_trials, "ts": time.time()}), encoding="utf-8")
-    rc, so, se = sh([PY, SKILLS / "phases" / "finalize" / "scripts" / "run.py", "--run-dir", ctx.root,
+    rc, so, se = sh([PY, harness.skills_path("phases", "finalize", SKILLS) / "scripts" / "run.py", "--run-dir", ctx.root,
                      "--project", project, "--n-trials", str(n_trials)])
     if rc != 0:
         raise Refused(f"finalize phase failed rc={rc}", stderr=(se or so)[-500:])

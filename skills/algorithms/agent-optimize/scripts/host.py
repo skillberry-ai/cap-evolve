@@ -92,15 +92,15 @@ from datetime import datetime
 from pathlib import Path
 
 import _bootstrap  # noqa: F401
-from cap_evolve import optimizer_config
+from cap_evolve import harness, optimizer_config
 import meter
 
 HERE = Path(__file__).resolve().parent
 SKILL_DIR = HERE.parent
-SKILLS = SKILL_DIR.parents[1]
+SKILLS = harness.skills_root()
 LEGACY_DOC = SKILL_DIR.parents[2] / "docs/archive/agent-optimize-legacy/legacy-SKILL.md"
-RUN_OPTIMIZER = SKILLS / "optimizers" / "run-optimizer" / "scripts" / "run.py"
-REGISTRY = SKILLS / "optimizers" / "registry.yaml"
+RUN_OPTIMIZER = harness.skills_path("optimizers", "run-optimizer", SKILLS) / "scripts" / "run.py"
+REGISTRY = harness._optimizer_registry_path()
 
 #: `terminal_reason` values that name a TRANSIENT infra failure (network/DNS/rate-limit),
 #: not a genuine stop. Deliberately narrow — see #430's non-goal: `error_max_turns` and any

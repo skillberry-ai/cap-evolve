@@ -4497,6 +4497,24 @@ def _skill_dir(component: str, name: str) -> Path:
     return roots[-1] / component / name
 
 
+def skills_root() -> Path:
+    """The skills folder: ``CAPEVOLVE_SKILLS_DIR`` if set, else the source checkout's ``skills/``."""
+    env = os.environ.get("CAPEVOLVE_SKILLS_DIR")
+    return Path(env) if env else Path(__file__).resolve().parents[2] / "skills"
+
+
+def skills_path(component: str, name: str, root=None) -> Path:
+    """Layout-neutral folder of one skill (source ``<root>/<component>/<name>`` or the flat
+    ``<root>/<name>`` install.sh makes). ``root`` overrides the search root; the source
+    checkout is the last fallback."""
+    if root is None:
+        return _skill_dir(component, name)
+    for cand in (Path(root) / component / name, Path(root) / name):
+        if cand.is_dir():
+            return cand
+    return Path(root) / component / name
+
+
 def _optimizer_registry_path() -> Path:
     """``optimizers/registry.yaml``: ``CAPEVOLVE_SKILLS_DIR`` first, then the source checkout."""
     env = os.environ.get("CAPEVOLVE_SKILLS_DIR")

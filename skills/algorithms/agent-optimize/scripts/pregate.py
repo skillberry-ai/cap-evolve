@@ -73,9 +73,10 @@ def enabled(spec: dict | None = None) -> bool:
 
 def _cluster():
     """cluster.py (trace_calls, _mutates) loaded by path: other skills ship same-named modules."""
-    skills = Path(os.environ.get("CAPEVOLVE_SKILLS_DIR", HERE.parents[2]))
+    from cap_evolve import harness
+    skills = harness.skills_root()
     spec = importlib.util.spec_from_file_location(
-        "pregate_cluster", skills / "phases" / "diagnose" / "scripts" / "cluster.py")
+        "pregate_cluster", harness.skills_path("phases", "diagnose", skills) / "scripts" / "cluster.py")
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod

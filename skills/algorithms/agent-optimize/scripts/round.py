@@ -110,7 +110,7 @@ DEFAULT_MAX_SCREEN_SKIPS = 1
 DEFAULT_MAX_MERGE_SKIPS = 1
 
 HERE = Path(__file__).resolve().parent
-SKILLS = Path(os.environ.get("CAPEVOLVE_SKILLS_DIR", HERE.parents[2]))
+SKILLS = harness.skills_root()
 
 
 def _events(run_dir, kind: str) -> list[dict]:

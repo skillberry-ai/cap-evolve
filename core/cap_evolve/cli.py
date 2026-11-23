@@ -74,6 +74,11 @@ def _find_skills_dir() -> Path | None:
     return None
 
 
+def _skills_path(component, name, root=None):
+    from .harness import skills_path
+    return skills_path(component, name, root)
+
+
 def _export_skills_dir(skills_dir: Path) -> None:
     """Tell the scripts we start where the skills are, but only for a real install (no source
     ``skills/`` next to this package). In a source checkout they find their own tree, and a
@@ -957,7 +962,7 @@ def _cmd_run(argv):
         if str(spec.get("ao_engine") or "") == "conductor":
             # AO-2 (opt-in, ``ao_engine: conductor``): code runs the loop and the LLM only does bounded
             # one-shot jobs; the supervisor relaunches the conductor until it exits 0.
-            cond = skills_dir / "algorithms" / "agent-optimize" / "scripts" / "conductor.py"
+            cond = _skills_path("algorithms", "agent-optimize", skills_dir) / "scripts" / "conductor.py"
             cond_cmd = [py, str(cond), "supervise", "--run-dir", str(workdir / run_dir),
                         "--project", str(proj_abs)]
             if args.agent_driver:
@@ -969,7 +974,7 @@ def _cmd_run(argv):
             # this exact handoff (skills/algorithms/agent-optimize/scripts/host.py) —
             # invoked the same way its own tests invoke it (subprocess, stdout is its
             # one JSON document), so its output becomes this command's output as-is.
-            host_script = skills_dir / "algorithms" / "agent-optimize" / "scripts" / "host.py"
+            host_script = _skills_path("algorithms", "agent-optimize", skills_dir) / "scripts" / "host.py"
             host_cmd = [py, str(host_script), "--run-dir", str(workdir / run_dir),
                        "--project", str(proj_abs), "--agent", args.agent_driver]
             # Same "propose" role resolution as the deterministic opt_cmd above (#665
