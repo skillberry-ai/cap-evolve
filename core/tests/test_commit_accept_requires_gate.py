@@ -46,7 +46,7 @@ def test_accept_with_passing_gate_row_accepts(tmp_path):
 
 def test_accept_with_promote_gate_event_accepts(tmp_path):
     run_dir, work = _staged(tmp_path)
-    run_dir.log_event("promote_gate", candidate="cand_2", verdict="accept")
+    run_dir.log_event("promote_gate", candidate="cand_2", verdict="accept", reference="seed")
     p = base._commit(run_dir, work, decision="accept")
     assert p.returncode == 0, p.stdout + p.stderr
 
@@ -147,3 +147,82 @@ def test_real_gate_check_reject_then_commit_accept_refused(tmp_path):
     assert r.gate("candC") == "reject"
     assert r.commit("candC", w).returncode == 2
     assert r.best() == "seed"
+
+
+def _table(r, tag_verdicts, parent, name, mtime=None):
+    t = {"parent": {"tag": parent}, "candidates": [{"tag": t, "verdict": v} for t, v in tag_verdicts]}
+    path = r.rd.root / "work" / name
+    path.write_text(json.dumps(t), encoding="utf-8")
+    if mtime is not None:
+        os.utime(path, (mtime, mtime))
+
+
+def test_round_reject_not_overruled_by_advisory_side_check(tmp_path):
+    import time
+    r = _Real(tmp_path)
+    w = r.mk("candX", 12)
+    _table(r, [("candX", "reject")], "seed", "round_i0.json", time.time() - 100)
+    assert r.gate("candX", "--current", "seed", "--advisory", "raw_vs_parent") == "accept"
+    assert r.commit("candX", w).returncode == 2
+    assert r.best() == "seed"
+
+
+def test_round_table_accept_loses_to_newer_gate_reject_vs_champion(tmp_path):
+    import time
+    r = _Real(tmp_path)
+    wa, wb = r.mk("candA", 12), r.mk("candB", 6)
+    _table(r, [("candA", "accept"), ("candB", "accept")], "seed", "round_i0.json", time.time() - 100)
+    assert r.commit("candA", wa).returncode == 0
+    assert r.gate("candB") == "reject"  # vs champion candA, newer than the table
+    p = r.commit("candB", wb)
+    assert p.returncode == 2, p.stdout + p.stderr
+    assert r.best() == "candA"
+
+
+def test_round_table_accept_vs_old_parent_refused_after_champion_change(tmp_path):
+    import time
+    r = _Real(tmp_path)
+    wa, wb = r.mk("candA", 12), r.mk("candB", 6)
+    _table(r, [("candA", "accept"), ("candB", "accept")], "seed", "round_i0.json", time.time() - 100)
+    assert r.commit("candA", wa).returncode == 0
+    assert r.commit("candB", wb).returncode == 2  # table's reference (seed) is no longer the champion
+    assert r.best() == "candA"
+
+
+def test_leftover_promote_gate_cannot_be_reused(tmp_path):
+    r = _Real(tmp_path)
+    wa, wb = r.mk("candA", 12), r.mk("candB", 6)
+    r.rd.log_event("promote_gate", candidate="candB", verdict="accept", reference="seed")
+    r.rd.log_event("promote_gate", candidate="candB", verdict="cancelled", reference="seed")
+    assert r.gate("candA") == "accept"
+    assert r.commit("candA", wa).returncode == 0
+    assert r.commit("candB", wb).returncode == 2
+    assert r.best() == "candA"
+    # even an uncancelled one is tied to its reference
+    r.rd.log_event("promote_gate", candidate="candB", verdict="accept", reference="seed")
+    assert r.commit("candB", wb).returncode == 2
+    assert r.best() == "candA"
+
+
+def test_act_commit_cancels_promote_gate_on_refusal(tmp_path):
+    if str(_S) not in sys.path:
+        sys.path.insert(0, str(_S))
+    import act
+    r = _Real(tmp_path)
+
+    class Ctx:
+        root = str(r.rd.root)
+
+        def work(self, tag):
+            return str(r.rd.root / "work" / tag)
+
+    orig = act.sh
+    act.sh = lambda cmd: (2, "{}", "")
+    try:
+        rc, _ = act.commit(Ctx(), "candB", "accept", "n", [])
+    finally:
+        act.sh = orig
+    assert rc == 2
+    gates = [e for e in _events(r.rd) if e["kind"] == "promote_gate"]
+    assert [g["verdict"] for g in gates] == ["accept", "cancelled"]
+    assert gates[0]["reference"] == "seed"

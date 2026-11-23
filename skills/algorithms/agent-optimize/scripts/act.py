@@ -542,12 +542,17 @@ def judge_p(ctx, a, tag, ref, params) -> dict:
 
 
 def commit(ctx, tag, decision, note, extra: list[str]) -> tuple[int, dict]:
+    rd = RunDir.open(ctx.root)
     if decision == "accept":
         # Every caller (promote, the conductor's confirm step) has a passing gate verdict in hand;
-        # record it so commit.py's accept-needs-a-gate check (#763) can see it.
-        RunDir.open(ctx.root).log_event("promote_gate", candidate=tag, verdict="accept")
+        # record it WITH the champion it was measured against so commit.py's accept-needs-a-gate
+        # check (#763) can see it.
+        rd.log_event("promote_gate", candidate=tag, verdict="accept", reference=rd.best_id)
     rc, so, se = sh([PY, HERE / "commit.py", "--run-dir", ctx.root, "--candidate-id", tag,
                      "--from-dir", ctx.work(tag), "--decision", decision, "--note", note, *extra])
+    if decision == "accept" and rc != 0:
+        # commit.py refused: cancel the gate record so it cannot be reused by a later accept.
+        rd.log_event("promote_gate", candidate=tag, verdict="cancelled", reference=rd.best_id)
     return rc, (jload(so) or {"stdout": so[-500:], "stderr": se[-300:]})
 
 

@@ -444,25 +444,50 @@ def _gate_row(run_dir: RunDir, candidate_id: str) -> dict | None:
     return None
 
 
-def _event_gate(run_dir: RunDir, candidate_id: str) -> tuple[str | None, str | None, str | None]:
-    """(verdict, reference, kind) of the newest ``promote_gate`` / ``gate_check`` event for a candidate.
+def _newest_gate_record(run_dir: RunDir, candidate_id: str) -> dict | None:
+    """The NEWEST non-advisory gate record for a candidate, across every kind (#763).
 
-    ``reference`` is the ``--current`` the gate_check compared against (None for promote_gate,
-    which gates against the champion by construction).
+    Kinds: a round-table row (reference = the table's ``parent.tag``), a ``gate_check`` event
+    (reference = its ``--current``), a ``promote_gate`` event (reference = the champion when
+    act.py promote ran). Side checks (``advisory`` events) never count. Newest by time wins, so a
+    later reject beats an earlier accept of any kind.
     """
-    out: tuple[str | None, str | None, str | None] = (None, None, None)
+    recs: list[tuple[float, int, dict]] = []
+    work = run_dir.root / "work"
+    if work.is_dir():
+        for log in work.iterdir():
+            if not log.is_file() or log.suffix != ".json":
+                continue
+            try:
+                payload = json.loads(log.read_text(encoding="utf-8"))
+                mt = log.stat().st_mtime
+            except Exception:  # noqa: BLE001 — not a round table
+                continue
+            if not isinstance(payload, dict):
+                continue
+            for row in payload.get("candidates") or []:
+                if isinstance(row, dict) and str(row.get("tag")) == str(candidate_id):
+                    parent = payload.get("parent")
+                    ref = parent.get("tag") if isinstance(parent, dict) else None
+                    recs.append((mt, 0, {"verdict": row.get("verdict"), "reference": ref,
+                                         "kind": "round_table"}))
     try:
         with run_dir.events_path.open(encoding="utf-8") as f:
-            for line in f:
+            for n, line in enumerate(f):
                 try:
                     ev = json.loads(line)
                 except Exception:  # noqa: BLE001
                     continue
-                if ev.get("kind") in ("promote_gate", "gate_check") and str(ev.get("candidate")) == str(candidate_id):
-                    out = (ev.get("verdict"), ev.get("reference"), ev["kind"])
+                if (ev.get("kind") in ("promote_gate", "gate_check") and not ev.get("advisory")
+                        and str(ev.get("candidate")) == str(candidate_id)):
+                    recs.append((float(ev.get("t") or 0), 1 + n, {
+                        "verdict": ev.get("verdict"), "reference": ev.get("reference"),
+                        "kind": ev["kind"]}))
     except FileNotFoundError:
-        return (None, None, None)
-    return out
+        pass
+    if not recs:
+        return None
+    return max(recs, key=lambda r: (r[0], r[1]))[2]
 
 
 def _gate_verdict(run_dir: RunDir, candidate_id: str) -> str | None:
@@ -708,19 +733,21 @@ def main(argv=None) -> int:
     accepted_without_gate = None
     gate_reference = None
     if accepted:
-        ev_verdict, ev_ref, ev_kind = _event_gate(run_dir, args.candidate_id)
-        # A gate_check only counts if it compared against the champion as it stands NOW.
-        if ev_kind == "gate_check" and (ev_ref is None or str(ev_ref) != str(run_dir.best_id)):
-            ev_verdict = None
-        passing = "accept" in (gate_verdict, ev_verdict)
-        gate_reference = ev_ref if ev_verdict == "accept" else None
-        if passing:
-            gate_verdict = "accept"
+        rec = _newest_gate_record(run_dir, args.candidate_id)
+        # The newest gate record must be an accept AND must have compared against the champion
+        # as it stands NOW; a gate against an older/weaker reference proves nothing.
+        passing = bool(rec and rec.get("verdict") == "accept" and rec.get("reference") is not None
+                       and str(rec["reference"]) == str(run_dir.best_id))
+        if rec:
+            gate_verdict = rec.get("verdict")
+        gate_reference = rec.get("reference") if rec else None
         if not passing:
             if not args.accept_without_gate:
                 print(json.dumps({
                     "error": f"--decision accept for {args.candidate_id}, but it has no passing "
-                             "gate record (no round-table row with verdict accept, no promote gate)",
+                             "gate record: its newest gate record must be an accept measured "
+                             f"against the current champion ({run_dir.best_id})",
+                    "newest_gate_record": rec,
                     "gate_verdict": gate_verdict,
                     "fix": "gate it first (round.py / gate_check.py, or act.py promote), or pass "
                            "--accept-without-gate REASON to override on the record",
