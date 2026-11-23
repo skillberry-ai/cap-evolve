@@ -59,6 +59,20 @@ SKILL_SUFFIXES = {".py", ".md", ".json", ".txt", ".yaml", ".yml"}
 DEFAULT_PROTECTED = [r"(?i)golden", r"(?i)ground[_-]?truth", r"(?i)(^|[/\\._-])answer(s)?([._/\\-]|$)",
                      r"(?i)evaluat(or|ion)\.py", r"(?i)dataset\.json", r"(?i)(^|[/\\])splits?([/\\._]|$)",
                      r"(?i)(^|[/\\])gold([/\\._-]|$)"]
+def _protected_hit(pat, v: str) -> bool:
+    """``pat`` matches ``v``; the "answer" rule only counts when ``v`` looks like a path
+    (has a slash or backslash, or ends in a file extension) or is exactly the bare folder name
+    "answer"/"answers" (``os.path.join(r, "answers", t)``), so ``t["answer_position"]`` passes."""
+    if not pat.search(v):
+        return False
+    if pat.pattern == DEFAULT_PROTECTED[2]:
+        return bool(re.search(r"[/\\]|\.\w+$", v) or _BARE_ANSWER.fullmatch(v.strip()))
+    return True
+
+
+_BARE_ANSWER = re.compile(r"(?i)answers?")
+
+
 #: Rollout splits no fixture may be harvested from (the hidden confirm stratum, test, and the legacy val/pool).
 FIXTURE_SPLITS_FORBIDDEN = {"confirm", "test", "val", "pool"}
 _TRUE, _FALSE = {"1", "true", "yes", "on"}, {"0", "false", "no", "off"}
@@ -199,7 +213,7 @@ _DYN_MODULES = {"importlib", "imp", "runpy", "builtins", "code", "codeop"}
 _OS_MODULES = {"os", "posix", "nt"}
 _PROC_ATTRS = {"system", "popen", "execv", "execve", "execl", "execlp", "execvp", "spawnl", "spawnv",
                "spawnlp", "spawnvp", "posix_spawn", "fork", "forkpty", "startfile"}
-_ID_NAME = re.compile(r"(?i)(^|_)(task|sample|instance|problem|example|case|row|sheet)_?(id|name|idx|index)$"
+_ID_NAME = re.compile(r"(?i)(^|_)(task|sample|instance|problem|example|case|row)_?(id|name|idx|index)$"
                       r"|^(tid|sid|task)$")
 _TABLE_MIN = 20  # constants in one literal collection before it is "a lookup table"
 
@@ -292,6 +306,7 @@ def lint_source(src: str, rel: str, cfg: dict) -> list[str]:
         elif isinstance(node, ast.Compare):
             names = [_name_of(n) for n in [node.left, *node.comparators]]
             consts = [n for n in [node.left, *node.comparators] if isinstance(n, ast.Constant)]
+            consts = [c for c in consts if c.value is not None]  # `x is None` is not task identity
             if consts and any(_ID_NAME.search(n) for n in names if n):
                 add(node, "branches on task identity (compares a task/sample id to a constant)")
             for c in [n for n in [node.left, *node.comparators] if isinstance(n, (ast.Tuple, ast.List, ast.Set))]:
@@ -315,7 +330,7 @@ def lint_source(src: str, rel: str, cfg: dict) -> list[str]:
             sv = str(v)
             if isinstance(v, str):
                 for pat in prot:
-                    if pat.search(v):
+                    if _protected_hit(pat, v):
                         add(node, f"names an evaluator/gold/split path ({v[:60]!r})")
                         break
             if sv in ids or any(len(i) >= 4 and re.search(rf"(?<![\w.]){re.escape(i)}(?![\w.])", sv)
@@ -511,7 +526,7 @@ def parse_harvest(exec_result: str) -> list[dict]:
                     args, kwargs = json.loads(r["args_kwargs"])
                 except (KeyError, ValueError, TypeError):
                     continue
-                if any(p.search(x) for x in _str_leaves([args, kwargs]) for p in prot):
+                if any(_protected_hit(p, x) for x in _str_leaves([args, kwargs]) for p in prot):
                     continue
                 out.append({"helper": r["helper"], "call": r["call"], "args": args, "kwargs": kwargs})
             return out

@@ -472,3 +472,48 @@ def test_a_missing_seed_snapshot_stops_the_round_pregate_not_fail_open(monkeypat
     monkeypatch.setattr(rnd, "spec_for_run", lambda run_dir, project: {"helpers": {"enabled": True}})
     with pytest.raises(helper_gate.GateConfigError, match="seed"):
         rnd.pregate_failure(rd, tmp_path, "parent", cand, None)
+
+
+def test_lint_sheet_name_none_and_answer_position_message_pass():
+    cfg = helpers.resolve({"helpers": {"enabled": True}})
+    lint = lambda src: helpers.lint_source(src, "f.py", cfg)
+    assert lint("def f(wb, sheet_name):\n    if sheet_name is None:\n        return wb.active\n") == []
+    assert lint("def f(wb, sheet_name):\n    return wb[sheet_name] if sheet_name is not None else wb.active\n") == []
+    assert lint("def f(a):\n    raise ValueError('answer_position must be a non-empty string')\n") == []
+    assert lint("def f(x):\n    return float(str(x).replace(',', ''))\n") == []
+    assert lint("def f(task_id):\n    if task_id == '10452':\n        return 42\n")
+    assert lint("def f():\n    return open('/data/1_10452_golden.xlsx')\n")
+    assert lint('def f():\n    return open("/data/answers/1 2.json")\n')
+
+
+def test_answer_word_is_a_gold_path_only_with_a_separator_or_extension():
+    cfg = helpers.resolve({"helpers": {"enabled": True}})
+    lint = lambda src: helpers.lint_source(src, "f.py", cfg)
+    assert lint('def f(t):\n    return t["answer_position"]\n') == []
+    assert lint('def f(t):\n    return t.get("answer_sheet")\n') == []
+    assert lint("def f(a):\n    raise ValueError('answer_position must be a non-empty string')\n") == []
+    for lit in ['"1_10452_answer.xlsx"', 'open("answers.json")', 'open("/data/answers/1 2.json")',
+                '"C:\\\\answers\\\\x y"', "open('/data/1_10452_golden.xlsx')"]:
+        assert lint(f"def f():\n    return {lit}\n"), lit
+    assert lint("def f(task_id):\n    if task_id == '10452':\n        return 42\n")
+
+
+def test_parse_harvest_keeps_answer_position_argument():
+    import json as _j
+    row = {"helper": "skills/s/scripts/m.py", "call": "f", "args_kwargs": _j.dumps([["answer_position"], {}])}
+    assert len(helpers.parse_harvest(f"{helpers.CALLS_TAG} {_j.dumps([row])}")) == 1
+    for bad in ["answers", "Answer"]:
+        row = {"helper": "skills/s/scripts/m.py", "call": "f", "args_kwargs": _j.dumps([[bad], {}])}
+        assert helpers.parse_harvest(f"{helpers.CALLS_TAG} {_j.dumps([row])}") == [], bad
+
+
+def test_bare_answer_folder_name_is_refused():
+    """T-74: a bare "answer"/"answers" folder literal used with os.path.join or Path / is refused."""
+    cfg = helpers.resolve({"helpers": {"enabled": True}})
+    lint = lambda src: helpers.lint_source(src, "f.py", cfg)
+    assert lint('import os\ndef f(r, t):\n    return open(os.path.join(r, "answers", t))\n')
+    assert lint('from pathlib import Path\ndef f(r):\n    return (Path(r)/"answer"/"x").read_text()\n')
+    assert lint('def f():\n    return "ANSWERS"\n')
+    assert lint('def f(t):\n    return t["answer_position"]\n') == []
+    assert lint('def f(t):\n    return t.get("answer_sheet")\n') == []
+    assert lint('def f():\n    return "the answer is wrong"\n') == []
