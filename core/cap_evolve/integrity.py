@@ -213,3 +213,98 @@ def set_readonly(root: Path, manifest: dict) -> None:
                 continue
             mode = p.stat().st_mode & 0o7777
             p.chmod(mode & ~0o222)
+
+
+# ---- the project's eval surface (adapter / scorer / tasks), sealed per run ---------------------
+#
+# ``snapshot`` above hashes a candidate workdir copy. The files that actually MEASURE a candidate --
+# the project's ``adapters/`` folder, a scorer, the tasks file(s) -- live in the project, outside
+# that copy. These helpers hash them once per run (at the first use) into the run's private area and
+# report which ones changed since, so a verb that moves ``best_id`` or scores test can refuse.
+
+EVAL_SURFACE_MANIFEST = "eval_surface.json"
+#: folders hashed recursively (the adapter and anything it ships next to it, e.g. ``tasks.jsonl``)
+EVAL_SURFACE_DIRS: tuple[str, ...] = ("adapters", "tasks")
+#: top-level files of the project (fnmatch on the bare name)
+EVAL_SURFACE_FILES: tuple[str, ...] = ("adapter.py", "*scorer*.py", "tasks*.jsonl", "tasks*.json",
+                                       "tasks*.yaml", "tasks*.csv")
+#: interpreter / OS noise that changes without anyone editing the eval surface
+_NOISE_DIRS = {"__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache"}
+_NOISE_FILES = ("*.pyc", "*.pyo", ".DS_Store")
+
+
+def _eval_surface_files(project: Path) -> dict[str, str]:
+    """{relpath: sha256} of the project's eval surface. Paths escaping ``project`` are skipped."""
+    project = Path(project)
+    out: dict[str, str] = {}
+    with contextlib.suppress(OSError):
+        for p in sorted(project.iterdir()):
+            if p.is_file() and any(fnmatch.fnmatch(p.name, g) for g in EVAL_SURFACE_FILES):
+                rel = _rel(p, project)
+                if rel is not None:
+                    with contextlib.suppress(OSError):
+                        out[rel] = _hash_file(p)
+    for d in EVAL_SURFACE_DIRS:
+        top = project / d
+        if top.is_symlink() or not top.is_dir():
+            continue  # never follow a symlinked folder out of the project
+        for dirpath, dirnames, filenames in os.walk(top, followlinks=False):
+            dirnames[:] = sorted(n for n in dirnames if n not in _NOISE_DIRS)
+            for name in sorted(filenames):
+                if any(fnmatch.fnmatch(name, g) for g in _NOISE_FILES):
+                    continue
+                p = Path(dirpath) / name
+                rel = _rel(p, project)
+                if rel is None:
+                    continue
+                with contextlib.suppress(OSError):
+                    out[rel] = _hash_file(p)
+    return dict(sorted(out.items()))
+
+
+def eval_surface_snapshot(project: Path) -> dict:
+    """Manifest of the project's eval surface (see :data:`EVAL_SURFACE_DIRS` / ``_FILES``)."""
+    project = Path(project).resolve()
+    return {"version": VERSION, "kind": "eval_surface", "root": str(project),
+            "files": _eval_surface_files(project)}
+
+
+def record_eval_surface(manifest_path: Path, project: Path) -> tuple[dict, bool]:
+    """Write the eval-surface manifest at ``manifest_path`` unless one is already there.
+
+    Returns ``(manifest, created)``. An existing manifest is never overwritten: the first use of a
+    run is the reference every later check compares against.
+    """
+    manifest_path = Path(manifest_path)
+    if manifest_path.exists():
+        return read_manifest(manifest_path), False
+    man = eval_surface_snapshot(project)
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    write_manifest(manifest_path, man)
+    return man, True
+
+
+def verify_eval_surface(manifest: dict, project: Path | None = None) -> TamperReport:
+    """Re-hash the eval surface named by ``manifest`` and diff.
+
+    ``project`` (when given) must be the project the manifest was recorded for: pointing a later
+    verb at a different project is itself a change of eval surface and is reported as such.
+    """
+    root = Path(manifest.get("root") or "")
+    if manifest.get("kind") != "eval_surface" or not str(manifest.get("root") or ""):
+        return TamperReport(False, reason="TAMPERED: the eval-surface manifest is unreadable or malformed")
+    if project is not None and Path(project).resolve() != root:
+        return TamperReport(False, modified=[str(Path(project).resolve())],
+                            reason=(f"TAMPERED: this verb names project {Path(project).resolve()} but the run's "
+                                    f"eval surface was recorded for {root}"))
+    expected = dict(manifest.get("files") or {})
+    actual = _eval_surface_files(root)
+    modified = sorted(r for r, h in actual.items() if r in expected and expected[r] != h)
+    added = sorted(r for r in actual if r not in expected)
+    removed = sorted(r for r in expected if r not in actual)
+    if not (modified or added or removed):
+        return TamperReport(True, reason=f"{len(expected)} eval-surface file(s) unchanged")
+    bits = [f"{k} {v}" for k, v in (("modified", modified), ("added", added), ("removed", removed)) if v]
+    return TamperReport(False, modified, added, removed,
+                        reason=("TAMPERED: the project's eval surface (adapter/scorer/tasks) changed since the "
+                                "run's first act call (" + "; ".join(bits) + ")"))

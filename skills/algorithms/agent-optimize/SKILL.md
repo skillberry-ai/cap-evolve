@@ -152,7 +152,13 @@ cause; an empty split is `empty`, not 0.0; a no-holdout spec is a FIT metric. No
 
 ## Invariants
 
-Core enforces the split seal, val-only gating and the tamper guard. Yours: never hand a subset result to
+Enforced by the scripts: test is scored once, by `finalize` only (the split seal); promote and the
+confirmation gate read val only. Eval-surface guard: the first `act.py` call that names `--project`
+hashes the project's `adapters/` and `tasks/` folders and its top-level `adapter.py`, `*scorer*.py`
+and `tasks*` files into the run's private area; `promote` (and every accept) and `finalize` re-hash
+them and refuse with a `tamper` event naming the changed files if any was edited, added or removed
+(`best_id` and the test seal untouched). Not covered: files elsewhere in the project, and a run whose
+manifest was itself edited. Yours: never hand a subset result to
 `gate_check.py`; every round leaves run-dir artifacts (JOURNAL.md entry in `work/TAG`, DIAGNOSIS.json);
 report a broken framework file, do not work around it. Wait for finalize to exit or the seal is wasted.
 

@@ -53,8 +53,8 @@ from pathlib import Path
 import _bootstrap  # noqa: F401  # side-effect import: seeds sys.path for cap_evolve
 
 import digest
-from cap_evolve import (RunDir, eval_index, graph, harness, hypotheses, optimizer_config, posterior, sched,
-                        schema_v2)
+from cap_evolve import (RunDir, eval_index, graph, harness, hypotheses, integrity, optimizer_config, posterior,
+                        sched, schema_v2)
 from cap_evolve.candidate_graph import CandidateGraph
 from cap_evolve.rundir import _file_lock
 from cap_evolve import helpers as helpers_mod
@@ -105,6 +105,9 @@ class Ctx:
         self.spec = spec_for_run(self.run_dir, self.project)
         self.cfg = optimizer_config.resolve(self.spec)
         self.warnings: list[str] = []
+        # #762: the first act call (or conductor backend) of a run seals the project's eval surface
+        if self.project and self.project.is_dir():
+            record_eval_surface(self)
 
     def warn(self, msg):
         self.warnings.append(msg)
@@ -418,12 +421,53 @@ def probe(a, ctx):
     return 0, out
 
 
+# ---- eval-surface seal (#762) ----------------------------------------------------------------
+
+def _surface_path(ctx) -> Path:
+    return Path(ctx.run_dir.private_dir) / integrity.EVAL_SURFACE_MANIFEST
+
+
+def record_eval_surface(ctx) -> None:
+    """At the first act call of a run that names --project, hash the project's adapter/scorer/tasks
+    files into the run's private area. Never overwritten afterwards: that first snapshot is the
+    reference promote and finalize compare against."""
+    if not ctx.project or not Path(ctx.project).is_dir() or _surface_path(ctx).exists():
+        return
+    _, created = integrity.record_eval_surface(_surface_path(ctx), ctx.project)
+    if created:
+        ctx.run_dir.log_event("eval_surface_recorded", project=str(Path(ctx.project).resolve()))
+
+
+def guard_eval_surface(ctx, verb: str) -> None:
+    """Refuse ``verb`` (promote / finalize) when the project's eval surface changed since the run's
+    first act call: log a ``tamper`` event naming the changed files and raise. ``best_id`` and the
+    test seal are untouched."""
+    path = _surface_path(ctx)
+    if not path.exists():
+        record_eval_surface(ctx)
+        if not path.exists():
+            raise Refused(f"{verb} needs the run's eval-surface record: pass --project (no act call of this "
+                          "run named the project, so the adapter/scorer cannot be checked)")
+    try:
+        man = integrity.read_manifest(path)
+    except (OSError, ValueError):
+        man = {}
+    rep = integrity.verify_eval_surface(man if isinstance(man, dict) else {}, ctx.project)
+    if rep.ok:
+        return
+    changed = sorted({*rep.modified, *rep.added, *rep.removed})
+    ctx.run_dir.log_event("tamper", verb=verb, verdict="tamper", changed=changed, modified=rep.modified,
+                          added=rep.added, removed=rep.removed, reason=rep.reason)
+    raise Refused(f"{verb} refused: {rep.reason}", verdict="tamper", changed=changed,
+                  next="restore the project's eval surface to what it was at the run's start, or start a new run")
+
+
 # ---- promote / prune -------------------------------------------------------------------------
 
 GATE_KEYS = ("accept", "indecisive", "delta", "se", "z", "reason")
 
 
-def judge(ctx, tag, ref, cand_min_trial: int = 0) -> dict:
+def judge(ctx, tag, ref, cand_min_trial: int = 0, advisory: str | None = None) -> dict:
     """The accept test for ``tag`` vs ``ref``; ALWAYS sequentially valid (promote and finalize are
     re-run as evidence grows). cost_gating on: gate_check --mode reward_gated (Bonferroni over its
     looks). cost_gating off: the posterior rule (posterior.py: accept needs P(D>dmin)>=0.95 and canary
@@ -438,7 +482,8 @@ def judge(ctx, tag, ref, cand_min_trial: int = 0) -> dict:
     if ctx.cfg["cost_gating"]:
         rc, so, se = sh([PY, HERE / "gate_check.py", "--run-dir", ctx.root, "--candidate", tag,
                          "--current", ref, "--mode", "reward_gated",
-                         *(["--candidate-min-trial", str(cand_min_trial)] if cand_min_trial else [])])
+                         *(["--candidate-min-trial", str(cand_min_trial)] if cand_min_trial else []),
+                         *(["--advisory", advisory] if advisory else [])])
         g = jload(so)
         if g is None or "error" in g:
             raise Refused(f"gate_check could not judge {tag}: {(g or {}).get('error') or se[-300:]}")
@@ -544,6 +589,8 @@ def judge_p(ctx, a, tag, ref, params) -> dict:
 def commit(ctx, tag, decision, note, extra: list[str]) -> tuple[int, dict]:
     rd = RunDir.open(ctx.root)
     if decision == "accept":
+        # best_id only moves on the eval surface the run started with (#762); also covers the conductor
+        guard_eval_surface(ctx, "promote")
         # Every caller (promote, the conductor's confirm step) has a passing gate verdict in hand;
         # record it WITH the champion it was measured against so commit.py's accept-needs-a-gate
         # check (#763) can see it.
@@ -579,6 +626,7 @@ def promote(a, ctx):
     if miss:
         raise Refused(f"{tag} lacks full-val ledger coverage ({len(miss)} tasks unmeasured)",
                       next=f"act.py probe {tag} --tasks {','.join(list(miss)[:10])} --n 1")
+    guard_eval_surface(ctx, "promote")   # #762: before any gate spend
     params = promotion_params(ctx)
     j = judge_p(ctx, a, tag, champ, params) if params else judge(ctx, tag, champ)
     out = {"champion": champ, "verdict": j["verdict"], "p_beat_champion": j["p_beat"],
@@ -866,6 +914,7 @@ def finalize(a, ctx):
         if final_path.exists():       # idempotent: a relaunch after DONE reports the sealed result
             return 0, {"already_finalized": True, "final": jload(final_path.read_text(encoding="utf-8"))}
         raise Refused("test is already sealed (scored once) but final.json is missing: a second finalize is refused")
+    guard_eval_surface(ctx, "finalize")
     if intent_path.exists() and (run_dir.rollouts / "test").is_dir() and any((run_dir.rollouts / "test").glob("*.json")):
         flat = complete_finalize(ctx, jload(intent_path.read_text(encoding="utf-8")) or {})
         out = {**flat, "champion": ctx.champion(), "completed_from_existing": True, "final": flat}
@@ -906,7 +955,7 @@ def finalize(a, ctx):
         if fresh_only:
             # the pooled verdict stays on record as the secondary statistic
             out["confirm"]["fresh_from_trial"] = fresh_from
-            out["confirm"]["pooled_verdict_vs_seed"] = judge(ctx, champ, "seed")["verdict"]
+            out["confirm"]["pooled_verdict_vs_seed"] = judge(ctx, champ, "seed", advisory="pooled_confirm")["verdict"]
         if j["verdict"] != "accept":
             if not (a.seal_anyway or "").strip():
                 raise Refused(f"confirm gate says {j['verdict']} vs the seed: test NOT sealed", confirm=out["confirm"],
@@ -916,6 +965,7 @@ def finalize(a, ctx):
             out["claim"] = ("the champion did NOT beat the seed on confirmation: report this run as having no "
                             "accepted change (the test score below is for the best-so-far, not an improvement)")
     n_trials = a.n_trials or int(ctx.spec.get("num_trials") or 1)
+    guard_eval_surface(ctx, "finalize")   # again, right before test is scored
     intent_path.write_text(json.dumps({"champion": champ, "n_trials": n_trials, "ts": time.time()}), encoding="utf-8")
     rc, so, se = sh([PY, SKILLS / "phases" / "finalize" / "scripts" / "run.py", "--run-dir", ctx.root,
                      "--project", project, "--n-trials", str(n_trials)])
