@@ -226,3 +226,26 @@ def test_act_commit_cancels_promote_gate_on_refusal(tmp_path):
     gates = [e for e in _events(r.rd) if e["kind"] == "promote_gate"]
     assert [g["verdict"] for g in gates] == ["accept", "cancelled"]
     assert gates[0]["reference"] == "seed"
+
+
+def test_provisional_then_real_grow_accept_then_commit_accepts(tmp_path):
+    """grow.py's pooled row records its reference, so its `promote` -> commit accept works."""
+    r = _Real(tmp_path)
+    proj = tmp_path / "proj"
+    (proj / "adapters").mkdir(parents=True)
+    (proj / "adapters" / "adapter.py").write_text(
+        "from cap_evolve.skillcheck import SyntheticAdapter as _S\n"
+        "class Adapter(_S):\n    def __init__(self):\n        super().__init__(n=12)\n",
+        encoding="utf-8")
+    w = r.mk("candA", 12)
+    val = str(r.harness.split_result_from_rollouts(r.rd, "candA", "val").reward)
+    pv = r.run("commit.py", "--candidate-id", "candA", "--from-dir", str(w), "--decision",
+               "provisional", "--val", val, "--note", "n", *_J)
+    assert pv.returncode == 0, pv.stdout + pv.stderr
+    g = r.run("grow.py", "--project", str(proj), "--candidate", "candA", "--add-trials", "1",
+              "--growth-round", "1", "--k-se", "1.0")
+    assert g.returncode == 0, g.stdout + g.stderr
+    assert json.loads(g.stdout)["recommendation"] == "promote"
+    p = r.commit("candA", w)
+    assert p.returncode == 0, p.stdout + p.stderr
+    assert r.best() == "candA"

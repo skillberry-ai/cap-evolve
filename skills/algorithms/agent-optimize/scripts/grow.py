@@ -166,6 +166,8 @@ def main(argv=None) -> int:
     work.mkdir(parents=True, exist_ok=True)
     (work / f"grow_{args.candidate}_r{args.growth_round}.json").write_text(
         json.dumps({"grown": args.candidate, "growth_round": args.growth_round,
+                    # the reference this pooled gate compared against (commit.py reads it)
+                    "parent": {"tag": ",".join(cur_tags)},
                     "candidates": [{
                         "tag": args.candidate,
                         "reward": pooled.reward,
