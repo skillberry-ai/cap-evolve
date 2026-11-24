@@ -23,6 +23,11 @@ so v1 runs are unchanged. Spec::
       max_file_bytes: 65536
       max_total_bytes: 262144
       smoke_timeout: 20         # seconds per smoke subprocess
+      skills_loader: kernel     # how the target receives skills/: "kernel" (default) = as a staged text tree
+                                # defined in its kernel (skills_tree_problems + kernel_bootstrap), so the gate
+                                # applies the same tree check and the smoke imports skills/*/scripts/*.py that
+                                # way (skills.<skill>.<script>, from text, file-name order, no file on disk);
+                                # "file" = the target runs the scripts as files (each imported from its file)
       task_ids: [...]           # extra ids the lint refuses as literals (or ids_file: path, one per line)
       forbidden_literals: [...] # answer values copied from traces/gold, refused as literals
       protected_patterns: [...] # regexes for evaluator/gold paths a helper must never name or open
@@ -46,6 +51,7 @@ from pathlib import Path
 DEFAULTS: dict = {
     "enabled": False, "lint": True, "smoke": True, "gate": True,
     "suffixes": [".py"], "max_file_bytes": 65536, "max_total_bytes": 262144, "smoke_timeout": 20.0,
+    "skills_loader": "kernel",
     "task_ids": [], "ids_file": None, "forbidden_literals": [], "protected_patterns": None,
     "deny_roots": [], "fixtures": None, "fixture_splits": ["feedback", "train"],
 }
@@ -59,6 +65,8 @@ SKILL_SUFFIXES = {".py", ".md", ".json", ".txt", ".yaml", ".yml"}
 DEFAULT_PROTECTED = [r"(?i)golden", r"(?i)ground[_-]?truth", r"(?i)(^|[/\\._-])answer(s)?([._/\\-]|$)",
                      r"(?i)evaluat(or|ion)\.py", r"(?i)dataset\.json", r"(?i)(^|[/\\])splits?([/\\._]|$)",
                      r"(?i)(^|[/\\])gold([/\\._-]|$)"]
+#: How the target receives skills/: as a staged tree loaded into its kernel (default), or as files.
+SKILLS_LOADERS = ("kernel", "file")
 #: Rollout splits no fixture may be harvested from (the hidden confirm stratum, test, and the legacy val/pool).
 FIXTURE_SPLITS_FORBIDDEN = {"confirm", "test", "val", "pool"}
 _TRUE, _FALSE = {"1", "true", "yes", "on"}, {"0", "false", "no", "off"}
@@ -86,6 +94,8 @@ def resolve(spec: dict | None = None) -> dict:
         raise ValueError(f"unknown helpers key(s) {bad}; valid keys: {sorted(DEFAULTS)}")
     cfg = {**DEFAULTS, **tbl}
     cfg["fixture_splits"] = list(cfg["fixture_splits"])
+    if cfg["skills_loader"] not in SKILLS_LOADERS:
+        raise ValueError(f"helpers.skills_loader={cfg['skills_loader']!r}: expected one of {list(SKILLS_LOADERS)}")
     forbidden = sorted(set(cfg["fixture_splits"]) & FIXTURE_SPLITS_FORBIDDEN)
     if forbidden:
         raise ValueError(f"helpers.fixture_splits {forbidden}: fixtures never come from held-out splits")
@@ -141,7 +151,9 @@ def _same_as_seed(f: Path, cand: Path, seed: Path | None) -> bool:
 
 def surface_problems(cand: Path, cfg: dict, seed: Path | None = None) -> list[str]:
     """Violations of the surface manifest: executable files outside the declared dirs, symlinks
-    among them, and size caps. Empty when helpers are off or nothing is declared.
+    among them, and size caps. With ``skills_loader: kernel`` (default) also ``skills_tree_problems`` on
+    ``skills/``: the target refuses the whole tree (every rollout) on any of them, so the gate refuses
+    the candidate first, for free. Empty when helpers are off or nothing is declared.
 
     ``seed``: files byte-identical to the seed's are not the candidate's doing and are not checked for
     the "outside the declared surface" rule (a seed's read-only ``reference/data_model.py``); only new
@@ -174,6 +186,9 @@ def surface_problems(cand: Path, cfg: dict, seed: Path | None = None) -> list[st
                             f"{cfg['max_file_bytes']}")
     if total > cfg["max_total_bytes"]:
         problems.append(f"helper files total {total} bytes > max_total_bytes {cfg['max_total_bytes']}")
+    if cfg.get("skills_loader", "kernel") == "kernel" and (cand / "skills").is_dir():
+        problems += [f"skills/{p} (the target refuses the whole skills/ tree with it)"
+                     for p in skills_tree_problems(cand / "skills")]
     return problems
 
 

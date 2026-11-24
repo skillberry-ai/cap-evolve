@@ -187,6 +187,26 @@ def test_skills_tree_problems_refuse_symlinks_gold_names_and_binaries(tmp_path):
     assert any("not allowed" in p for p in helpers.skills_tree_problems(src))
 
 
+def test_the_gate_applies_the_targets_skills_tree_check(tmp_path):
+    """The target refuses a whole skills tree (every rollout) on any ``skills_tree_problems`` finding, so the
+    gate's surface check must refuse it first, for free (#895 GLM HC-2 smoke: a helper named answers.py
+    passed the gate, then all 36 rung-1 rollouts were refused as "gold-named file")."""
+    cfg = helpers.resolve({"helpers": {"enabled": True}, "surface": {"executable_dirs": ["skills/*/scripts"]}})
+    assert cfg["skills_loader"] == "kernel"
+    c = _cand(tmp_path, {"skills/a/scripts/answers.py": "def f():\n    return 1\n", "skills/a/SKILL.md": "# a\n",
+                         "skills/a/notes.csv": "x\n"})
+    probs = helpers.surface_problems(c, cfg)
+    assert any("skills/a/scripts/answers.py: gold-named file" in p for p in probs), probs
+    assert any("skills/a/notes.csv" in p and "not allowed" in p for p in probs), probs
+    assert all("refuses the whole skills/ tree" in p for p in probs if p.startswith("skills/a/"))
+    # a target that runs the scripts as files does not stage the tree: none of these apply
+    assert not any("gold-named" in p or "not allowed" in p
+                   for p in helpers.surface_problems(c, {**cfg, "skills_loader": "file"}))
+    # a clean tree adds nothing
+    ok = _cand(tmp_path / "ok", {"skills/a/scripts/fmt.py": "x = 1\n", "skills/a/SKILL.md": "# a\n"})
+    assert helpers.surface_problems(ok, cfg) == []
+
+
 def test_token_is_a_plain_replace_and_prompt_text_comes_from_skill_md(tmp_path):
     assert helpers.render_skills_root("see {skills_root}.a and {literal}", "skills") == "see skills.a and {literal}"
     _cand(tmp_path, {"my-skill/SKILL.md": "---\nname: my-skill\ndescription: does a thing\n---\nCall norm.f(x).\n"})

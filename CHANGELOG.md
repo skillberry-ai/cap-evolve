@@ -25,6 +25,20 @@ All notable changes to cap-evolve are documented here. The format follows
 - Kept from #880: the diversity gate compares ADDED lines, a P2 job gets one in-thread retry, tau2 native-sim result files are named by
   process, thread and a random suffix.
 ### Fixed
+- The helper gate now refuses, for free, what the target's sandbox would refuse on every rollout. A SpreadsheetBench
+  target receives `skills/` as a staged text tree defined in its kernel, and the gate did not check it that way:
+  - The smoke test imported each skill script (`skills/<skill>/scripts/*.py`) from its file. It now runs the
+    candidate's whole skills tree through `helpers.kernel_bootstrap`, as the target does (`skills.<skill>.<script>`,
+    from text, in file-name order, no file on disk), and a `call` fixture runs on that module. Before, a sibling
+    import with a `sys.path.insert(dirname(__file__))` fallback passed the gate and failed every rollout (a
+    hill-climb run spent a full 360-rollout evaluation on one: `No module named 'targets'`), while a relative
+    sibling import the target can load was refused. A changed helper that breaks an unchanged sibling is now
+    refused too. Other helper files and `cli` fixtures still run from the file.
+  - The surface check now applies the adapter's `skills_tree_problems` (no symlink, no gold-looking file name such
+    as `answers.py`, only text file types, no two files importing as one module). Before, an HC-2 candidate with a
+    helper named `answers.py` passed the gate and all its rung-1 rollouts were refused.
+  New `helpers.skills_loader`: `kernel` (default) or `file`, for a target that runs skill scripts as files (then
+  neither applies). The optimizer's self-check uses the same config, so it reports the same findings.
 - Under `promotion_rule: P2` the proposer now reads the CURRENT champion's own feedback-split (F) trials. Before, it
   read the seed's F trajectories in every iteration: P2 tags a candidate's F trials `<round>__<cid>__<stage>`,
   and the trajectory copier only looked for the bare `<cid>` tag, so it fell back to the seed. The same lookup

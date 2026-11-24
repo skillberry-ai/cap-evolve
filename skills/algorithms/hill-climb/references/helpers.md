@@ -13,16 +13,21 @@ One trace is not enough. Name the traces in the hypothesis.
 - A small pure function or script: parse, locate, normalise, compute, validate. Parameterised by its inputs,
   stdlib plus packages already in the target environment, deterministic, no network, no subprocess.
 - It writes only to a path its caller passes in. It never reads evaluator, gold, split or dataset paths.
-- Skill surfaces: `skills/<name>/scripts/*.py` plus a `SKILL.md` that says when to call it. The target gets them preloaded as
-  `skills.<skill>.<script>` (token `{skills_root}` = `skills`). Tau surfaces: a method in `tools.py`, decorated
+- Skill surfaces: `skills/<name>/scripts/*.py` plus a `SKILL.md` that says when to call it. The target gets them
+  preloaded as `skills.<skill>.<script>` (token `{skills_root}` = `skills`), defined from their text in file-name
+  order, with no file on disk: import a sibling as `from . import <name>` or `from .<name> import f`, and it must
+  sort before the file that imports it (a `sys.path` or `__file__` fallback finds nothing there). The tree holds
+  only text files (`.py .md .json .txt .yaml`), no symlink, and no file named like gold (`answer*`, `golden*`).
+  Tau surfaces: a method in `tools.py`, decorated
   `@candidate_helper` (from `cap_evolve.helpers`) so a crash in it is attributed to the candidate.
 - General procedure only. A task id, an answer literal, a branch on task identity, or a lookup table of answers
   is rejected by the lint before any rollout is charged.
 
 **What the checks do (all free, before any rollout is charged).** Every algorithm runs the same helper gate
 (`cap_evolve.helper_gate`) on each candidate it proposes: `helper_surface` (executable files only in declared dirs,
-size caps), `helper_lint`, and `helper_smoke` (the helper imports, two runs give identical output, it writes only
-its declared outputs, no network, no gold). All three run, so the reason lists every finding. A failure makes
+size caps, and the skills tree rules above), `helper_lint`, and `helper_smoke` (the helper imports, a skill script
+exactly the way the target loads it, two runs give identical output, it writes only its declared outputs, no
+network, no gold). All three run, so the reason lists every finding. A failure makes
 the step indecisive: the candidate is not measured, no budget is spent, and the reason is filed in the rejected
 memory you read next step (and in LEDGER.md under "Not scored"); fix it and propose again.
 

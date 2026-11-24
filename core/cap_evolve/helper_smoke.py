@@ -3,7 +3,12 @@
 For each such file (``helpers.executable_files``) a subprocess, with no network, no process
 spawning, gold/evaluator paths unreadable and every write refused (see ``_helper_smoke_runner``):
 
-1. imports it;
+1. imports it. A skill script (``skills/<skill>/scripts/*.py``) is imported the way the target gets it
+   (``helpers.skills_loader: kernel``, the default): the candidate's whole skills tree goes through
+   ``helpers.kernel_bootstrap``, so ``skills.<skill>.<script>`` is defined from text, in file-name order,
+   with no file on disk. A helper whose sibling import only works from a real file is refused here,
+   instead of failing every rollout. Any other helper file (and ``skills_loader: file``) is imported from
+   its file;
 2. for each fixture row that targets it, runs it TWICE (different ``PYTHONHASHSEED``, fresh
    identical workspaces) and requires: no exception, identical stdout/return value/output bytes,
    and writes only to the row's declared ``outputs``.
@@ -119,7 +124,10 @@ def _materialize(ws: Path, row: dict, cfg: dict) -> None:
             raise ValueError(f"fixture file {rel!r}: expected text, {{'src': path}} or {{'b64': data}}")
 
 
-def _run_once(root: Path, script: Path, row: dict | None, cfg: dict, seed: str, mode: str) -> dict:
+def _run_once(root: Path, script: Path, row: dict | None, cfg: dict, seed: str, mode: str, *,
+              bootstrap: str | None = None, module: str | None = None) -> dict:
+    """One runner subprocess. With ``bootstrap`` (kernel loader) the runner execs that source instead of
+    importing ``script`` from its file, and a ``call`` row calls ``module`` (``skills.<skill>.<script>``)."""
     tmp = Path(tempfile.mkdtemp(prefix="capevolve_helper_smoke_"))
     try:
         ws, rt = tmp / "ws", tmp / "rt"
@@ -136,6 +144,7 @@ def _run_once(root: Path, script: Path, row: dict | None, cfg: dict, seed: str, 
             "argv": [str(a).replace("{ws}", str(ws)) for a in (row or {}).get("argv") or []],
             "stdin": (row or {}).get("stdin"), "call": (row or {}).get("call"),
             "args": (row or {}).get("args") or [], "kwargs": (row or {}).get("kwargs") or {},
+            "loader": "kernel" if bootstrap is not None else "file", "bootstrap": bootstrap, "module": module,
         }
         (rt / "spec.json").write_text(json.dumps(spec), encoding="utf-8")
         env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "PYTHONHASHSEED": seed,
@@ -172,6 +181,17 @@ def _declared(ws: Path, outputs, res) -> set:
     return ok
 
 
+KERNEL_IMPORT_LABEL = "skills import (as the target loads them: skills.<skill>.<script>, from text, in file-name order)"
+
+
+def _skill_module(cand: Path, f: Path) -> str | None:
+    """``skills.<skill>.<script>`` when ``f`` is one of the files ``kernel_bootstrap`` loads, else None."""
+    rel = f.relative_to(cand).parts
+    if len(rel) == 4 and rel[0] == "skills" and rel[2] == "scripts" and f.suffix == ".py":
+        return f"skills.{helpers._ident(rel[1])}.{helpers._ident(f.stem)}"
+    return None
+
+
 def _why(label: str, r: dict) -> str:
     bits = list(r.get("violations") or [])
     if r.get("exception"):
@@ -189,19 +209,45 @@ def run_smoke(cand: Path, cfg: dict, *, parent: Path | None = None, fixtures: li
     rows = fixtures or []
     problems: list[str] = []
     runs = 0
+    kernel = cfg.get("skills_loader", "kernel") == "kernel"
+    boot: dict = {}            # the one whole-tree import: {"src", "ok"} once it ran
+
+    def kernel_import(f: Path) -> bool:
+        nonlocal runs
+        if not boot:
+            try:
+                boot["src"] = helpers.kernel_bootstrap(cand / "skills", int(cfg["max_total_bytes"]))
+            except ValueError as e:      # oversize tree, or two files that import as one module
+                boot.update(src=None, ok=False)
+                problems.append(f"{KERNEL_IMPORT_LABEL}: {e}"[:300])
+                return False
+            r = _run_once(cand, f, None, cfg, _SEEDS[0], "import", bootstrap=boot["src"])
+            runs += 1
+            boot["ok"] = bool(r.get("ok"))
+            if not boot["ok"]:
+                problems.append(_why(KERNEL_IMPORT_LABEL, r))
+        return boot["ok"]
+
     for f in files:
         rel = f.relative_to(cand).as_posix()
-        r = _run_once(cand, f, None, cfg, _SEEDS[0], "import")
-        runs += 1
-        if not r.get("ok"):
-            problems.append(_why(f"{rel} import", r))
-            continue
+        module = _skill_module(cand, f) if kernel else None
+        if module is not None:
+            if not kernel_import(f):
+                continue
+        else:
+            r = _run_once(cand, f, None, cfg, _SEEDS[0], "import")
+            runs += 1
+            if not r.get("ok"):
+                problems.append(_why(f"{rel} import", r))
+                continue
         for i, row in enumerate(x for x in rows if x.get("helper") == rel):
             label = f"{rel} fixture {row.get('id', i)}"
             mode = "call" if row.get("kind") == "call" else "cli"
+            kw = ({"bootstrap": boot["src"], "module": module}
+                  if module is not None and mode == "call" else {})   # a cli row runs the file, as before
             try:
-                a = _run_once(cand, f, row, cfg, _SEEDS[0], mode)
-                b = _run_once(cand, f, row, cfg, _SEEDS[1], mode)
+                a = _run_once(cand, f, row, cfg, _SEEDS[0], mode, **kw)
+                b = _run_once(cand, f, row, cfg, _SEEDS[1], mode, **kw)
             except ValueError as e:
                 problems.append(f"{label}: {e}")
                 continue
