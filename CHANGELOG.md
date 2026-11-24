@@ -15,11 +15,15 @@ All notable changes to cap-evolve are documented here. The format follows
   and `prior_iterations/` were val, and train was only scored for the seed at baseline and at finalize. New
   spec key `hc_feedback_split` (`train` | `val` | `auto`, default `auto`; env `CAPEVOLVE_HC_FEEDBACK_SPLIT`
   wins), resolved once per run from the frozen splits and logged as an `hc_feedback_split` event: `auto` is
-  `train` when train and val differ as sets, `val` when they are the same set. Under `train` the proposer gets
-  the val verdict and aggregates only, never a val task id or per-task val result; val rollouts (and their
-  evidence-ledger rows) are moved to the sealed dir outside the run tree (as for pooled mode: by default
-  `<project>.sealed/<run>`, a sibling of the project dir; `CAPEVOLVE_SEALED_DIR` overrides), and gate reasons that name val tasks
-  reach `rejected.jsonl` / `JOURNAL.md` with the ids replaced. Each accepted champion is run once on train
+  `train` when train and val differ as sets, `val` when they are the same set; a run started before the key
+  existed (iterations spent, nothing frozen) stays `val`. Under `train` the proposer is given the val verdict and
+  aggregates: its work-dir inputs (prompt, trajectories, LEDGER/JOURNAL/RUNMAP, `prior_iterations/`,
+  `rejected.jsonl`/`history.jsonl`) and the run's event and graph logs carry no val task id (reasons name counts;
+  a bare numeric id in free text is left as is). Val rollouts and evidence-ledger rows, and the per-step
+  broke/fixed lists, raw gate reasons, footprint and quarantine ids, go to the sealed dir outside the run tree
+  (as for pooled mode: by default `<project>.sealed/<run>`, a sibling of the project dir; `CAPEVOLVE_SEALED_DIR`
+  overrides). Not sealed yet (follow-up): the run tree's `splits.json` and `baseline.json`, so an unsandboxed
+  proposer that browses the run tree can still find the val ids and the seed's per-task val results. Each accepted champion is run once on train
   (tagged with its candidate id) so LEDGER compares its train results with its parent's; a rejected candidate is
   never run on train. Cost: |train| x num_trials extra rollouts per accepted candidate, charged to
   `max_metric_calls` and always reserved first (`champion_train_unfunded` stops the loop instead of

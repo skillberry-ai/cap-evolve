@@ -2,7 +2,8 @@
 
 With distinct train and val ids the default is ``train``: the proposer's trajectories, failure lists,
 focus order, LEDGER broke/fixed and ``prior_iterations/`` come from TRAIN, every candidate is still gated
-on val against its parent's val, and the proposer learns about val only the verdict and the aggregates.
+on val against its parent's val, and the proposer's inputs and the run's logs carry the val verdict and
+aggregates only (``splits.json``/``baseline.json`` still hold val ids: the documented follow-up).
 Each accepted champion is measured on train once (budget-reserved); a rejected one never is. Val
 rollouts are sealed outside the run tree. ``hc_feedback_split: val`` is the loop as it was.
 
@@ -96,10 +97,15 @@ def _events(rd, kind):
     return [json.loads(l) for l in rd.events_path.read_text().splitlines() if json.loads(l)["kind"] == kind]
 
 
-def _leaks(root: Path, ids) -> list:
+def _leaks(root: Path, ids, skip=()) -> list:
+    """Every file under ``root`` naming one of ``ids`` (in its path or content). ``skip``: relative
+    subtrees not scanned (git's zlib-compressed objects of the run tree, whose plain files are scanned)."""
     pats = [(t, re.compile(r"(?<![A-Za-z0-9])" + re.escape(t) + r"(?![0-9])")) for t in ids]
     bad = []
     for dirpath, dirnames, files in os.walk(root):
+        rel = os.path.relpath(dirpath, root)
+        if any(rel == s or rel.startswith(s + os.sep) for s in skip):
+            continue
         for name in dirnames + files:
             bad += [(os.path.join(dirpath, name), "name", t) for t, p in pats if p.search(name)]
         for name in files:
@@ -175,8 +181,31 @@ def test_pooled_runs_do_not_use_it_and_an_explicit_train_is_a_logged_no_op(tmp_p
     assert harness.resolve_hc_feedback_split(rd, pooled=True) == "feedback"
     ev = _events(rd, "hc_feedback_split")[-1]
     assert ev["value"] == "feedback" and ev["ignored"] is True
-    assert "hc_feedback_split" not in json.loads(rd.state_path.read_text()) and rd.sealed_dir is None
+    assert json.loads(rd.state_path.read_text())["hc_feedback_split"] == "feedback" and rd.sealed_dir is None
     assert harness.feedback_split(rd) == "val"
+    assert harness.resolve_hc_feedback_split(rd, pooled=True) == "feedback"
+    assert len(_events(rd, "hc_feedback_split")) == 1                 # once per run, not per call/resume
+
+
+def test_a_run_that_already_spent_iterations_without_the_key_stays_val(tmp_path):
+    _, rd, _ = _setup(tmp_path)
+    rd.update_spent(iterations=3)                    # a run started before the key existed: it read val
+    assert harness.resolve_hc_feedback_split(rd) == "val"
+    ev = _events(rd, "hc_feedback_split")[-1]
+    assert ev["value"] == "val" and ev["reason"] == "resume of a run whose proposer already read val"
+    assert ev["ignored"] is False and ev["sealed_val"] is False
+    assert json.loads(rd.state_path.read_text())["hc_feedback_split"] == "val" and rd.sealed_dir is None
+    assert list((rd.root / "rollouts" / "val").glob("*__seed__t0.json"))
+
+
+def test_an_explicit_train_on_such_a_run_is_ignored_and_says_why(tmp_path):
+    _, rd, _ = _setup(tmp_path, spec={"hc_feedback_split": "train"})
+    rd.update_spent(iterations=1)
+    assert harness.resolve_hc_feedback_split(rd) == "val"
+    ev = _events(rd, "hc_feedback_split")[-1]
+    assert ev["ignored"] is True and ev["requested"] == "train" and ev["source"] == "spec"
+    assert ev["reason"] == "resume of a run whose proposer already read val"
+    assert harness.feedback_split(rd) == "val" and rd.sealed_dir is None
 
 
 # ---- the seal -----------------------------------------------------------------------------------
@@ -248,7 +277,7 @@ def test_no_val_task_id_reaches_the_proposer(tmp_path):
         text = f.read_text()
         assert text and not [t for t in VA if re.search(r"(?<![A-Za-z0-9])" + t + r"(?![0-9])", text)], f
     rej = [json.loads(l) for l in rd.rejected_path.read_text().splitlines()]
-    assert "gate_max_broke" in rej[0]["reason"] and "<val task>" in rej[0]["reason"]
+    assert "gate_max_broke" in rej[0]["reason"] and "broke [1 val task(s)]" in rej[0]["reason"]
     assert not list((rd.root / "rollouts").glob("val/*.json"))
     assert len(list(rd.rollout_dir("val").glob("*.json"))) == len(VA) * 5
     # LEDGER: an accepted step's per-task columns compare TRAIN results with the parent's train results;
@@ -268,6 +297,16 @@ def test_no_val_task_id_reaches_the_proposer(tmp_path):
     assert sorted(p.name for p in (prior / "cand_0001" / "trajectories").iterdir()) == \
         sorted(f"{t}__cand_0001__t0.json" for t in TR)
     assert not (prior / "cand_0002" / "trajectories").exists()
+    # RUNMAP does not send a train-feedback proposer to the live run dir
+    runmap = (opt.calls[3]["snap"] / "RUNMAP.md").read_text()
+    assert str(rd.root) not in runmap and "live run dir" not in runmap
+    # EVERY file of the run tree: the only ones still holding val-only ids are the documented follow-up
+    holders = sorted({os.path.relpath(f, rd.root) for f, _, _ in _leaks(rd.root, VA, skip=(".git/objects",))})
+    assert holders == ["baseline.json", "splits.json"], holders
+    steps = _events(rd, "step")
+    assert all("broke" not in e and "fixed" not in e for e in steps)
+    assert [e.get("n_broke") for e in steps] == [0, 1, 5, 0]
+    assert "[1 val task(s)]" in steps[1]["reason"] and "gate_max_broke" in steps[1]["reason"]
 
 
 def test_an_accept_runs_the_champion_on_train_once_and_a_reject_never(tmp_path):
@@ -345,6 +384,62 @@ def test_a_p2_hill_climb_run_ignores_an_explicit_train_and_logs_it(tmp_path, mon
                             gate_kwargs={"promotion_rule": "P2", "p2_conf_n": 48})
     ev = _events(rd, "hc_feedback_split")[-1]
     assert ev["value"] == "feedback" and ev["ignored"] is True and ev["source"] == "env"
-    assert "hc_feedback_split" not in json.loads(rd.state_path.read_text())
+    assert json.loads(rd.state_path.read_text())["hc_feedback_split"] == "feedback"
     assert not rd.sealed_splits and harness.feedback_split(rd) == "feedback"
     assert not [e for e in _events(rd, "eval_start") if e["split"] == "train"]
+
+
+def test_the_sealed_steps_file_keeps_the_full_val_detail(tmp_path):
+    rd, opt, res = _run(tmp_path, ["good", "trade"], gate={"gate_max_broke": 0})
+    rows = [json.loads(l) for l in (rd.sealed_dir / "steps.jsonl").read_text().splitlines()]
+    by = {r["candidate"]: r for r in rows}
+    assert by["cand_0002"]["broke"] == ["vq00z"] and by["cand_0002"]["fixed"] == ["vq06z", "vq07z"]
+    assert "vq00z" in by["cand_0002"]["reason"] and by["cand_0002"]["accept"] is False
+    assert by["cand_0001"]["fixed"] == VA[2:6] and by["cand_0001"]["broke"] == []
+    assert rd.sealed_dir not in rd.root.parents and rd.root not in rd.sealed_dir.parents
+    node = [json.loads(l) for l in (rd.root / "graph.jsonl").read_text().splitlines()][-1]
+    assert "vq00z" not in json.dumps(node) and "[1 val task(s)]" in node["note"]
+
+
+def test_a_quarantine_under_train_keeps_its_val_ids_sealed(tmp_path):
+    _, rd, _ = _setup(tmp_path)
+    harness.resolve_hc_feedback_split(rd)
+    assert rd.quarantine(["vq03z"], reason="missing") == ["vq03z"]
+    assert rd.quarantined_tasks() == ["vq03z"] and rd.quarantine(["vq03z"]) == []
+    assert "vq03z" not in rd.state_path.read_text()
+    assert "vq03z" in (rd.sealed_dir / "quarantine.json").read_text()
+
+
+def test_the_hill_climb_script_reports_the_champion_train_eval(tmp_path):
+    """The real skill entry point (``scripts/run.py``) on the zero-API toy_calc project, train feedback."""
+    import subprocess
+    repo = Path(__file__).resolve().parents[2]
+    example = repo / "benchmarks" / "toy" / "examples" / "calc"
+    proj = tmp_path / "proj"
+    (proj / "adapters").mkdir(parents=True)
+    shutil.copy(example / "adapter.py", proj / "adapters" / "adapter.py")
+    env = dict(os.environ, CAPEVOLVE_TOY_DATA=str(example), CAPEVOLVE_CORE=str(repo / "core"),
+               PYTHONPATH=str(repo / "core"))
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("toy_calc_adapter_hcfb", example / "adapter.py")
+    toy = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(toy)                     # reads its tasks from its own dir: no env needed
+    adapter = toy.Adapter()
+    rd = RunDir.create(proj / ".capevolve", ts="cli", budget=Budget(max_iterations=1))
+    harness.ensure_splits(adapter, rd, seed=0)
+    seed = tmp_path / "seed"
+    shutil.copytree(example / "capability", seed)
+    harness.baseline(adapter, seed, run_dir=rd)
+    code = ('import sys,pathlib;p=pathlib.Path(sys.argv[1]).joinpath("prompt.txt");'
+            'p.write_text(p.read_text()+"\\n[CALC] compute it exactly, output only the number")')
+    out = subprocess.run(
+        [sys.executable, str(repo / "skills/algorithms/hill-climb/scripts/run.py"), "--run-dir", str(rd.root),
+         "--project", str(proj), "--optimizer", f"{sys.executable} -c '{code}' {{workdir}}",
+         "--max-iterations", "1", "--store", "copy"],
+        capture_output=True, text=True, env=env, timeout=300)
+    assert out.returncode == 0, out.stderr[-2000:]
+    res = json.loads(out.stdout)
+    step = res["steps"][0]
+    assert step["accepted"] is True and step["champion_train"]["split"] == "train"
+    assert step["champion_train"]["reward"] == 1.0 and step["candidate_val"]["split"] == "val"
+    assert _events(rd, "hc_feedback_split")[-1]["value"] == "train"

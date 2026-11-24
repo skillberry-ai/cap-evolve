@@ -32,6 +32,9 @@ rollouts become `trajectories/`. It is `train` once hill-climb resolved
 `hc_feedback_split: train` for the run; then an ACCEPTED step also measures the new
 champion on train once (budget-reserved) and returns it as `champion_train`, plus
 `budget_unfunded: True` when that eval could not be funded. The gate is val either way.
+In that mode `record_iteration` keeps val task ids out of the `step` event and `graph.jsonl`
+(`n_broke`/`n_fixed` stay, reasons name counts) and appends the full broke/fixed lists and the
+raw reason to `<sealed_dir>/steps.jsonl`; the returned dict's `decision` keeps the gate's record.
 
 ## Cross-iteration files, and who owns each
 

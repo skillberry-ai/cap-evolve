@@ -66,6 +66,8 @@ def seal_rows(run_dir, split: str) -> int:
     if sealed is None:
         return 0
     src, dst = Path(run_dir.root) / LEDGER, Path(sealed) / LEDGER
+    # Lock order: the run ledger, then the sealed one. This is the only place that holds two ledger locks at
+    # once (``record`` and ``forget_tags`` take one at a time), so the order cannot deadlock against another.
     with _file_lock(src.with_suffix(".lock")):
         have = _rows_of(src)
         move = [r for r in have if r.get("split") == split]

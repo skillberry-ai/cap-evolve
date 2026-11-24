@@ -384,19 +384,35 @@ class RunDir:
             st["unfunded"] = str(why)[:300]
             self._write_state(st)
 
+    def _sealed_quarantine(self) -> Path | None:
+        """Where the quarantine lives once a split is sealed (``seal_split``): its ids are that split's, so
+        they stay out of state.json. ``None``: in state.json, as always."""
+        sd = self.sealed_dir
+        return sd / "quarantine.json" if sd is not None and self.sealed_splits else None
+
     def quarantined_tasks(self) -> list:
         """Task ids removed from the evaluable set for this run (still missing after the retries)."""
+        sq = self._sealed_quarantine()
+        if sq is not None and sq.exists():
+            return sorted(json.loads(sq.read_text(encoding="utf-8")) or {})
         return sorted((self._read_state().get("quarantined") or {}))
 
     def quarantine(self, task_ids, reason: str = "") -> list:
         """Add ``task_ids`` to the quarantine (locked RMW); returns the ones newly added."""
+        sq = self._sealed_quarantine()
         with _file_lock(self._state_lock):
             st = self._read_state()
-            q = st.get("quarantined") or {}
+            q = dict(st.get("quarantined") or {})
+            if sq is not None and sq.exists():
+                q.update(json.loads(sq.read_text(encoding="utf-8")) or {})
             new = [str(t) for t in task_ids if str(t) not in q]
             for t in new:
                 q[t] = {"reason": reason, "ts": time.time()}
-            if new:
+            if new and sq is not None:
+                _atomic_write(sq, json.dumps(q, indent=2))
+                if st.pop("quarantined", None) is not None:
+                    self._write_state(st)
+            elif new:
                 st["quarantined"] = q
                 self._write_state(st)
             return new
@@ -622,6 +638,9 @@ class RunDir:
             with _file_lock(self._state_lock):
                 st = self._read_state()
                 st["sealed_splits"] = sorted(set(st.get("sealed_splits") or ()) | {split})
+                q = st.pop("quarantined", None)          # its ids go with the split (see quarantine)
+                if q:
+                    _atomic_write(sd / "quarantine.json", json.dumps(q, indent=2))
                 self._write_state(st)
         src, dst = self.rollouts / split, sd / "rollouts" / split
         if not src.is_dir():

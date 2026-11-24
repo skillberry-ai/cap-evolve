@@ -873,7 +873,8 @@ def _evaluate_candidate(
                       **({"workers": workers} if workers > 1 else {}),
                       # only on a SUBSET eval, so a full-split event record is unchanged.
                       # Present ⇒ this reward is a triage signal, not a gateable score.
-                      **(({"n_subset": len(tasks), "subset": True} if split == "confirm"
+                      **(({"n_subset": len(tasks), "subset": True}
+                          if split == "confirm" or split in (getattr(run_dir, "sealed_splits", None) or ())
                           else {"subset_ids": [t.id for t in tasks], "subset": True})
                          if ids is not None else {}),
                       # Present only when some rollout tagged how solid its cost is
@@ -1569,11 +1570,12 @@ def feedback_split(run_dir) -> str:
 
 
 def _hide_val_ids(run_dir, text):
-    """Under ``hc_feedback_split: train`` the proposer may learn the val VERDICT and aggregates, never a val
-    task id. Free text that reaches it (a gate reason naming the tasks a veto counted, an evaluation error)
-    has each val-only id replaced by ``<val task>``. A purely numeric id is replaced only where it is quoted
-    (a list literal): bare, it cannot be told from a number. Structured views (the failure lists, LEDGER's
-    broke/fixed, trajectories) never hold val ids in the first place; this is for the free text."""
+    """Under ``hc_feedback_split: train`` the proposer's inputs and the run's logs carry the val VERDICT and
+    aggregates, not val task ids. Free text that reaches them (a gate reason naming the tasks a veto counted,
+    an evaluation error) has each val-only id replaced by ``<val task>``. A purely numeric id is replaced
+    only where it is quoted (a list literal): bare, it cannot be told from a number. Structured views (the
+    failure lists, LEDGER's broke/fixed, trajectories) never hold val ids in the first place; this is for the
+    free text."""
     if not text or feedback_split(run_dir) != "train":
         return text
     try:
@@ -1594,6 +1596,43 @@ def _hide_val_ids(run_dir, text):
     return text
 
 
+def _scrub_reason(run_dir, text, *lists):
+    """``_hide_val_ids`` after replacing each given id list's literal (``"['a', 'b']"``, the way the gate and
+    the no-regression veto print them) with a count, so a reason says "broke [2 val task(s)]" instead of
+    naming them. A no-op unless ``feedback_split(run_dir) == "train"``."""
+    if not text or feedback_split(run_dir) != "train":
+        return text
+    for ids in lists:
+        if ids:
+            text = text.replace(str(list(ids)), f"[{len(ids)} val task(s)]")
+    return _hide_val_ids(run_dir, text)
+
+
+def _sealed_append(run_dir, name: str, row: dict) -> None:
+    """Append ``row`` to ``<sealed_dir>/<name>`` (JSON lines): per-task val detail kept for audit, outside
+    the run tree the proposer can read. Best-effort: an audit write must never break a run."""
+    sd = getattr(run_dir, "sealed_dir", None)
+    if sd is None:
+        return
+    try:
+        with (Path(sd) / name).open("a", encoding="utf-8") as f:
+            f.write(json.dumps({"t": time.time(), **row}, default=str) + "\n")
+    except OSError as e:
+        run_dir.log_event("optimizer_context_warning", what=f"sealed/{name}", error=str(e)[:300])
+
+
+def _seal_step_detail(run_dir, cid, parent_id, accepted, val, reason, extra: dict, sealed) -> str:
+    """``record_iteration``'s train-feedback seal (see there). Mutates ``extra``; returns the reason to log."""
+    if feedback_split(run_dir) != "train":
+        return reason
+    lists = {k: extra.pop(k) for k in ("broke", "fixed") if isinstance(extra.get(k), list)}
+    for k, v in lists.items():
+        extra.setdefault(f"n_{k}", len(v))
+    _sealed_append(run_dir, "steps.jsonl", {"candidate": cid, "parent": parent_id, "accept": accepted,
+                                            "val": val, **lists, "reason": reason, **(sealed or {})})
+    return _scrub_reason(run_dir, reason, *lists.values())
+
+
 def resolve_hc_feedback_split(run_dir, *, pooled: bool = False) -> str:
     """Resolve ``hc_feedback_split`` ONCE per run, freeze it in state.json, seal val when it is ``train``.
 
@@ -1603,8 +1642,12 @@ def resolve_hc_feedback_split(run_dir, *, pooled: bool = False) -> str:
     ``train`` with train == val is ``val`` for the same reason; with an EMPTY train split it is an error.
 
     ``pooled`` (rule P2 / ``split_mode: pooled`` / HC-2): the proposer already reads F and the gate C, so the
-    key is not used: ``feedback`` is returned, nothing is frozen or sealed, and an explicit ``train`` is a
-    logged no-op (``ignored: true``).
+    key is not used: ``feedback`` is returned and frozen, nothing is sealed, and an explicit ``train`` is a
+    logged no-op (``ignored: true``), logged once per run.
+
+    A run with no frozen value but iterations already spent (started before this key existed, so its
+    proposer has read val) freezes ``val``, even under an explicit ``train`` (logged with the reason and
+    ``ignored: true``).
 
     A value frozen by an earlier call wins over a later spec/env (an event records the request), because
     switching back to val mid-run would hand the proposer the per-task val data the run has withheld. Under
@@ -1615,19 +1658,30 @@ def resolve_hc_feedback_split(run_dir, *, pooled: bool = False) -> str:
     requested, source = gatecfg.hc_feedback_split_setting(spec_for_run(run_dir))
     splits = None if pooled else run_dir.read_splits()
     if pooled or splits.pooled:
-        run_dir.log_event("hc_feedback_split", value="feedback", ignored=requested == "train",
-                          requested=requested, source=source,
-                          reason="pooled split / rule P2 / HC-2: the proposer reads F, the gate C")
+        # Logged once per run (``freeze_state`` writes the key once), not on every hc2_loop call or resume.
+        if "hc_feedback_split" not in run_dir._read_state():
+            run_dir.freeze_state(hc_feedback_split="feedback")
+            run_dir.log_event("hc_feedback_split", value="feedback", ignored=requested == "train",
+                              requested=requested, source=source,
+                              reason="pooled split / rule P2 / HC-2: the proposer reads F, the gate C")
         return "feedback"
     tr, va = {str(t) for t in splits.train}, {str(t) for t in splits.val}
     info = dict(requested=requested, source=source, n_train=len(tr), n_val=len(va), n_overlap=len(tr & va))
     frozen = run_dir._read_state().get("hc_feedback_split")
+    why = None
     if frozen in ("train", "val"):
         value = frozen
+    elif run_dir.spent.iterations > 0:
+        # A run started before this key existed (no frozen value, iterations already spent): its proposer
+        # has read val, so switching it to train now would mix feedback splits within one run and still
+        # leave val ids in the handover it already wrote. It stays val, whatever was requested.
+        value, why = "val", "resume of a run whose proposer already read val"
     else:
         if requested == "train" and not tr:
             raise ValueError("hc_feedback_split: train needs a non-empty train split")
         value = "train" if requested != "val" and tr and tr != va else "val"
+    if why:
+        info.update(reason=why, ignored=requested == "train")
     moved = rows = 0
     if value == "train":
         # Sealed BEFORE the value is frozen, so a run whose sealed dir cannot be created can still be
@@ -1723,7 +1777,10 @@ def retry_missing(adapter, run_dir: RunDir, result: SplitResult, *, candidate_di
     still = coverage_mod.missing_ids(result.per_task, planned)
     if still and quarantine:
         new = run_dir.quarantine(still, reason=f"missing on {tag} after {attempts} retries")
-        if new:
+        if new and split in (getattr(run_dir, "sealed_splits", None) or ()):
+            # A sealed split's ids stay sealed: the event counts them; RunDir.quarantine keeps them in the sealed dir.
+            run_dir.log_event("task_quarantined", n_tasks=len(new), tag=tag, split=split, retries=attempts)
+        elif new:
             run_dir.log_event("task_quarantined", tasks=new, tag=tag, split=split, retries=attempts)
     return result
 
@@ -1782,6 +1839,9 @@ def _apply_tipping(adapter, run_dir: RunDir, workdir: Path, cid: str, current_va
             "tipping": {k: (round(v, 6) if isinstance(v, float) and math.isfinite(v) else v)
                         for k, v in tp.items()},
             "retried_recovered": retried, "counted_as_failures": failures}
+    if feedback_split(run_dir) == "train":      # val ids stay sealed: the count is logged, the ids audited
+        _sealed_append(run_dir, "steps.jsonl", {"candidate": cid, "coverage_counted_as_failures": failures})
+        info["counted_as_failures"] = len(failures)
     run_dir.log_event("coverage_check", candidate=cid, **info)
     return deltas or None, cand_val, info
 
@@ -2789,7 +2849,8 @@ def record_iteration(run_dir: RunDir, workdir: Path, cid: str, *,
                      indecisive: bool = False, parents: list | None = None,
                      edit_kind: str | None = None, memory_skill: str | None = None,
                      cluster_ids: list[str] | None = None, subset: dict | None = None,
-                     val_verified: bool = True, count_iteration: bool = True, **extra) -> None:
+                     val_verified: bool = True, count_iteration: bool = True,
+                     sealed: dict | None = None, **extra) -> None:
     """THE one place an iteration is recorded. EVERY algorithm ends its iteration here.
 
     Three things must happen exactly once per iteration, and they used to be
@@ -2827,7 +2888,14 @@ def record_iteration(run_dir: RunDir, workdir: Path, cid: str, *,
     ``commit.py``, or a deterministic algorithm via ``run_step``) gets exactly one DAG
     node with no separate plumbing per caller. ``parents`` defaults to ``[parent_id]``
     (an edit); pass 2+ ids for a merge node (#438's job to populate, not this one's).
+
+    Under ``hc_feedback_split: train`` (``feedback_split(run_dir) == "train"``) the step event, the graph
+    node and the handover carry no val task id: the ``broke``/``fixed`` lists in ``extra`` are dropped
+    (``n_broke``/``n_fixed`` stay), the reason's id lists become counts (``_scrub_reason``), and the full
+    detail (the lists, the raw reason, and ``sealed``'s extra per-task fields) goes to the sealed dir's
+    ``steps.jsonl`` instead. Otherwise ``sealed`` is ignored and nothing changes.
     """
+    reason = _seal_step_detail(run_dir, cid, parent_id, accepted, val, reason, extra, sealed)
     # A merge node round.py already recorded with 2+ parents keeps them even when the
     # committer did not repeat ``--parents`` (#438). A single-parent edit keeps the
     # commit-time parent, which is what the step event below records.
@@ -2945,9 +3013,9 @@ def _build_runmap(workdir: Path, run_dir: RunDir) -> None:
         + ("  Only accepted champions are run on train, so a rejected candidate has no trajectories "
            "here; its `val` below is the aggregate the gate decided on.\n" if traj_split == "train" else "")
         + "\n"
-        + (f"The live run dir (read-only) is at `{run_dir.root}` if you need `rollouts/train/` "
-           "traces or the git log. Val rollouts are sealed: they are not in the run dir.\n\n"
-           if traj_split == "train" else
+        # Under train feedback there is no pointer to the live run dir: everything the proposer may read
+        # (its parent's and the prior champions' train trials) is already copied into its working dir.
+        + ("" if traj_split == "train" else
            f"The live run dir (read-only) is at `{run_dir.root}` if you need "
            "`rollouts/<split>/` traces or the git log.\n\n")
         + "\n".join(table) + "\n\n"
@@ -3714,7 +3782,7 @@ def _tamper_step(run_dir: RunDir, *, cid: str, parent_id, workdir: Path,
                      indecisive=True, memory_skill=memory_skill,
                      optimizer_seconds=round(optimizer_seconds, 2),
                      opt_cost_usd=round(opt_cost_usd, 6), opt_tokens=opt_tokens)
-    run_dir.log_event("step_indecisive", candidate=cid, reason=reason)
+    run_dir.log_event("step_indecisive", candidate=cid, reason=_hide_val_ids(run_dir, reason))
     run_dir.record_spend_warnings()
     return {
         "candidate_id": cid,
@@ -3770,7 +3838,7 @@ def _eval_error_step(run_dir: RunDir, *, cid: str, parent_id, workdir: Path, err
                      indecisive=True, memory_skill=memory_skill,
                      optimizer_seconds=round(optimizer_seconds, 2),
                      opt_cost_usd=round(opt_cost_usd, 6), opt_tokens=opt_tokens)
-    run_dir.log_event("step_indecisive", candidate=cid, reason=reason)
+    run_dir.log_event("step_indecisive", candidate=cid, reason=_hide_val_ids(run_dir, reason))
     run_dir.record_spend_warnings()
     return {
         "candidate_id": cid,
@@ -3998,8 +4066,9 @@ def run_step(
         streak = getattr(run_dir, "_consecutive_eval_errors", 0) + 1
         run_dir._consecutive_eval_errors = streak
         eval_error = str(e)
-        run_dir.log_event("evaluate_error", candidate=cid, error=eval_error[:500],
-                          error_full=eval_error, consecutive=streak)
+        _logged = _hide_val_ids(run_dir, eval_error)      # the val eval's error may name a val task
+        run_dir.log_event("evaluate_error", candidate=cid, error=_logged[:500],
+                          error_full=_logged, consecutive=streak)
         if streak >= _MAX_CONSECUTIVE_EVAL_ERRORS:
             raise RuntimeError(
                 f"{streak} consecutive candidate evaluations raised — this looks like "
@@ -4032,9 +4101,10 @@ def run_step(
                 cand_dir=workdir, tags=(parent_id or "seed", cid), split="val",
                 all_task_ids=[pt.get("task_id") for pt in (cand_val.per_task or [])])
             if fp is not None:
+                # Under train feedback the footprint's (val) task ids are sealed with the step's detail.
                 run_dir.log_event("gate_footprint", candidate=cid, parent=parent_id,
                                   n_in_footprint=len(fp), n_tasks=len(cand_val.per_task or []),
-                                  tasks=sorted(map(str, fp))[:60])
+                                  **({} if eval_split == "train" else {"tasks": sorted(map(str, fp))[:60]}))
         paired_deltas = _paired_deltas(current_val, cand_val, footprint=fp)
         # Only when restricted: the zeros make the cross-task spread an unreliable SE estimate on
         # a small footprint, so it is floored by what per-task trial noise implies. Unrestricted
@@ -4162,6 +4232,9 @@ def run_step(
                                     else "; REJECTED by promotion rule P: ") + pres.reason
             elif pres.promote:
                 baseline_val = held["cand"]
+            if eval_split == "train" and promo_rec.get("reason"):
+                promo_rec["reason"] = _scrub_reason(run_dir, promo_rec["reason"], mv["broke"], mv["fixed"],
+                                                    regressions)
             run_dir.log_event("promotion", candidate=cid, **{k: v for k, v in promo_rec.items() if k != "rule"})
     else:
         # Rule P2: the verdict came from the evaluator (rung 1 on F, then the group-sequential test on
@@ -4224,6 +4297,10 @@ def run_step(
     if mv["n_shared"]:
         _step_extra.update(broke=mv["broke"], fixed=mv["fixed"],
                            n_broke=len(mv["broke"]), n_fixed=len(mv["fixed"]))
+    # Under train feedback, per-task val detail that has no place in the logs (record_iteration seals the
+    # broke/fixed lists and the raw reason itself).
+    _sealed = ({"regressions": regressions, **({"footprint": sorted(map(str, fp))} if fp is not None else {})}
+               if eval_split == "train" else None)
     if champ_info is not None:
         _step_extra["champion_train"] = {**champ_info, **({"reward": champ_train.reward,
                                                             "n_scored": champ_train.n_scored}
@@ -4239,8 +4316,11 @@ def run_step(
                      cost_usd=(cand_val.cost_usd or 0.0) + promo_extra_cost[0] if promo_rec else cand_val.cost_usd,
                      tokens=(cand_val.tokens or 0) + promo_extra_cost[1] if promo_rec else cand_val.tokens,
                      opt_cost_usd=round(opt_cost_usd, 6), opt_tokens=opt_tokens,
-                     **_step_extra)
+                     sealed=_sealed, **_step_extra)
     run_dir.record_spend_warnings()
+    # What reaches the logs and the proposer: no val id under train feedback (``decision`` itself, in the
+    # returned dict, keeps the gate's full record).
+    shown_reason = _scrub_reason(run_dir, decision.reason, mv["broke"], mv["fixed"], regressions)
 
     # update optimizer memory + commit the iteration to the version store so the
     # whole process stays inspectable (git log / LEDGER / JOURNAL).
@@ -4256,12 +4336,12 @@ def run_step(
         # back to the optimizer as "these edits did not work" guidance, and an
         # infrastructure outage says nothing about the edit — filing it there teaches
         # the optimizer to avoid a change that was never actually evaluated.
-        run_dir.log_event("step_indecisive", candidate=cid, reason=decision.reason,
+        run_dir.log_event("step_indecisive", candidate=cid, reason=shown_reason,
                           val=cand_val.reward, n_scored=cand_val.n_scored,
                           n_tasks=cand_val.n_tasks)
     else:
         if rejected is not None:
-            reason = decision.reason
+            reason = shown_reason
             if validation is not None and validation.warnings:
                 # Authoring smells the candidate carries are part of why it is worth
                 # revisiting — the next iteration should see them, not rediscover them.
@@ -4452,13 +4532,13 @@ def _algorithm_brief(current_val: SplitResult, algorithm: str, split: str = "val
     """How acceptance works, so the optimizer aims for a real, significant gain.
 
     ``split="train"`` (``hc_feedback_split: train``): the failures shown are train tasks and the judge is
-    val, whose per-task results the proposer never sees; ``current_val`` is still the VAL result."""
+    val, whose per-task results the proposer is not shown; ``current_val`` is still the VAL result."""
     if split == "train":
         return (
             "## How your edit is judged\n"
             f"Algorithm: {algorithm}. The failures above are from the TRAIN split. Your edited "
             "candidate is scored on a separate, held-out VAL split and compared to the current best "
-            f"(val reward {current_val.reward:.3f}). You never see val tasks or per-task val results: "
+            f"(val reward {current_val.reward:.3f}). You are not shown val tasks or per-task val results: "
             "only the accept/reject verdict and the aggregate val numbers come back. It is ACCEPTED "
             "only if the per-task improvement on val clears a significance bar (a noise margin), so a "
             "tiny or lucky change is rejected. Aim for a real, generalizing gain across a CLASS of "
@@ -5546,8 +5626,9 @@ def hill_climb_loop(
     default TRAIN when the frozen train and val ids differ. Then the failure lists, the focus order and
     ``trajectories/`` come from the parent's train results (the seed's from baseline, each new champion's
     from one train eval after its accept), while every candidate is still gated on val against the
-    parent's val (``current_val``); the proposer gets the val verdict and aggregates only, and the val
-    rollouts are sealed. ``hc_feedback_split: val`` (or train == val) is the loop as it always was.
+    parent's val (``current_val``); the proposer's inputs carry the val verdict and aggregates, not val task
+    ids, and the val rollouts are sealed (``splits.json``/``baseline.json`` in the run tree still hold val
+    ids: a documented follow-up). ``hc_feedback_split: val`` (or train == val) is the loop as it always was.
     """
     gate_kwargs = dict(gate_kwargs or {})
     rejected, history, store = _init_memory_store(run_dir, store)

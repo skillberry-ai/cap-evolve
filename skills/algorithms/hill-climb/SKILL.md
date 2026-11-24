@@ -79,22 +79,32 @@ splits, frozen in `state.json`, and logged as an `hc_feedback_split` event.
 - **`train`**: the trajectories, the failure index, the passing block, the focus order,
   LEDGER's broke/fixed columns and `prior_iterations/<id>/trajectories/` all come from
   TRAIN. The gate is unchanged: every candidate is measured on val against the parent's
-  val. The proposer learns only the verdict and the aggregate val numbers (reward, Δ),
-  never a val task id or per-task val result: val rollouts are moved to the sealed dir
-  (outside the run tree, as for pooled mode's confirm stratum), and gate reasons that name
-  val tasks reach `rejected.jsonl` / `JOURNAL.md` with the ids replaced. The seed's train
-  result comes from baseline. Each ACCEPTED candidate is run once on train (the run's
+  val. What the proposer is given about val is the verdict and the aggregate val numbers
+  (reward, Δ): its work-dir inputs (prompt, trajectories, LEDGER/JOURNAL/RUNMAP,
+  `prior_iterations/`, `rejected.jsonl`/`history.jsonl`) and the run's event and graph logs
+  carry no val task id. Val rollouts and their ledger rows move to the sealed dir (outside
+  the run tree, as for pooled mode's confirm stratum); per-step broke/fixed lists, the gate's
+  raw reason, footprint and quarantine ids go there too (`steps.jsonl`, `quarantine.json`).
+  Gate reasons and evaluation errors reach the logs with ids replaced; a purely numeric id is
+  replaced only where it is quoted, a bare number in free text is left as is. **Not sealed
+  yet (follow-up):** the run tree's `splits.json` (val membership) and `baseline.json` (the
+  seed's per-task val results), so an unsandboxed proposer that browses the run tree can
+  still find the val ids and the seed's per-task val results; `final.json`, written at
+  finalize after the search, also holds per-task val. The seed's train result comes from
+  baseline. Each ACCEPTED candidate is run once on train (the run's
   `--n-trials`), so LEDGER compares the champion's train results with its parent's; a
   rejected candidate is never run on train. Cost: |train| × n_trials extra rollouts per
   accept, charged to `max_metric_calls` and always reserved first; a champion train eval
   that cannot be funded is logged (`champion_train_unfunded`) and stops the loop. A task id
   that is in BOTH train and val (an overlapping split, `n_overlap` in the event) is a train
   task too, so its train results are shown; the guarantee covers the val-only ids. The value
-  is frozen: a later spec/env change is logged (`frozen: true`) but does not switch it.
+  is frozen: a later spec/env change is logged (`frozen: true`) but does not switch it. A
+  run started before this key existed (iterations already spent, nothing frozen) stays
+  `val`, even under an explicit `train`: its proposer has already read val.
 - **`val`** is the loop as it was before: the proposer reads val, the gate decides on val.
 
 Not used under rule P2 / `split_mode: pooled` / HC-2, which have their own F/C split: an
-explicit `train` there is a logged no-op (`ignored: true`).
+explicit `train` there is a logged no-op (`ignored: true`, logged once per run).
 
 ## Focus schedules
 
