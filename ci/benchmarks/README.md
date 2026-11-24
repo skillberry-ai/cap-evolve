@@ -429,16 +429,32 @@ github.com still works, so publishing no longer goes through the artifact servic
 To publish a run its bench job never published — one you resumed by hand, or drove directly on
 the runner — follow [PUBLISHING.md](PUBLISHING.md); it runs these same scripts in the same order.
 
-### Raw run data: kept on the runner for the full backup
+### Raw run data: staged when the dispatch asks for it
 
 What gets published is a summary. The raw run data, meaning the run dir with every candidate, trace and
-rollout, plus the job's output dir, would otherwise be lost when the next job's checkout cleans the
-workspace. So each bench job keeps it first (step `Keep the raw run data on the runner for the full
-backup`, [`lib/backup_run.sh`](lib/backup_run.sh)), **on the runner, outside the workspace**, as a
-capture source for the full backup procedure, [`docs/FULL_BACKUP.md`](../../docs/FULL_BACKUP.md):
+rollout, plus the job's output dir, is lost when the next job's checkout cleans the workspace. A
+dispatch that sets the input **`raw_data_location`** (an rclone path `<remote>:<path>`; empty by
+default, and PR-label runs never set it) makes each bench job keep it (step `Keep the raw run data for
+the full backup`, [`lib/backup_run.sh`](lib/backup_run.sh)): packed on the runner, outside the
+workspace, then uploaded to `<path>/<run_id>__<tier>-<bench>/` with `rclone copy --immutable` and
+checked with `rclone check`. Only when the check passes is the runner's copy removed; when the upload
+fails, the capture stays on the runner and the step warns why.
+
+- **`<remote>`** is defined by the repository secret **`RAW_DATA_RCLONE_CONFIG`**: the text of an rclone
+  config section, for example the output of `rclone config show <remote>` on a machine where that
+  remote works. Give it write access to the staging path only. The step writes it to a 0600 temp file
+  and removes it afterwards.
+- **rclone** is installed by the step itself into `~/.local/bin`, pinned by version and sha256
+  ([`lib/install_rclone.sh`](lib/install_rclone.sh)).
+- The staging area holds **raw, unscanned data** (it can contain tokens from logs or `.env` files), so
+  keep it private to the people who run the backup.
+
+CI never runs the backup: the full backup procedure, [`docs/FULL_BACKUP.md`](../../docs/FULL_BACKUP.md),
+is applied on demand by an agent a user asks, with read access to the staging area, which it reads as
+one of its sources. Each capture, in the staging area and on the runner before its upload:
 
 ```
-~/capevolve-ci-capture/<run_id>__<tier>-<bench>/        (a re-run attempt N>1: <run_id>__<tier>-<bench>.a<N>/)
+<run_id>__<tier>-<bench>/        (a re-run attempt N>1: <run_id>__<tier>-<bench>.a<N>/)
   <run_id>__<tier>-<bench>.tar.zst   the output dir, <out_dir>_proj/.capevolve/ and <out_dir>_proj.sealed/
   members.sha256                     sha256 of every file, taken before packing
   symlinks.txt                       every symlink and its target
@@ -447,17 +463,18 @@ capture source for the full backup procedure, [`docs/FULL_BACKUP.md`](../../docs
 ```
 
 A capture dir is written once and never overwritten. The run's `ci_runs/` folder gets a copy of
-`backup.json`, and its README says where the capture dir is, so it can be found from the run's page.
+`backup.json`, with `staged` (where it was uploaded) and `kept_on_runner`, and its README says where
+the capture is, so it can be found from the run's page.
 The step is best-effort: it never fails a run, falls back to `.tar.gz` if `zstd` is missing, and skips
 (with a warning) when the runner's disk would drop below 20 GB free.
 
 **Moving it to the backup location** is done only by following `docs/FULL_BACKUP.md`, which lists this
 tree as a source (§5.3(b)). The operator unpacks each archive into staging, checks it against
 `backup.json` and `members.sha256`, scans it for secrets, organizes it into a run folder and uploads that.
-**Never copy `~/capevolve-ci-capture/` into the backup location as is**: it is not in the location's
+**Never copy the staging area or `~/capevolve-ci-capture/` into the backup location as is**: it is not in the location's
 layout, it was never scanned for secrets, and it has no `MANIFEST.json`. The backup never deletes a
 source. Once a full backup's `BACKUP_RESULTS_<TS>.md` records a run as uploaded and checked, the
-runner's admin may remove that capture dir to free disk.
+staging area's owner (or, for a capture left on a runner, the runner's admin) may remove it.
 
 Runs from 2026-11-18 until this change were archived as
 `~/skillberry-runs-backup/user/<who triggered the run>/<repo>/<run_id>__<tier>-<bench>.tar.zst`, with
