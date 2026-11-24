@@ -190,9 +190,13 @@ case "$BENCH" in
     APPWORLD_ROOT="$AW_EVAL/root_opt" "$CAPEVOLVE_PY" "$AW_EX/scripts/check_injection.py" "$AW_EX/seed_capability" \
       | tail -1 | grep -q "A4 PASS" || { echo "::error:: AppWorld injection check (A4) failed"; exit 1; }
     echo "appworld ready at $AW_EVAL" ;;
-  tau2)
+  tau2|tau2_harness)
+    # tau2_harness is the tau2 leg plus the agent-harness capability, so it installs the SAME
+    # cached checkout. The commit is printed because the clone is unpinned and per runner: an
+    # A/B pair of the two legs is comparable only if both report the same commit.
     [ -d "$CACHE/tau2-bench/.git" ] || git clone --depth 1 https://github.com/sierra-research/tau2-bench "$CACHE/tau2-bench"
-    uv pip install -p "$CAPEVOLVE_PY" -q $IDX -e "$CACHE/tau2-bench" ;;
+    uv pip install -p "$CAPEVOLVE_PY" -q $IDX -e "$CACHE/tau2-bench"
+    echo "tau2-bench @ $(git -C "$CACHE/tau2-bench" rev-parse HEAD 2>/dev/null || echo unknown) (cached, unpinned)" ;;
   tau2_sierra|tau2_sierra_blackbox)
     # The two DELIVERY ARMS (direct / blackbox) of benchmarks/tau2/examples/sierra_airline, on vanilla
     # sierra-research tau2 — a DIFFERENT checkout from the unpinned `tau2` leg above. The commit is

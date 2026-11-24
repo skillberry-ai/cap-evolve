@@ -1,0 +1,14 @@
+{
+  "allow": ["config", "lesson"],
+  "wired": [
+    "loop.max_steps",
+    "loop.think_tool",
+    "loop.repeat_limit",
+    "sampling.temperature",
+    "memory.mode",
+    "memory.top_k",
+    "memory.max_entries",
+    "memory.max_entry_chars",
+    "memory.write_during_eval"
+  ]
+}

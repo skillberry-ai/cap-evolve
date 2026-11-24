@@ -1,0 +1,13 @@
+{
+  "loop": {
+    "max_steps": 100,
+    "think_tool": false,
+    "repeat_limit": 0
+  },
+  "memory": {
+    "mode": "all",
+    "max_entries": 30,
+    "max_entry_chars": 600,
+    "write_during_eval": false
+  }
+}

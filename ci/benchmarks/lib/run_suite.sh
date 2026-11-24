@@ -14,7 +14,7 @@
 set -uo pipefail
 LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$LIB_DIR/../../.." && pwd)"
-BENCH="${1:?bench (tau2|swebench|skillsbench|spreadsheetbench|rfe-creator|parsec|tau2_sierra|tau2_sierra_blackbox|appworld)}"
+BENCH="${1:?bench (tau2|tau2_harness|swebench|skillsbench|spreadsheetbench|rfe-creator|parsec|tau2_sierra|tau2_sierra_blackbox|appworld)}"
 PY="${CAPEVOLVE_PY:-$REPO/.venv-e2e/bin/python}"; [ -x "$PY" ] || PY="python3"
 TIER="${TIER:-smoke}"
 
@@ -51,7 +51,7 @@ GATE_K_SE="${GATE_K_SE:-0.2}"
 # tau2 legs, whose adapters write them and where a failed rollout is only readable from the
 # trajectory; no other adapter produces them. Env wins, so a dispatch can still force either way.
 case "$BENCH" in
-  tau2|tau2_sierra|tau2_sierra_blackbox) _NATIVE_SIMS_DEFAULT=1 ;;
+  tau2|tau2_harness|tau2_sierra|tau2_sierra_blackbox) _NATIVE_SIMS_DEFAULT=1 ;;
   *)                                      _NATIVE_SIMS_DEFAULT=0 ;;
 esac
 export CAPEVOLVE_NATIVE_SIMS="${CAPEVOLVE_NATIVE_SIMS:-$_NATIVE_SIMS_DEFAULT}"
@@ -283,7 +283,7 @@ TPL="$REPO/benchmarks"
 cp "$TPL/_shared/model_config.py" "$PROJ/adapters/" 2>/dev/null || true
 
 case "$BENCH" in
-  tau2)
+  tau2|tau2_harness)
     cp "$TPL/tau2/template/adapter.py" "$PROJ/adapters/"
     cp -R "$REPO/benchmarks/tau2/examples/airline/seed_capability" "$PROJ/seed_capability"
     # tau2's FULL editable surface, for every tier (smoke/full/integration all reach here):
@@ -304,6 +304,26 @@ case "$BENCH" in
     # files to the optimizer — the deterministic path's INSTRUCTIONS.md does, and agent mode's
     # briefing does it in host.py's `_surface_section`.
     CAPS="[system-prompt, tools]"
+    if [ "$BENCH" = "tau2_harness" ]; then
+      # The agent-harness A/B arm (#1018). EVERYTHING above and below is the plain tau2 leg —
+      # same tasks, models, trials, iterations, gate — so dispatching both legs on one commit
+      # measures what the agent-harness capability adds and nothing else. Three differences:
+      #   1. the harness overlay (harness.json, harness_policy.json, memory/) joins the seed.
+      #      Its values are plain tau2's (100 steps, no think tool, no nudge, no lessons), so
+      #      the seed agent behaves like llm_agent. Its README stays out: system-prompt reads
+      #      any top-level .md as prompt text.
+      #   2. agent-harness joins the capability list (validate + guidance + optimizer brief);
+      #   3. the default optimizer instructions get one appended section naming the harness
+      #      files and the settings this adapter wires.
+      HS="$REPO/benchmarks/tau2/examples/airline/harness_seed"
+      cp "$HS/harness.json" "$HS/harness_policy.json" "$PROJ/seed_capability/"
+      cp -R "$HS/memory" "$PROJ/seed_capability/memory"
+      CAPS="[system-prompt, tools, agent-harness]"
+      mkdir -p "$PROJ/optimizer"
+      cp "$REPO/benchmarks/_scaffold/project/optimizer/INSTRUCTIONS.md" "$PROJ/optimizer/INSTRUCTIONS.md"
+      cat "$HS/OPTIMIZER_NOTE.md" >> "$PROJ/optimizer/INSTRUCTIONS.md"
+      OPT_INSTRUCTIONS="$PROJ/optimizer/INSTRUCTIONS.md"
+    fi
     cat > "$WORK/.env" <<ENV
 MODEL=litellm_proxy/$AGENT_MODEL_WIRE
 LITELLM_PROXY_API_BASE=$AGENT_API_BASE
