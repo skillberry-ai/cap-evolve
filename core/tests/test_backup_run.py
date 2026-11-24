@@ -25,10 +25,13 @@ WHAT THIS PINS
 9. The workflow runs it best-effort (continue-on-error), before publishing, with the user name
    passed through the environment, and only on a dispatch that names a staging area
    (raw_data_location, empty by default); the rclone config comes from a secret, via the environment.
-10. Staging: with RAW_DATA_LOCATION the capture dir is uploaded write-once and checked, and only then
-   removed from the runner; <out_dir>/backup.json says where it is staged. The rclone config is a
-   0600 temp file, removed afterwards. A failed upload (bad path, unknown remote) leaves the capture
-   on the runner and says why.
+10. Raw-data area: with RAW_DATA_LOCATION the capture dir is uploaded write-once and checked, and
+   only then removed from the runner; <out_dir>/backup.json names the leg's dir, never the area's
+   path. The rclone config is a 0600 file in a private temp dir, removed afterwards. A failed upload
+   (bad path, unknown remote) leaves the capture on the runner and says why, with rclone's error.
+11. A refresh token from an interactive login is refused (rclone would rewrite it into the deleted
+   temp config); renewable setups are accepted. A config rclone rewrites anyway gets a warning.
+   When some hashes could not be compared, the check is repeated with --download.
 """
 
 import hashlib
@@ -65,7 +68,7 @@ def _work(tmp_path: Path) -> Path:
 def _run(tmp_path, out, **env):
     e = {**os.environ, "CI_CAPTURE_ROOT": str(tmp_path / "capture"), "BACKUP_USER": "bcarmeli",
          "BACKUP_REPO": "tau", "PY": sys.executable, "RUNNER_NAME": "test-runner", **env}
-    e.pop("GITHUB_STEP_SUMMARY", None)
+    e.pop("GITHUB_STEP_SUMMARY", None); e.pop("RUNNER_TEMP", None)
     if "GITHUB_RUN_ATTEMPT" not in env:
         e.pop("GITHUB_RUN_ATTEMPT", None)
     return subprocess.run(["bash", str(SCRIPT), str(out), "999000111", "smoke-tau2"],
@@ -301,10 +304,11 @@ def test_staging_uploads_checks_then_frees_the_runner(tmp_path):
     assert b["sha256"] == hashlib.sha256(next(staged.glob(f"{NAME}.tar.*")).read_bytes()).hexdigest()
     assert not (tmp_path / CAP).exists(), "the runner's copy is removed once the upload is checked"
     o = json.loads((out / "backup.json").read_text())
-    assert o["staged"] == f"stg:{tmp_path}/staging/{NAME}/" and o["kept_on_runner"] is False
+    assert o["staged"] == f"{NAME}/" and o["kept_on_runner"] is False
     assert "staging_error" not in o and o["sha256"] == b["sha256"]
-    assert not list((tmp_path / "tmpdir").iterdir()), "the rclone config temp file is removed"
-    assert "[stg]" not in r.stdout + r.stderr
+    assert str(tmp_path / "staging") not in json.dumps(o) + r.stdout, "the area's path is not published"
+    assert not list((tmp_path / "tmpdir").iterdir()), "the rclone config temp dir is removed"
+    assert "[stg]" not in r.stdout + r.stderr and "rewrote" not in r.stdout
 
 
 @needs_rclone
@@ -314,7 +318,7 @@ def test_a_failed_staging_keeps_the_capture_on_the_runner(tmp_path, loc, why):
     out = _work(tmp_path)
     r = _stage(tmp_path, out, loc)
     assert r.returncode == 0, r.stdout + r.stderr
-    assert "::warning::staging the raw run data" in r.stdout and why in r.stdout
+    assert "::warning::uploading the raw run data" in r.stdout and why in r.stdout
     assert (tmp_path / CAP / "backup.json").is_file()
     o = json.loads((out / "backup.json").read_text())
     assert o["staged"] is None and o["kept_on_runner"] is True and why in o["staging_error"]
@@ -364,6 +368,65 @@ def test_install_rclone_is_a_no_op_when_the_version_is_there(tmp_path):
     assert r.returncode == 0 and "already at" in r.stdout
 
 
+@needs_rclone
+def test_an_interactive_login_refresh_token_is_refused(tmp_path):
+    out = _work(tmp_path)
+    conf = STG_CONF + 'token = {"access_token":"a","refresh_token":"r","expiry":"2026-01-01T00:00:00Z"}\n'
+    r = _stage(tmp_path, out, f"stg:{tmp_path}/staging", conf=conf)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "refresh token from an interactive login" in r.stdout
+    assert (tmp_path / CAP).is_dir() and not (tmp_path / "staging").exists()
+    assert json.loads((out / "backup.json").read_text())["kept_on_runner"] is True
+
+
+@needs_rclone
+def test_a_renewable_setup_with_a_token_is_accepted(tmp_path):
+    out = _work(tmp_path)
+    conf = STG_CONF + 'client_credentials = true\ntoken = {"access_token":"a","refresh_token":"r"}\n'
+    r = _stage(tmp_path, out, f"stg:{tmp_path}/staging", conf=conf)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert (tmp_path / "staging" / NAME / "backup.json").is_file() and not (tmp_path / CAP).exists()
+
+
+def _fake_rclone(tmp_path, check_says="", rewrite_config=False):
+    """A wrapper around the real rclone: logs each call, can make `check` (without --download) say
+    `check_says`, and can append to the --config file (as a token refresh would)."""
+    real = shutil.which("rclone")
+    d = tmp_path / "fakebin"
+    d.mkdir()
+    (d / "rclone").write_text(f"""#!/usr/bin/env bash
+echo "$*" >> {tmp_path}/rclone-calls.txt
+cfg=""; logf=""; prev=""
+for a in "$@"; do [ "$prev" = --config ] && cfg="$a"; [ "$prev" = --log-file ] && logf="$a"; prev="$a"; done
+{real} "$@"; rc=$?
+case " $* " in *" check "*) case " $* " in *" --download "*) ;; *)
+  [ -n "{check_says}" ] && echo "{check_says}" >> "${{logf:-/dev/stderr}}" ;; esac ;; esac
+{"[ -n \"$cfg\" ] && echo '# rewritten' >> \"$cfg\"" if rewrite_config else ""}
+exit $rc
+""")
+    (d / "rclone").chmod(0o755)
+    return {"PATH": f"{d}:{os.environ['PATH']}"}
+
+
+@needs_rclone
+def test_hashes_that_could_not_be_checked_are_compared_by_content(tmp_path):
+    out = _work(tmp_path)
+    env = _fake_rclone(tmp_path, check_says="NOTICE: Local file system: 1 hashes could not be checked")
+    r = _stage(tmp_path, out, f"stg:{tmp_path}/staging", **env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    calls = (tmp_path / "rclone-calls.txt").read_text()
+    assert re.search(r"^.* check --one-way --download ", calls, re.M), calls
+    assert not (tmp_path / CAP).exists()
+
+
+@needs_rclone
+def test_a_config_that_rclone_rewrites_gets_a_warning(tmp_path):
+    out = _work(tmp_path)
+    r = _stage(tmp_path, out, f"stg:{tmp_path}/staging", **_fake_rclone(tmp_path, rewrite_config=True))
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "rclone rewrote the config of remote 'stg'" in r.stdout
+
+
 def test_the_run_folder_says_where_the_staged_archive_is(tmp_path):
     sys.path.insert(0, str(LIB))
     spec = importlib.util.spec_from_file_location("run_folder", LIB / "run_folder.py")
@@ -372,7 +435,8 @@ def test_the_run_folder_says_where_the_staged_archive_is(tmp_path):
     out = _work(tmp_path)
     (out / "backup.json").write_text(json.dumps({"archive": f"{NAME}.tar.zst", "runner": "r1",
                                                  "capture_dir": f"/home/ci/capevolve-ci-capture/{NAME}",
-                                                 "bytes": 5_000_000, "staged": f"stg:raw/{NAME}/",
+                                                 "bytes": 5_000_000, "staged": f"{NAME}/",
                                                  "kept_on_runner": False}))
     readme = (rf.build(out, tmp_path / "folder", None, None, None, None, "tau", False) / "README.md").read_text()
-    assert f"staged at `stg:raw/{NAME}/`" in readme and "kept on runner" not in readme
+    assert f"uploaded to the CI raw-data area the run was dispatched with, as `{NAME}/`" in readme
+    assert "kept on runner" not in readme

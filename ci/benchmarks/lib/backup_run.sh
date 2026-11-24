@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Keep ONE benchmark leg's raw run data, packed, as a capture source for the full backup procedure
 # (docs/FULL_BACKUP.md, §5.3(b)): on the runner, outside the workspace, and, when RAW_DATA_LOCATION
-# is set, uploaded to that staging area (then removed from the runner).
+# is set, uploaded to that CI raw-data area (then removed from the runner).
 #
 #   backup_run.sh <out_dir> <run_id> <slug>
 #     out_dir  the leg's output dir (ci/benchmarks/.work/suite_<tier>_<bench>)
@@ -26,13 +26,21 @@
 # and a copy of backup.json at <out_dir>/backup.json, which publish_results.sh puts in the run's
 # ci_runs/ folder, so the capture can be found from the run's page later.
 #
-# Staging (RAW_DATA_LOCATION=<remote>:<path>): the capture dir is copied, write-once
-# (rclone copy --immutable), to <path>/<capture dir name>/ and checked (rclone check). Only when the
-# check passes is the runner's copy removed. The copy in <out_dir> then also says
-#   "staged": "<remote>:<path>/<capture dir name>/", "kept_on_runner": false
-# and, when staging fails, "staged": null, "kept_on_runner": true, "staging_error": "<why>" (the
-# capture stays on the runner). The staging area is a SOURCE for the backup, never the backup
+# Raw-data area (RAW_DATA_LOCATION=<remote>:<path>): the capture dir is copied, write-once
+# (rclone copy --immutable), to <path>/<capture dir name>/ and checked (rclone check, and
+# rclone check --download when some hashes could not be compared). Only when the check passes is the
+# runner's copy removed. The copy in <out_dir> then also says
+#   "staged": "<capture dir name>/" (relative to RAW_DATA_LOCATION, which is not recorded: the
+#             run folder is published), "kept_on_runner": false
+# and, when the upload fails, "staged": null, "kept_on_runner": true, "staging_error": "<why>" (the
+# capture stays on the runner). The raw-data area is a SOURCE for the backup, never the backup
 # location itself.
+#
+# Credentials: the remote must use credentials that rclone never rewrites (object-store keys, an
+# SFTP key, a password, a service account, JWT or client credentials). A refresh token from an
+# interactive (browser) login is refused: rclone would save the refreshed token into the temp config,
+# which is deleted, and providers whose refresh tokens work only once would then reject the secret's
+# token, in CI and on the machine it was copied from.
 #
 # WHY: the published results (ci_runs/, ci_ui/, the record) are a summary; the raw run data is
 # lost when the next job's checkout cleans the workspace. This keeps it until an operator runs
@@ -52,10 +60,11 @@
 #   PROJECT_WORK        default <out_dir>_proj (as run_suite.sh lays it out)
 #   BACKUP_MIN_FREE_GB  default 20
 #   GITHUB_RUN_ATTEMPT  the run attempt (default 1)
-#   RAW_DATA_LOCATION   rclone path <remote>:<path> of the staging area; empty = keep on the runner only
+#   RAW_DATA_LOCATION   rclone path <remote>:<path> of the CI raw-data area; empty = keep on the runner only
 #   RAW_DATA_RCLONE_CONFIG  rclone config text defining <remote> (CI: a secret). Written to a 0600
-#                       temp file for rclone --config and removed on exit; never printed. Empty =
-#                       rclone's own config on the runner.
+#                       file in a private temp dir under $RUNNER_TEMP (cleaned by GitHub after every
+#                       job; else $TMPDIR or /tmp) for rclone --config, and removed on exit; never
+#                       printed. Empty = rclone's own config on the runner.
 #   PY                  python for the sections.json lookup and backup.json (default python3)
 set -uo pipefail
 
@@ -184,7 +193,7 @@ mv "$tmp" "$dst" || fail "moving $tmp into place"
 cp "$dst/backup.json" "$out/backup.json" 2>/dev/null || log "could not copy backup.json into $out"
 log "kept $name -> $dst/$name.$ext ($((bytes / 1024 / 1024)) MB)"
 
-# ---- staging: upload the capture dir, check it, then free the runner's disk -----------------------
+# ---- raw-data area: upload the capture dir, check it, then free the runner's disk ------------------
 summary() { [ -n "${GITHUB_STEP_SUMMARY:-}" ] && echo "$1" >> "$GITHUB_STEP_SUMMARY"; return 0; }
 note_out() {  # note_out <staged or ""> <kept_on_runner true|false> [error]: record the outcome in <out_dir>/backup.json
   "$PY" - "$out/backup.json" "$1" "$2" "${3:-}" <<'PY' || log "could not record the staging outcome in $out/backup.json"
@@ -204,9 +213,9 @@ if [ -z "$loc" ]; then
   exit 0
 fi
 stage_fail() {
-  echo "::warning::staging the raw run data of $name failed ($1); it stays on runner ${RUNNER_NAME:-?} in $dst"
+  echo "::warning::uploading the raw run data of $name to the raw-data area failed ($1); it stays on runner ${RUNNER_NAME:-?} in $dst"
   note_out "" true "$1"
-  summary "Raw run data of $name NOT staged ($1); kept on runner \`${RUNNER_NAME:-?}\`: \`$dst/$name.$ext\`"
+  summary "Raw run data of $name NOT uploaded ($1); kept on runner \`${RUNNER_NAME:-?}\`: \`$dst/$name.$ext\`"
   exit 0
 }
 loc="${loc%/}"
@@ -216,25 +225,46 @@ case "$loc" in
 esac
 [ -n "$remote" ] && [ "${remote#*/}" = "$remote" ] || stage_fail "RAW_DATA_LOCATION is not of the form <remote>:<path>"
 command -v rclone >/dev/null 2>&1 || stage_fail "rclone is not installed on the runner"
-rc_args=()
+rtmp="$(umask 077; mktemp -d -p "${RUNNER_TEMP:-${TMPDIR:-/tmp}}" rclone.XXXXXX)" \
+  || stage_fail "cannot create a private temp dir for rclone"
+trap 'rm -rf "$rtmp"' EXIT
+rlog="$rtmp/rclone.log"
+rc_args=(--log-file "$rlog")
+# rclone's last error lines, one line, for staging_error (rclone does not log config values)
+why() { local t; t="$(tail -n 2 "$rlog" 2>/dev/null | sed -E 's/^[0-9\/]+ [0-9:]+ //' | tr '\n' ' ' | cut -c1-300)"; echo "${t:+: $t}"; }
 if [ -n "${RAW_DATA_RCLONE_CONFIG:-}" ]; then
-  cfg="$(umask 077; mktemp)" || stage_fail "cannot create a temp file for the rclone config"
-  trap 'rm -f "$cfg"' EXIT
+  cfg="$rtmp/rclone.conf"
   printf '%s\n' "$RAW_DATA_RCLONE_CONFIG" > "$cfg" || stage_fail "cannot write the rclone config"
-  rc_args=(--config "$cfg")
+  rc_args+=(--config "$cfg")
+  # Refuse an interactive-login refresh token (see Credentials above); accept service-account, JWT
+  # and client-credentials setups, which rclone can renew without rewriting a refresh token.
+  "$PY" - "$cfg" "$remote" <<'PY' || stage_fail "remote '$remote' uses a refresh token from an interactive login, which rclone rewrites when it refreshes; use credentials that do not change (see ci/benchmarks/README.md)"
+import configparser, sys
+c = configparser.RawConfigParser(strict=False)
+c.read(sys.argv[1])
+s = c[sys.argv[2]] if c.has_section(sys.argv[2]) else {}
+renewable = ("service_account_file", "service_account_credentials", "box_config_file",
+             "config_credentials", "client_credentials")
+sys.exit(1 if "refresh_token" in s.get("token", "") and not any(s.get(k) for k in renewable) else 0)
+PY
 fi
 rclone "${rc_args[@]}" listremotes 2>/dev/null | grep -qxF "$remote:" \
   || stage_fail "remote '$remote' is not defined in the rclone config"
 target="$loc/$dirname_"
 rclone "${rc_args[@]}" copy --immutable --retries 3 --low-level-retries 10 "$dst" "$target" >/dev/null 2>&1 \
-  || stage_fail "rclone copy to $target failed"
-chk="$(rclone "${rc_args[@]}" check --one-way "$dst" "$target" 2>&1)" || stage_fail "rclone check of $target failed"
-if printf '%s' "$chk" | grep -qi "no common hash"; then  # sizes only: compare contents instead
+  || stage_fail "rclone copy of $dirname_ failed$(why)"
+chk="$(rclone "${rc_args[@]}" check --one-way "$dst" "$target" 2>&1)" || stage_fail "rclone check of $dirname_ failed$(why)"
+# A size-only check is not enough to remove the runner's copy: when no hash is shared, or some
+# hashes could not be compared (for example multipart objects), compare the contents.
+if printf '%s' "$chk$(cat "$rlog" 2>/dev/null)" | grep -qiE "no common hash|could not be checked"; then
   rclone "${rc_args[@]}" check --one-way --download "$dst" "$target" >/dev/null 2>&1 \
-    || stage_fail "rclone check --download of $target failed"
+    || stage_fail "rclone check --download of $dirname_ failed$(why)"
 fi
-note_out "$target/" false
-rm -rf "$dst" || log "staged, but could not remove $dst from the runner"
-log "staged $name -> $target/ (checked); removed it from the runner"
-summary "Raw run data staged to \`$target/\` ($((bytes / 1024 / 1024)) MB, sha256 \`${sha:0:12}…\`, checked)"
+if [ -n "${cfg:-}" ] && ! printf '%s\n' "$RAW_DATA_RCLONE_CONFIG" | cmp -s - "$cfg"; then
+  echo "::warning::rclone rewrote the config of remote '$remote' (a refreshed token?); the RAW_DATA_RCLONE_CONFIG secret may now be stale. Use credentials that do not change (see ci/benchmarks/README.md)."
+fi
+note_out "$dirname_/" false
+rm -rf "$dst" || log "uploaded, but could not remove $dst from the runner"
+log "uploaded $name to the raw-data area as $dirname_/ (checked); removed it from the runner"
+summary "Raw run data uploaded to the raw-data area as \`$dirname_/\` ($((bytes / 1024 / 1024)) MB, sha256 \`${sha:0:12}…\`, checked)"
 exit 0

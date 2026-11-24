@@ -337,7 +337,7 @@ on:
         default: hill-climb-all
         options: [hill-climb-all, hill-climb-cyclic, hill-climb-hardest-first, agent-optimize]
       raw_data_location:
-        description: "Staging area for each leg's raw run data (run dir with candidates, traces, rollouts, plus the output dir): an rclone path <remote>:<path>, with <remote> defined in the RAW_DATA_RCLONE_CONFIG secret. Each leg packs its data and uploads it to <path>/<run_id>__<tier>-<bench>/, a source for an on-demand backup (docs/FULL_BACKUP.md). Empty (default) = not kept. PR-label runs never keep it."
+        description: "CI raw-data area for each leg's raw run data (run dir with candidates, traces, rollouts, plus the output dir): an rclone path <remote>:<path>, with <remote> defined in the RAW_DATA_RCLONE_CONFIG secret (credentials that do not change when used, not a browser-login token: see ci/benchmarks/README.md). Each leg packs its data and uploads it to <path>/<run_id>__<tier>-<bench>/, a source for an on-demand backup (docs/FULL_BACKUP.md). Empty (default) = not kept. PR-label runs never keep it."
         type: string
         default: ""
   pull_request:
@@ -790,12 +790,12 @@ jobs:
 
       # The raw run data (the whole work area: run dir with candidates, traces, rollouts, plus the
       # output dir) is otherwise lost when the next job's checkout cleans the workspace. Kept on the
-      # runner and uploaded to a staging area ONLY when the dispatch names one (input
+      # runner and uploaded to a CI raw-data area ONLY when the dispatch names one (input
       # raw_data_location; empty by default, and never on PR-label runs):
       #   <raw_data_location>/<run_id>__<tier>-<bench>/{<name>.tar.zst, members.sha256, backup.json, ...}
       # The runner's copy (~/capevolve-ci-capture/) is removed once the upload is checked, and kept
       # when it is not. CI never runs the backup itself: the backup (docs/FULL_BACKUP.md) is done on
-      # demand, by an agent a user asks, which reads the staging area as one of its sources.
+      # demand, by an agent a user asks, which reads the raw-data area as one of its sources.
       # rclone is installed first, pinned by version and sha256, into ~/.local/bin (install_rclone.sh);
       # if that fails, the upload is skipped and the capture stays on the runner.
       # Best-effort: never fails the run. See ci/benchmarks/lib/backup_run.sh.

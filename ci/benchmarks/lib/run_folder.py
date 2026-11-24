@@ -26,13 +26,13 @@ published by hand uses the same layout, see ci/benchmarks/PUBLISHING.md):
   capability.diff           the optimized capability vs the seed
   optimized_capability/     the optimized capability itself (no __pycache__)
   recipe/                   capevolve.yaml, split_ids.json, the tier's overrides.env
-  backup.json               where the raw run data is: its staging area, or the runner (when backup_run.sh kept it)
+  backup.json               where the raw run data is: the CI raw-data area, or the runner (when backup_run.sh kept it)
 
 SkillsBench skills are Anthropic-licensed, so for skillsbench only a diffstat is kept
 (capability.diffstat.txt), as run_suite.sh already does. Anything over MAX_BYTES is left out,
 and the README says so. Raw run data (traces, candidates, logs) is NOT here: the run's
 "Open UI" data covers browsing it. When the dispatch asked for it, the full run dir is kept, packed,
-in a staging area (or on the runner, when staging failed) as a capture source for
+in the CI raw-data area (or on the runner, when the upload failed) as a capture source for
 docs/FULL_BACKUP.md (backup_run.sh; backup.json and the README say where).
 """
 from __future__ import annotations
@@ -169,7 +169,8 @@ def readme(meta: dict, dest: Path, name: str, repo: str | None, has_ui: bool, sk
         L.append(f"- not included: {s}")
     if (dest / "backup.json").is_file():
         b = json.loads((dest / "backup.json").read_text(encoding="utf-8"))
-        where = (f"staged at `{b['staged']}`" if b.get("staged")
+        where = (f"uploaded to the CI raw-data area the run was dispatched with, as `{b['staged']}`"
+                 if b.get("staged")
                  else f"kept on runner `{b.get('runner', '?')}` in `{b.get('capture_dir', '?')}/`")
         L.append(f"- **Raw run data** (run dir with candidates, traces and rollouts, {b.get('bytes', 0) / 1e6:.0f} MB "
                  f"compressed): {where} "
