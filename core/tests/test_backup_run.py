@@ -380,6 +380,41 @@ def test_an_interactive_login_refresh_token_is_refused(tmp_path):
 
 
 @needs_rclone
+def test_a_wrapper_over_an_interactive_login_remote_is_refused_too(tmp_path):
+    out = _work(tmp_path)
+    conf = ('[box]\ntype = box\ntoken = {"access_token":"a","refresh_token":"r"}\n\n'
+            f'[stg]\ntype = alias\nremote = box:area\n')
+    r = _stage(tmp_path, out, "stg:raw", conf=conf)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "(or a remote it wraps) uses a refresh token" in r.stdout and (tmp_path / CAP).is_dir()
+
+
+@needs_rclone
+def test_a_config_that_is_not_valid_is_reported_as_such(tmp_path):
+    r = _stage(tmp_path, _work(tmp_path), "stg:raw", conf="token = no section header here\n")
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "is not a valid rclone config" in r.stdout and "no section header" not in r.stdout + r.stderr
+
+
+@needs_rclone
+@pytest.mark.skipif(hasattr(os, "geteuid") and os.geteuid() == 0, reason="root writes anywhere")
+def test_a_failed_upload_does_not_publish_the_area_path(tmp_path):
+    out = _work(tmp_path)
+    ro = tmp_path / "secretarea"
+    ro.mkdir()
+    ro.chmod(0o555)
+    try:
+        r = _stage(tmp_path, out, f"stg:{ro}/private-area-name")
+    finally:
+        ro.chmod(0o755)
+    assert r.returncode == 0, r.stdout + r.stderr
+    o = json.loads((out / "backup.json").read_text())
+    assert o["kept_on_runner"] is True and "<raw-data area>" in o["staging_error"], o
+    for text in (o["staging_error"], r.stdout):
+        assert "private-area-name" not in text and str(ro) not in text, text
+
+
+@needs_rclone
 def test_a_renewable_setup_with_a_token_is_accepted(tmp_path):
     out = _work(tmp_path)
     conf = STG_CONF + 'client_credentials = true\ntoken = {"access_token":"a","refresh_token":"r"}\n'

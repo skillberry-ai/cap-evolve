@@ -443,9 +443,13 @@ fails, the capture stays on the runner and the step warns why.
 - **`<remote>`** is defined by the repository secret **`RAW_DATA_RCLONE_CONFIG`**: the text of an rclone
   config section (`rclone config show <remote>`). Give it write access to the raw-data area only. The
   step writes it to a 0600 file in a private temp dir under `$RUNNER_TEMP` and removes it afterwards.
-- **Use credentials that do not change when used:** object-store access keys (S3-style), an SFTP key,
-  a password (for example WebDAV), a service account, or a JWT or client-credentials setup (for Box:
-  `box_sub_type = enterprise` with `box_config_file`). **A token from a browser login does not work:**
+- **Use credentials that do not change when used, written in full in the config text:** object-store
+  access keys (S3-style), an SFTP key, a password (for example WebDAV), a service account given
+  inline (Google Drive: `service_account_credentials`), or a client-credentials setup (Box:
+  `box_sub_type = enterprise`, `client_credentials = true`, and the app's `client_id` and
+  `client_secret`). An option that names a file (`box_config_file`, `service_account_file`) works
+  only when that file is on the runner. The rule holds for the remote and every remote it wraps
+  (`crypt`, `alias`, `union`, ...). **A token from a browser login does not work:**
   rclone saves each refreshed token into the config file, which the step deletes, and some providers
   (Box among them) accept each refresh token only once, so the secret's token would stop working, in
   CI and on the machine it was copied from. The step refuses such a config, and warns when rclone

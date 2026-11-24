@@ -230,23 +230,52 @@ rtmp="$(umask 077; mktemp -d -p "${RUNNER_TEMP:-${TMPDIR:-/tmp}}" rclone.XXXXXX)
 trap 'rm -rf "$rtmp"' EXIT
 rlog="$rtmp/rclone.log"
 rc_args=(--log-file "$rlog")
-# rclone's last error lines, one line, for staging_error (rclone does not log config values)
-why() { local t; t="$(tail -n 2 "$rlog" 2>/dev/null | sed -E 's/^[0-9\/]+ [0-9:]+ //' | tr '\n' ' ' | cut -c1-300)"; echo "${t:+: $t}"; }
+# rclone's last error lines, one line, for staging_error (rclone does not log config values). The
+# raw-data area's path is replaced by "<raw-data area>" (a literal match): staging_error is published.
+why() {
+  local t p="${loc#*:}"
+  t="$(tail -n 2 "$rlog" 2>/dev/null | sed -E 's/^[0-9\/]+ [0-9:]+ //' | tr '\n' ' ')"
+  t="${t//"$loc"/<raw-data area>}"
+  [ -n "$p" ] && t="${t//"$p"/<raw-data area>}"
+  p="${p#/}"; [ -n "$p" ] && t="${t//"$p"/<raw-data area>}"
+  t="$(printf '%s' "$t" | cut -c1-300)"
+  echo "${t:+: $t}"
+}
 if [ -n "${RAW_DATA_RCLONE_CONFIG:-}" ]; then
   cfg="$rtmp/rclone.conf"
   printf '%s\n' "$RAW_DATA_RCLONE_CONFIG" > "$cfg" || stage_fail "cannot write the rclone config"
   rc_args+=(--config "$cfg")
-  # Refuse an interactive-login refresh token (see Credentials above); accept service-account, JWT
-  # and client-credentials setups, which rclone can renew without rewriting a refresh token.
-  "$PY" - "$cfg" "$remote" <<'PY' || stage_fail "remote '$remote' uses a refresh token from an interactive login, which rclone rewrites when it refreshes; use credentials that do not change (see ci/benchmarks/README.md)"
+  # Refuse an interactive-login refresh token (see Credentials above), in the remote and in every
+  # remote it wraps (crypt, alias, chunker, union, ...); accept service-account, JWT and
+  # client-credentials setups, which rclone can renew without rewriting a refresh token.
+  "$PY" - "$cfg" "$remote" 2>/dev/null <<'PY'
 import configparser, sys
-c = configparser.RawConfigParser(strict=False)
-c.read(sys.argv[1])
-s = c[sys.argv[2]] if c.has_section(sys.argv[2]) else {}
+try:
+    c = configparser.RawConfigParser(strict=False)
+    c.read(sys.argv[1])
+except Exception:
+    sys.exit(2)
 renewable = ("service_account_file", "service_account_credentials", "box_config_file",
-             "config_credentials", "client_credentials")
-sys.exit(1 if "refresh_token" in s.get("token", "") and not any(s.get(k) for k in renewable) else 0)
+             "client_credentials")
+todo, seen = [sys.argv[2]], set()
+while todo:
+    name = todo.pop()
+    if name in seen or not c.has_section(name):
+        continue
+    seen.add(name)
+    s = c[name]
+    if "refresh_token" in s.get("token", "") and not any(s.get(k) for k in renewable):
+        sys.exit(1)
+    for ref in (s.get("remote", "") + " " + s.get("upstreams", "")).split():
+        if ":" in ref:
+            todo.append(ref.split(":", 1)[0])
+sys.exit(0)
 PY
+  case $? in
+    0) ;;
+    1) stage_fail "remote '$remote' (or a remote it wraps) uses a refresh token from an interactive login, which rclone rewrites when it refreshes; use credentials that do not change (see ci/benchmarks/README.md)" ;;
+    *) stage_fail "the RAW_DATA_RCLONE_CONFIG secret is not a valid rclone config" ;;
+  esac
 fi
 rclone "${rc_args[@]}" listremotes 2>/dev/null | grep -qxF "$remote:" \
   || stage_fail "remote '$remote' is not defined in the rclone config"
