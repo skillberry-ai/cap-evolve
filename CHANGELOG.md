@@ -37,8 +37,11 @@ All notable changes to cap-evolve are documented here. The format follows
   - The surface check now applies the adapter's `skills_tree_problems` (no symlink, no gold-looking file name such
     as `answers.py`, only text file types, no two files importing as one module). Before, an HC-2 candidate with a
     helper named `answers.py` passed the gate and all its rung-1 rollouts were refused.
-  New `helpers.skills_loader`: `kernel` (default) or `file`, for a target that runs skill scripts as files (then
-  neither applies). The optimizer's self-check uses the same config, so it reports the same findings.
+  Deleting a skill script that an unchanged sibling imports is refused as well. New `helpers.skills_loader`: `kernel`
+  (default; the documented contract for a skill surface, "preloaded as `skills.<skill>.<script>`") or `file`, for a
+  target that runs skill scripts as files (then neither applies). It only matters for a candidate with a `skills/`
+  tree: in this repo that is SpreadsheetBench; tau2's helper surface is `tools.py`. The optimizer's self-check uses
+  the same config, so it reports the same findings.
 - Under `promotion_rule: P2` the proposer now reads the CURRENT champion's own feedback-split (F) trials. Before, it
   read the seed's F trajectories in every iteration: P2 tags a candidate's F trials `<round>__<cid>__<stage>`,
   and the trajectory copier only looked for the bare `<cid>` tag, so it fell back to the seed. The same lookup

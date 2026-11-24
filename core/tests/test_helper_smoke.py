@@ -308,6 +308,19 @@ def test_a_changed_helper_that_breaks_an_unchanged_sibling_is_refused(tmp_path):
     assert r["files"] == ["skills/s/scripts/a_base.py"]     # only the changed file is "new", the whole tree is loaded
 
 
+def test_deleting_a_helper_an_unchanged_sibling_imports_is_refused(tmp_path):
+    """No remaining file changed, but the tree the target loads did (review of #1016, round 1)."""
+    parent = _tree(tmp_path, {"skills/s/scripts/a_base.py": "VALUE = 1\n",
+                              "skills/s/scripts/b_user.py": "from .a_base import VALUE\n"}, "p")
+    cand = _tree(tmp_path, {"skills/s/scripts/b_user.py": "from .a_base import VALUE\n"}, "c")
+    r = helper_smoke.run_smoke(cand, CFG, parent=parent, fixtures=[])
+    assert not r["skipped"] and not r["ok"] and "skills.s.b_user" in r["detail"], r
+    # a deletion nothing depends on still passes, and the file loader keeps the old (skip) behaviour
+    ok = _tree(tmp_path, {"skills/s/scripts/a_base.py": "VALUE = 1\n"}, "c_ok")
+    assert helper_smoke.run_smoke(ok, CFG, parent=parent, fixtures=[])["ok"]
+    assert helper_smoke.run_smoke(cand, {**CFG, "skills_loader": "file"}, parent=parent, fixtures=[])["skipped"]
+
+
 def test_helpers_outside_skill_scripts_still_import_from_their_file(tmp_path):
     c = _tree(tmp_path, {"tools/util.py": "import json\n\ndef f():\n    return json.dumps([1])\n"})
     cfg = {**CFG, "executable_dirs": ["tools"]}

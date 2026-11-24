@@ -128,7 +128,7 @@ def load_module():
     """The module under test: from the kernel bootstrap (kernel loader), or from its file."""
     if spec.get("loader") == "kernel":
         exec(compile(spec["bootstrap"], "<capevolve-kernel-bootstrap>", "exec"),
-             {"__name__": "capevolve_kernel_bootstrap"})
+             {"__name__": "__main__"})          # the kernel runs it in its __main__ namespace
         return sys.modules.get(spec["module"]) if spec.get("module") else None
     s = importlib.util.spec_from_file_location("helper_under_smoke", spec["script"])
     m = importlib.util.module_from_spec(s)

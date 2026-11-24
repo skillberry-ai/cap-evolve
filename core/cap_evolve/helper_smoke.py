@@ -192,6 +192,15 @@ def _skill_module(cand: Path, f: Path) -> str | None:
     return None
 
 
+def _removed_skill_scripts(cand: Path, parent: Path | None) -> list[str]:
+    """Skill scripts the parent has and the candidate does not: the tree the target loads changed even
+    when no remaining file did."""
+    if parent is None or not Path(parent).is_dir():
+        return []
+    return sorted(f.relative_to(parent).as_posix() for f in Path(parent).glob("skills/*/scripts/*.py")
+                  if not (cand / f.relative_to(parent)).exists())
+
+
 def _why(label: str, r: dict) -> str:
     bits = list(r.get("violations") or [])
     if r.get("exception"):
@@ -203,20 +212,21 @@ def run_smoke(cand: Path, cfg: dict, *, parent: Path | None = None, fixtures: li
     """``{name, ok, detail, skipped, files, runs}`` for the pregate. Not enabled / nothing to run => skipped."""
     cand = Path(cand).resolve()
     files = helpers.changed_files(cand, parent, helpers.executable_files(cand, cfg))
-    if not files:
+    kernel = cfg.get("skills_loader", "kernel") == "kernel"
+    removed = _removed_skill_scripts(cand, parent) if kernel else []
+    if not files and not removed:
         return {"name": "helper_smoke", "ok": True, "detail": "no new or changed helper files",
                 "skipped": True, "files": [], "runs": 0}
     rows = fixtures or []
     problems: list[str] = []
     runs = 0
-    kernel = cfg.get("skills_loader", "kernel") == "kernel"
     boot: dict = {}            # the one whole-tree import: {"src", "ok"} once it ran
 
     def kernel_import(f: Path) -> bool:
         nonlocal runs
         if not boot:
             try:
-                boot["src"] = helpers.kernel_bootstrap(cand / "skills", int(cfg["max_total_bytes"]))
+                boot["src"] = helpers.kernel_bootstrap(cand / "skills")   # the target's own call: same limit
             except ValueError as e:      # oversize tree, or two files that import as one module
                 boot.update(src=None, ok=False)
                 problems.append(f"{KERNEL_IMPORT_LABEL}: {e}"[:300])
@@ -257,5 +267,7 @@ def run_smoke(cand: Path, cfg: dict, *, parent: Path | None = None, fixtures: li
             elif (a["stdout"], a["value"], a["outputs"]) != (b["stdout"], b["value"], b["outputs"]):
                 problems.append(f"{label}: not deterministic (two runs differ in "
                                 f"{'stdout' if a['stdout'] != b['stdout'] else 'return value' if a['value'] != b['value'] else 'output bytes'})")
+    if removed and not boot:      # only deletions: an unchanged sibling may import a removed script
+        kernel_import(cand / "skills")
     return {"name": "helper_smoke", "ok": not problems, "detail": "; ".join(problems), "skipped": False,
             "files": [f.relative_to(cand).as_posix() for f in files], "runs": runs}
