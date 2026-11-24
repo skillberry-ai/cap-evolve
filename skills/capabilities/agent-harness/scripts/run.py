@@ -1,0 +1,34 @@
+"""Expose an agent-harness artifact as a Candidate and report the policy + validity."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+
+import _bootstrap  # noqa: F401
+
+from cap_evolve import Candidate
+
+import abstract
+
+
+def main(argv=None) -> int:
+    p = argparse.ArgumentParser(prog="agent-harness")
+    p.add_argument("--path", required=True,
+                   help="capability dir with harness.json (+ memory/, hooks/, harness_policy.json)")
+    p.add_argument("--baseline", help="the dir this candidate was derived from (e.g. the parent "
+                                     "candidate); warns when the implied cost per task grows")
+    args = p.parse_args(argv)
+    parts = abstract.materialize(Path(args.path))
+    v = abstract.validate(Path(args.path),
+                          baseline=Path(args.baseline) if args.baseline else None)
+    cand = Candidate(id="seed", component="agent-harness", text_parts=parts, dir=str(args.path))
+    print(json.dumps({"candidate": cand.to_dict(), "policy": abstract.load_policy(Path(args.path)),
+                      "valid": v}, indent=2))
+    return 0 if v["ok"] else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

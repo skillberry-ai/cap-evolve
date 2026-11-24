@@ -74,7 +74,7 @@ path, how to obtain it, and the alternatives. Never invent a NEEDED input.
 
 - **capability artifact**: the thing being optimized (a copy is edited).
   - where: a dir/file, e.g. `policy/policy.md`, `tools.json`, a skill package dir
-  - capability skill: `system-prompt | tools | mcp-tool | skill-package | …`
+  - capability skill: `system-prompt | tools | mcp-tool | skill-package | agent-harness | …`
 
 ## RECOMMENDED  (defaults shown; override in capevolve.yaml)
 

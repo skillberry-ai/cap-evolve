@@ -43,10 +43,12 @@ it. Here is everything intake needs (fill each field; leave a field blank only i
 you want intake to ask):
 
 # 1. CAPABILITY  (what gets optimized — a COPY is edited each iteration; the original is never touched)
-- type:    <one or a list of: system-prompt | tools | mcp-tool | skill-package>
+- type:    <one or a list of: system-prompt | tools | mcp-tool | skill-package | agent-harness>
            # system-prompt = a prompt/policy text file; tools = the agent's OWN tools;
            # mcp-tool = tools served by an EXTERNAL MCP server (only docs/exposed-set edits);
-           # skill-package = an Agent Skill dir (SKILL.md + refs + scripts). Combine, e.g. [system-prompt, tools].
+           # skill-package = an Agent Skill dir (SKILL.md + refs + scripts);
+           # agent-harness = the loop/context/memory/retry/sampling settings around the model
+           # (harness.json + memory/lessons.jsonl + hooks/). Combine, e.g. [system-prompt, tools].
 - seed:    <path to the seed artifact to optimize, e.g. policy/policy.md | tools.json | skills/<name>/>
 - NOTE for `tools`: the optimizer may edit tool docstrings/descriptions AND tool
            behavior/code, AND add/remove COMPOSITE tools that call existing tools
@@ -149,7 +151,7 @@ Start from the closest example and edit its `adapter.py`:
 resolves the name via `skills/optimizers/registry.yaml`:
 
 ```yaml
-capabilities:    [system-prompt, tools]   # any of: system-prompt | tools | mcp-tool | skill-package
+capabilities:    [system-prompt, tools]   # any of: system-prompt | tools | mcp-tool | skill-package | agent-harness
 optimizer_skill: claude-code              # ← swap: codex | gemini-cli | opencode | cursor | droid | copilot | kimi | pi | antigravity | openclaw | ibm-bob | generic | mock
 algorithm_skill: hill-climb               # hill-climb (--focus all|cyclic|hardest-first) | gepa | skillopt | agent-optimize (REQUIRES orchestration_mode: agent). evograph is deprecated.
 num_trials: 4

@@ -131,6 +131,28 @@
         ]
       }
     },
+    "agent-harness": {
+      "component": "capability",
+      "path": "capabilities/agent-harness",
+      "summary": "Optimize the harness around the model \u2014 agent loop and stopping rules, context management, cross-run memory, tool-error handling, sampling, and sub-agents.",
+      "entry": "scripts/run.py",
+      "abstract": "scripts/abstract.py",
+      "check": "scripts/check.py",
+      "prompt": null,
+      "inputs": null,
+      "needs": [],
+      "provides": [
+        "candidate"
+      ],
+      "compatible_with": {
+        "optimizers": [
+          "*"
+        ],
+        "algorithms": [
+          "*"
+        ]
+      }
+    },
     "mcp-tool": {
       "component": "capability",
       "path": "capabilities/mcp-tool",

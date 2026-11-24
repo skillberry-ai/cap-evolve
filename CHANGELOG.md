@@ -8,6 +8,12 @@ All notable changes to cap-evolve are documented here. The format follows
 [0.1.0]: https://github.com/skillberry-ai/cap-evolve/releases/tag/v0.1.0
 
 ## [Unreleased]
+### Added
+- `agent-harness` capability (`skills/capabilities/agent-harness`): optimizes the harness around the model
+  (loop and stopping rules, context compaction, cross-run memory, tool-error retries, sampling, sub-agents) through
+  `harness.json`, `memory/lessons.jsonl` and `hooks/*.py`. Memory is written by the optimizer from train/val traces
+  and is read-only during scored rollouts; `validate()` fails `memory.write_during_eval: true` and lessons from the
+  test split.
 ### Changed
 - **Behaviour change for hill-climb runs whose split has distinct `train` and `val` ids:** the proposer now
   learns from TRAIN and the gate still decides on VAL. Before, plain hill-climb (no `hc2` / P2 / `split_mode:

@@ -75,6 +75,11 @@ The **prompt** and the **tools** are equally fair game:
   (actionable errors), add loop/workflow/composite tools, and **swap via a safe wrapper —
   never bare-remove** a primitive. A tool body the model cannot skip beats a sentence it
   can forget; a knowledge-gap failure still belongs in the prompt.
+- **Harness** ([`agent-harness`](../skills/capabilities/agent-harness/SKILL.md)) — the
+  code and settings around the model: loop and stopping rules, context compaction,
+  **cross-run memory** (lessons the optimizer distills from train/val traces, read-only
+  while a rollout is scored), tool-error retries, sampling, and sub-agents. Every
+  setting must be one the adapter actually wires, and cost growth is reported.
 
 ## Speed + observability
 
@@ -86,7 +91,7 @@ heatmap, per-iteration git diffs, the lineage tree, and gate decisions.
 
 ## Skill library
 
-22 skills · 5 algorithms (3 run-executable + 2 agent-mode) · 14 optimizer backends, all over
+23 skills · 5 algorithms (3 run-executable + 2 agent-mode) · 14 optimizer backends, all over
 the core. Extending is one folder or one registry row — see [`EXTENDING.md`](EXTENDING.md).
 
 **How the counts are defined.** A *skill* is one `skills/<component>/<name>/SKILL.md`, i.e.
@@ -106,7 +111,7 @@ above is checkable rather than remembered.
 |---|---|
 | orchestrate | `orchestrate` · `using-cap-evolve` |
 | phases | `intake` · `implement-and-check` · `baseline` · `evaluate` · `diagnose` · `gate` · `finalize` · `report` |
-| capabilities | `system-prompt` · `skill-package` · `tools` · `mcp-tool` |
+| capabilities | `system-prompt` · `skill-package` · `tools` · `mcp-tool` · `agent-harness` |
 | algorithms | `hill-climb` (`--focus all\|cyclic\|hardest-first`) · `gepa` · `skillopt` · `agent-optimize` (agent mode only) · ~~`evograph`~~ (deprecated — use `agent-optimize`) |
 | optimizers | `run-optimizer` + `optimizers/registry.yaml` (14 backends incl. `mock`) |
 

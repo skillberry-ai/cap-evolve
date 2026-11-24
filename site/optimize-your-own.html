@@ -150,10 +150,12 @@ it. Here is everything intake needs (fill each field; leave a field blank only i
 you want intake to ask):
 
 # 1. CAPABILITY  (what gets optimized — a COPY is edited each iteration; the original is never touched)
-- type:    &lt;one or a list of: system-prompt | tools | mcp-tool | skill-package&gt;
+- type:    &lt;one or a list of: system-prompt | tools | mcp-tool | skill-package | agent-harness&gt;
            # system-prompt = a prompt/policy text file; tools = the agent's OWN tools;
            # mcp-tool = tools served by an EXTERNAL MCP server (only docs/exposed-set edits);
-           # skill-package = an Agent Skill dir (SKILL.md + refs + scripts). Combine, e.g. [system-prompt, tools].
+           # skill-package = an Agent Skill dir (SKILL.md + refs + scripts);
+           # agent-harness = the loop/context/memory/retry/sampling settings around the model
+           # (harness.json + memory/lessons.jsonl + hooks/). Combine, e.g. [system-prompt, tools].
 - seed:    &lt;path to the seed artifact to optimize, e.g. policy/policy.md | tools.json | skills/&lt;name&gt;/&gt;
 - NOTE for `tools`: the optimizer may edit tool docstrings/descriptions AND tool
            behavior/code, AND add/remove COMPOSITE tools that call existing tools
@@ -249,7 +251,7 @@ you want intake to ask):
       <div class="step">
         <h3>Set <code>capevolve.yaml</code></h3>
         <p>Swapping the optimizer is one word — one runner (<code>run-optimizer</code>) resolves the name via <code>skills/optimizers/registry.yaml</code>:</p>
-<pre><code>capabilities:    [system-prompt, tools]   # any of: system-prompt | tools | mcp-tool | skill-package
+<pre><code>capabilities:    [system-prompt, tools]   # any of: system-prompt | tools | mcp-tool | skill-package | agent-harness
 optimizer_skill: claude-code              # ← swap: codex | gemini-cli | opencode | cursor | droid | copilot | kimi | pi | antigravity | openclaw | ibm-bob | generic | mock
 algorithm_skill: hill-climb               # hill-climb (--focus all|cyclic|hardest-first) | gepa | skillopt | agent-optimize | evograph (last two REQUIRE orchestration_mode: agent)
 num_trials: 4

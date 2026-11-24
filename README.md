@@ -12,7 +12,7 @@
   <img src="https://img.shields.io/badge/python-3.10%2B-blue" alt="python">
   <img src="https://img.shields.io/badge/runtime%20deps-0%20(stdlib)-success" alt="deps">
   <img src="https://img.shields.io/badge/license-Apache--2.0-informational" alt="license">
-  <img src="https://img.shields.io/badge/agent%20skills-22-7c5cff" alt="skills">
+  <img src="https://img.shields.io/badge/agent%20skills-23-7c5cff" alt="skills">
 </p>
 
 **cap-evolve improves an AI agent's prompts, tools, and skills by learning from failed
@@ -175,6 +175,7 @@ credentials, and the optional dashboard: [Installation](docs/INSTALL.md).
 | **Tool implementations** | Edit tool **code** for deterministic enforcement; add/wrap/swap tools (never bare-remove) |
 | **MCP tool surfaces** | Safe edits only — tool docs, in-description examples, and which tools are exposed |
 | **Skill packages** | An Agent Skill dir — `SKILL.md` bodies, references, and executable scripts |
+| **Agent harness** | Loop and stopping rules, context compaction, cross-run memory (lessons learned from past runs), tool-error retries, sampling, sub-agents |
 
 Combine them, e.g. `[system-prompt, tools]`. See [Architecture](docs/ARCHITECTURE.md).
 
