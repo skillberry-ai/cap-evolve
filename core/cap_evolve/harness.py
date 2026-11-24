@@ -4264,12 +4264,23 @@ def _capability_brief(capabilities) -> str:
     return "\n".join(lines)
 
 
-def _algorithm_brief(current_val: SplitResult, algorithm: str) -> str:
+def _algorithm_brief(current_val: SplitResult, algorithm: str, split_mode: str = "") -> str:
     """How acceptance works, so the optimizer aims for a real, significant gain."""
+    if split_mode == "pooled":
+        scored = (
+            "Your edited candidate is judged on held-out tasks you have NOT seen (no scores "
+            "or feedback from them are shown to you), so fitting the visible feedback tasks "
+            f"will not pass. The current best scores {current_val.reward:.3f} on the tasks "
+            "you can see. "
+        )
+    else:
+        scored = (
+            "Your edited candidate is re-scored on the SAME held-out "
+            f"val tasks and compared to the current best (val reward {current_val.reward:.3f}). "
+        )
     return (
         "## How your edit is judged\n"
-        f"Algorithm: {algorithm}. Your edited candidate is re-scored on the SAME held-out "
-        f"val tasks and compared to the current best (val reward {current_val.reward:.3f}). "
+        f"Algorithm: {algorithm}. " + scored +
         "It is ACCEPTED only if the per-task improvement clears a significance bar (a noise "
         "margin), so a tiny or lucky change is rejected. Aim for a real, generalizing gain "
         "across a CLASS of failures — not a one-off patch to a single task (that overfits "
@@ -4919,7 +4930,8 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
                                budget=feedback_budget)
     passing = _passing_block(protect) if history_enabled() else ""
     cap = _capability_brief(capabilities)
-    algo = _algorithm_brief(current_val, algorithm)
+    split_mode = gatecfg.GateConfig.for_run(run_dir).split_mode if run_dir is not None else ""
+    algo = _algorithm_brief(current_val, algorithm, split_mode)
     bench = (f"- The benchmark / runner source is at `{bench_repo}` — read-only context "
              "you may consult to understand tools, scoring, or task structure."
              if bench_repo else "")

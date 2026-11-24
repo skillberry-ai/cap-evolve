@@ -449,7 +449,9 @@ def _verdict(
                     delta=mean_d, threshold=0.0,
                 )
             bar = k_se * se
-            ok = mean_d > bar
+            # A tie (mean_d == bar within float noise) is always a reject, so a
+            # one-task gain at k_se=1.0 does not flip with n by rounding.
+            ok = mean_d > bar and not math.isclose(mean_d, bar, rel_tol=1e-9, abs_tol=1e-12)
             return GateDecision(
                 accept=ok,
                 reason=(f"paired Δ̄={mean_d:+.4f} {'>' if ok else '<='} {k_se}·SE={bar:.4f} "
