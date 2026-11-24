@@ -30,7 +30,7 @@ checklist is `docs/VERIFICATION_SCAN.md` (v3.0).
   with `--immutable`, never `sync`, `move` or `purge`. Every file there is written once (§2.6). Never rename there, because on most remotes a rename is a copy and a delete.
   This holds even when the operator's role on the remote allows deletes. Never change or delete a
   source on the host. A source tree is never copied into the backup location as is, even when it is
-  laid out like it (for example the CI staging area or the runners' capture dirs, §5.3(b)): every byte reaches the
+  laid out like it (for example the CI raw-data area or the runners' capture dirs, §5.3(b)): every byte reaches the
   location only through staging, the secret scan and §10.
 - **One backup location.** The only place on a remote that this procedure writes to, or reads
   existing backups from, is `$LOC` (§2.1); every path on the remote is written relative to it. Every
@@ -493,21 +493,26 @@ and search at least:
   `.capevolve*/` (including `.capevolve-blackbox/`), plus the sibling `project/`, plus
   `<project>.sealed/<run>/` and `$CAPEVOLVE_SEALED_DIR`.
 - **(b) CI state:**
-  - **the CI staging area:** the rclone path a CI run was dispatched with (workflow input
-    `raw_data_location`, `.github/workflows/benchmarks.yml`), named per leg by the `staged` field of
-    the `backup.json` in the run's `ci_runs/` folder. It holds one dir per leg,
-    `<run_id>__<tier>-<bench>[.a<N>]/`, with the same files as a runner capture dir (below). For a
-    run dispatched with a staging area, it is the only full copy of the run dir.
+  - **the CI raw-data area:** the rclone path a CI run was dispatched with (workflow input
+    `raw_data_location`, `.github/workflows/benchmarks.yml`). It holds one dir per leg,
+    `<run_id>__<tier>-<bench>[.a<N>]/`, with the same files as a runner capture dir (below). The
+    `staged` field of the `backup.json` in the run's `ci_runs/` folder names the leg's dir, relative
+    to that path; the path itself is not recorded there. For a run dispatched with a raw-data area,
+    it is the only full copy of the run dir.
     - It is a source, independent of `$LOC`: never inside it, and never written to or deleted from by
       this procedure.
-    - Ask the user for the staging path and for read access to it (an rclone remote they configure).
-      Before the capture starts, check it read-only: `rclone lsf "<staging path>" --max-depth 1`
+    - Ask the user for the raw-data area's path and for read access to it (an rclone remote they
+      configure). Before the capture starts, check it read-only: `rclone lsf "<path>" --max-depth 1`
       succeeds, and `rclone cat --count 1024` reads one `backup.json`. If either fails, stop and ask
       the user.
     - Captured as §5.5 ("Packed sources") says;
+  - a CI run dispatched without a raw-data area (every run started by a PR label, and every dispatch
+    that leaves `raw_data_location` empty) has no full copy of its run dir once the next job of that
+    tier and bench cleans the workspace. Record its run dir as a `lost` gap; only its `ci_runs/` and
+    `ci_ui/` folders remain;
   - **runner capture dirs** `~/capevolve-ci-capture/<run_id>__<tier>-<bench>[.a<N>]/`, on every
     self-hosted runner (`ci/benchmarks/lib/backup_run.sh`): a leg's capture before its upload, kept
-    there when the upload to the staging area failed (`kept_on_runner: true` and `staging_error` in
+    there when the upload to the raw-data area failed (`kept_on_runner: true` and `staging_error` in
     the run's `backup.json`). The whole work area of one bench leg, packed, with
     `members.sha256` (per-file sha256 taken on the runner before packing), `symlinks.txt`,
     `unreadable.txt` and `backup.json`. The archive holds the job's output dir, the project's
@@ -576,8 +581,8 @@ about 32 at a time. A serial listing of a large folder can take hours.
   points to the existing folder, and its gap report compares both copies (§6.4).
 
 **Capture order.** Most volatile first, by the profile's `volatile: true` entries: harness job dirs
-deleted on a timer, CI work dirs and slots, `skillberry-runs/live` branches, CI captures in the staging area or on a runner
-(removed by the staging area's owner or the runner's admin to free space, only after a backup recorded them as uploaded and
+deleted on a timer, CI work dirs and slots, `skillberry-runs/live` branches, CI captures in the raw-data area or on a runner
+(removed by the raw-data area's owner or the runner's admin to free space, only after a backup recorded them as uploaded and
 checked), `/tmp`, unmerged branches. Then the rest.
 
 ### 5.5 Copy, hash and redact
@@ -585,9 +590,9 @@ checked), `/tmp`, unmerged branches. Then the rest.
 - **Hash on the source.** Hash every source file (sha256) **on the source, before copying**. The
   result is `source_sha256` in `MANIFEST.json`.
 - **Copy into staging.** Copy into a local staging tree laid out as in §3. Preserve timestamps.
-- **Packed sources** (§3.3), for example a CI capture in the staging area or on a runner (§5.3(b)):
-  1. A staged capture is first fetched read-only, with `rclone copy` of its dir into a scratch dir
-     outside staging; its host is then that scratch dir. Hash the archive on its host, and compare it with the `sha256` and `bytes` in its `backup.json`
+- **Packed sources** (§3.3), for example a CI capture in the raw-data area or on a runner (§5.3(b)):
+  1. A capture in the raw-data area is first fetched read-only, with `rclone copy` of its dir into a
+     scratch dir outside staging; its host is then that scratch dir. Hash the archive on its host, and compare it with the `sha256` and `bytes` in its `backup.json`
      (for a runner archive, the `backup.json` in the run's `ci_runs/` folder). A mismatch is
      a finding: record both values, capture the archive as found, and report it in `GAPS.json`
      (`unreadable` if it does not unpack).

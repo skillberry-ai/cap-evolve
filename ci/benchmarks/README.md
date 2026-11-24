@@ -429,7 +429,7 @@ github.com still works, so publishing no longer goes through the artifact servic
 To publish a run its bench job never published — one you resumed by hand, or drove directly on
 the runner — follow [PUBLISHING.md](PUBLISHING.md); it runs these same scripts in the same order.
 
-### Raw run data: staged when the dispatch asks for it
+### Raw run data: uploaded to a CI raw-data area when the dispatch asks for it
 
 What gets published is a summary. The raw run data, meaning the run dir with every candidate, trace and
 rollout, plus the job's output dir, is lost when the next job's checkout cleans the workspace. A
@@ -441,17 +441,26 @@ checked with `rclone check`. Only when the check passes is the runner's copy rem
 fails, the capture stays on the runner and the step warns why.
 
 - **`<remote>`** is defined by the repository secret **`RAW_DATA_RCLONE_CONFIG`**: the text of an rclone
-  config section, for example the output of `rclone config show <remote>` on a machine where that
-  remote works. Give it write access to the staging path only. The step writes it to a 0600 temp file
-  and removes it afterwards.
+  config section (`rclone config show <remote>`). Give it write access to the raw-data area only. The
+  step writes it to a 0600 file in a private temp dir under `$RUNNER_TEMP` and removes it afterwards.
+- **Use credentials that do not change when used:** object-store access keys (S3-style), an SFTP key,
+  a password (for example WebDAV), a service account, or a JWT or client-credentials setup (for Box:
+  `box_sub_type = enterprise` with `box_config_file`). **A token from a browser login does not work:**
+  rclone saves each refreshed token into the config file, which the step deletes, and some providers
+  (Box among them) accept each refresh token only once, so the secret's token would stop working, in
+  CI and on the machine it was copied from. The step refuses such a config, and warns when rclone
+  rewrites a config anyway.
 - **rclone** is installed by the step itself into `~/.local/bin`, pinned by version and sha256
   ([`lib/install_rclone.sh`](lib/install_rclone.sh)).
-- The staging area holds **raw, unscanned data** (it can contain tokens from logs or `.env` files), so
-  keep it private to the people who run the backup.
+- The raw-data area holds **raw, unscanned data** (it can contain tokens from logs or `.env` files),
+  so keep it private to the people who run the backup. Its path is not written into the published
+  `ci_runs/` folder: `backup.json` there names only the leg's dir in it.
+- A run dispatched without `raw_data_location` keeps no raw data: once the next job of that tier and
+  bench cleans the workspace, only the published summary remains.
 
 CI never runs the backup: the full backup procedure, [`docs/FULL_BACKUP.md`](../../docs/FULL_BACKUP.md),
-is applied on demand by an agent a user asks, with read access to the staging area, which it reads as
-one of its sources. Each capture, in the staging area and on the runner before its upload:
+is applied on demand by an agent a user asks, with read access to the raw-data area, which it reads as
+one of its sources. Each capture, in the raw-data area and on the runner before its upload:
 
 ```
 <run_id>__<tier>-<bench>/        (a re-run attempt N>1: <run_id>__<tier>-<bench>.a<N>/)
@@ -463,7 +472,7 @@ one of its sources. Each capture, in the staging area and on the runner before i
 ```
 
 A capture dir is written once and never overwritten. The run's `ci_runs/` folder gets a copy of
-`backup.json`, with `staged` (where it was uploaded) and `kept_on_runner`, and its README says where
+`backup.json`, with `staged` (the leg's dir in the raw-data area) and `kept_on_runner`, and its README says where
 the capture is, so it can be found from the run's page.
 The step is best-effort: it never fails a run, falls back to `.tar.gz` if `zstd` is missing, and skips
 (with a warning) when the runner's disk would drop below 20 GB free.
@@ -471,10 +480,10 @@ The step is best-effort: it never fails a run, falls back to `.tar.gz` if `zstd`
 **Moving it to the backup location** is done only by following `docs/FULL_BACKUP.md`, which lists this
 tree as a source (§5.3(b)). The operator unpacks each archive into staging, checks it against
 `backup.json` and `members.sha256`, scans it for secrets, organizes it into a run folder and uploads that.
-**Never copy the staging area or `~/capevolve-ci-capture/` into the backup location as is**: it is not in the location's
+**Never copy the raw-data area or `~/capevolve-ci-capture/` into the backup location as is**: it is not in the location's
 layout, it was never scanned for secrets, and it has no `MANIFEST.json`. The backup never deletes a
 source. Once a full backup's `BACKUP_RESULTS_<TS>.md` records a run as uploaded and checked, the
-staging area's owner (or, for a capture left on a runner, the runner's admin) may remove it.
+raw-data area's owner (or, for a capture left on a runner, the runner's admin) may remove it.
 
 Runs from 2026-11-18 until this change were archived as
 `~/skillberry-runs-backup/user/<who triggered the run>/<repo>/<run_id>__<tier>-<bench>.tar.zst`, with
