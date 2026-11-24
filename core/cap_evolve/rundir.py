@@ -10,6 +10,9 @@ Layout under ``.capevolve/run_<ts>/``::
     rollouts/<split>/<task>__<cand>__t<k>.json
     events.jsonl        # append-only audit log
 
+A sealed run (pooled mode's confirm stratum, or a split passed to ``seal_split``) keeps those rollouts in
+``sealed_dir`` instead, outside the run tree; ``rollout_dir`` resolves the location.
+
 This is the only module that owns the run's state, so test-sealing and budget
 accounting can't be bypassed by a skill. Pure stdlib.
 """
@@ -597,10 +600,53 @@ class RunDir:
             self._write_state(st)
         return target
 
+    @property
+    def sealed_splits(self) -> tuple:
+        """Legacy splits whose rollouts live in the sealed dir (``seal_split``); ``()`` for most runs."""
+        try:
+            return tuple(self._read_state().get("sealed_splits") or ())
+        except (OSError, ValueError):
+            return ()
+
+    def seal_split(self, split: str) -> int:
+        """Move ``split``'s rollouts out of the run tree into the sealed dir, and keep every later one there.
+
+        For a split the proposer must not read but the framework still scores (hill-climb's val under
+        ``hc_feedback_split: train``). Idempotent, and safe to call again after a crash between the state
+        write and the move: whatever is still under ``rollouts/<split>`` is moved (an existing sealed copy
+        wins). Returns the number of files moved."""
+        if split in ("test", "confirm"):
+            raise ValueError(f"split {split!r} is sealed by its own mechanism")
+        sd = self.seal()
+        if split not in self.sealed_splits:
+            with _file_lock(self._state_lock):
+                st = self._read_state()
+                st["sealed_splits"] = sorted(set(st.get("sealed_splits") or ()) | {split})
+                self._write_state(st)
+        src, dst = self.rollouts / split, sd / "rollouts" / split
+        if not src.is_dir():
+            return 0
+        dst.mkdir(parents=True, exist_ok=True)
+        n = 0
+        for f in sorted(src.iterdir()):
+            target = dst / f.name
+            if target.exists():
+                f.unlink() if f.is_file() else shutil.rmtree(f)
+            else:
+                shutil.move(str(f), str(target))
+                n += 1
+        with contextlib.suppress(OSError):
+            src.rmdir()
+        return n
+
     def rollout_dir(self, split: str) -> Path:
-        """``rollouts/<split>``; the confirm stratum's rollouts live in the sealed dir."""
-        sd = self.sealed_dir if split == "confirm" else None
-        return (sd / "rollouts" / "confirm") if sd is not None else self.rollouts / split
+        """``rollouts/<split>``; the confirm stratum's rollouts, and those of any ``seal_split`` split, live
+        in the sealed dir."""
+        if split == "confirm" or (split != "test" and split in self.sealed_splits):
+            sd = self.sealed_dir
+            if sd is not None:
+                return sd / "rollouts" / split
+        return self.rollouts / split
 
     @property
     def private_dir(self) -> Path:

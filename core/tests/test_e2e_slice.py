@@ -106,16 +106,19 @@ def test_cyclic_variant_also_improves(tmp_path):
     assert summary["best_val"] == 1.0
 
 
+@pytest.mark.parametrize("feedback", ["train", "val"])
 @pytest.mark.parametrize("focus", ["cyclic", "hardest-first"])
-def test_narrow_focus_renders_the_focused_tasks_failures(tmp_path, focus):
+def test_narrow_focus_renders_the_focused_tasks_failures(tmp_path, focus, feedback, monkeypatch):
     """A narrow focus must focus a task the loop actually HAS per-task data for.
 
-    ``_focus_instructions`` filters the parent's VAL rows, so a focus set built from
-    TRAIN ids intersected them in nothing and every non-``all`` schedule shipped a
-    prompt with "0 failing of 0 tasks" and no failure index at all. Assert on the
+    ``_focus_instructions`` filters the parent's rows on the split the proposer reads
+    (``hc_feedback_split``: train by default for these distinct splits, or val), so a focus
+    set built from the OTHER split intersected them in nothing and every non-``all`` schedule
+    shipped a prompt with "0 failing of 0 tasks" and no failure index at all. Assert on the
     rendered prompt, not on a tuple of schedule names — the mock optimizer applies a
     fixed edit script and never reads the prompt, so only this can see the regression.
     """
+    monkeypatch.setenv("CAPEVOLVE_HC_FEEDBACK_SPLIT", feedback)
     from cap_evolve import Budget, RunDir, harness
     import importlib.util
     spec = importlib.util.spec_from_file_location("toy_calc_adapter", EXAMPLE / "adapter.py")
@@ -138,9 +141,10 @@ def test_narrow_focus_renders_the_focused_tasks_failures(tmp_path, focus):
                             focus=focus, max_iterations=1)
     assert len(seen) == 1
     prompt = seen[0]
-    val_ids = run_dir.read_splits().val
-    assert any(f"Focus: task {t}." in prompt for t in val_ids), \
-        "the focused task must be a VAL id — that is the only per-task data the loop holds"
+    ids = run_dir.read_splits().ids(feedback)
+    assert set(ids) != set(run_dir.read_splits().val if feedback == "train" else run_dir.read_splits().train)
+    assert any(f"Focus: task {t}." in prompt for t in ids), \
+        f"the focused task must be a {feedback} id — the split whose per-task data the proposer reads"
     assert "## (a)" in prompt, "the focused task's failures must reach the optimizer"
     assert "0 failing of 0 tasks" not in prompt
 

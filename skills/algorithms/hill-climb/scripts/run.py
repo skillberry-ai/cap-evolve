@@ -1,11 +1,12 @@
 """hill-climb — global hill-climb on the val gate, with a selectable focus schedule.
 
-``--focus`` selects which of the parent's failing VAL tasks each iteration's
-reflection emphasizes (val is the only per-task data the loop holds):
+``--focus`` selects which of the parent's failing tasks each iteration's reflection
+emphasizes, on the split the proposer learns from (spec ``hc_feedback_split``: TRAIN by
+default when train and val differ, else val; the gate always decides on val):
 
-    all            every failing val task each iteration (default)
-    cyclic         one val task at a time, cycling through them
-    hardest-first  val tasks ordered by the parent's per-task reward ascending
+    all            every failing task each iteration (default)
+    cyclic         one task at a time, cycling through them
+    hardest-first  tasks ordered by the parent's per-task reward ascending
 
 The parent is always the current best (global hill-climb); honesty (val-only
 gate, sealed test) lives in core. This is a thin wrapper over

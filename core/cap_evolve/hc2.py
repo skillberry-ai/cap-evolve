@@ -616,6 +616,7 @@ def hc2_loop(adapter, *, run_dir, optimizer, evaluator, params: HC2Params, ctx, 
     """
     from . import harness
     rejected, history, store = harness._init_memory_store(run_dir, store)
+    harness.resolve_hc_feedback_split(run_dir, pooled=True)   # not used under HC-2 (F/C); logged
     rdiffs = RejectedDiffs(run_dir)
     n_rounds = params.max_rounds or max_iterations
     window = params.diversity_window or params.k

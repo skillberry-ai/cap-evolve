@@ -48,11 +48,40 @@ def _ledger_paths(run_dir) -> list:
     return paths
 
 
+def _sealed_split(run_dir, split: str) -> bool:
+    """Rows of the confirm stratum, and of any split the run sealed (``RunDir.seal_split``), live sealed."""
+    return split == "confirm" or split in (getattr(run_dir, "sealed_splits", None) or ())
+
+
 def _path_for(run_dir, split: str) -> Path:
     sealed = getattr(run_dir, "sealed_dir", None)
-    if split == "confirm" and sealed is not None:
+    if sealed is not None and _sealed_split(run_dir, split):
         return Path(sealed) / LEDGER
     return Path(run_dir.root) / LEDGER
+
+
+def seal_rows(run_dir, split: str) -> int:
+    """Move the run ledger's ``split`` rows into the sealed ledger (after ``RunDir.seal_split``). Returns rows moved."""
+    sealed = getattr(run_dir, "sealed_dir", None)
+    if sealed is None:
+        return 0
+    src, dst = Path(run_dir.root) / LEDGER, Path(sealed) / LEDGER
+    with _file_lock(src.with_suffix(".lock")):
+        have = _rows_of(src)
+        move = [r for r in have if r.get("split") == split]
+        if not move:
+            return 0
+        with _file_lock(dst.with_suffix(".lock")):
+            prior = _rows_of(dst)
+            seen = {(r["tag"], r["split"], r["task"], r["k"]) for r in prior}
+            add = [r for r in move if (r["tag"], r["split"], r["task"], r["k"]) not in seen]
+            tmp = dst.with_suffix(".tmp")
+            tmp.write_text("".join(json.dumps(r) + "\n" for r in prior + add), encoding="utf-8")
+            os.replace(tmp, dst)
+        tmp = src.with_suffix(".tmp")
+        tmp.write_text("".join(json.dumps(r) + "\n" for r in have if r.get("split") != split), encoding="utf-8")
+        os.replace(tmp, src)
+    return len(move)
 
 
 def _rows_of(path: Path) -> list[dict]:
@@ -115,13 +144,14 @@ def record(run_dir, candidate_dir, split: str, tag: str, task_ids, ks, *, seed_b
         return 0
     h, fp = cap_hash(candidate_dir), env_fp()
     path = _path_for(run_dir, split)
+    rdir = run_dir.rollout_dir(split)
     with _file_lock(path.with_suffix(".lock")):
         have = _rows_of(path)
         old = {(r["tag"], r["split"], r["task"], r["k"]): r for r in have}
         new = []
         for tid in task_ids:
             for j, k in enumerate(ks):
-                f = run_dir.rollout_dir(split) / f"{tid}__{tag}__t{k}.json"
+                f = rdir / f"{tid}__{tag}__t{k}.json"
                 try:
                     d = json.loads(f.read_text(encoding="utf-8"))
                 except (OSError, ValueError):
@@ -166,7 +196,7 @@ def backfill(run_dir) -> int:
     """Rebuild the ledger from the rollouts on disk (train/val; never test)."""
     n = 0
     for split in ("train", "val"):
-        d = Path(run_dir.rollouts) / split
+        d = run_dir.rollout_dir(split) if hasattr(run_dir, "rollout_dir") else Path(run_dir.rollouts) / split
         by_tag: dict[str, dict[str, set]] = {}
         for p in d.glob("*.json") if d.is_dir() else []:
             m = _ROLLOUT.match(p.name)

@@ -188,7 +188,8 @@ def in_footprint_tasks(run_dir, tags, symbols, split: str = "val") -> set[str]:
     """
     if not symbols:
         return set()
-    d = Path(getattr(run_dir, "rollouts", run_dir)) / split
+    d = (run_dir.rollout_dir(split) if hasattr(run_dir, "rollout_dir")
+         else Path(getattr(run_dir, "rollouts", run_dir)) / split)
     if not d.is_dir():
         return set()
     symbols = set(symbols)

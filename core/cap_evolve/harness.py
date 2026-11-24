@@ -1175,8 +1175,10 @@ def reuse_baseline(prior_run_dir: Path, *, run_dir: RunDir) -> SplitResult:
     # with them on disk neither re-evaluates the seed. The prior run's CANDIDATE rollouts are not
     # copied — they share names (cand_0001, …) with this run's candidates, so a reader could see
     # the prior run's result for a candidate this run has not evaluated yet.
+    prior_rd = RunDir(prior) if (prior / "state.json").exists() else None
     for split in ("val", "train"):
-        src = prior / "rollouts" / split
+        # A prior hill-climb run under ``hc_feedback_split: train`` keeps its val rollouts sealed.
+        src = prior_rd.rollout_dir(split) if prior_rd is not None else prior / "rollouts" / split
         if not src.is_dir():
             continue
         dst = run_dir.rollout_dir(split)
@@ -1550,6 +1552,128 @@ def gate_split(run_dir) -> str:
         return "feedback" if run_dir.read_splits().pooled else "val"
     except (OSError, ValueError):
         return "val"
+
+
+def feedback_split(run_dir) -> str:
+    """The split whose per-task results and rollouts the PROPOSER reads (LEDGER, JOURNAL stamps, RUNMAP,
+    ``prior_iterations/``, ``trajectories/``): ``feedback`` under ``split_mode: pooled``, ``train`` when this
+    hill-climb run resolved ``hc_feedback_split`` to train (``resolve_hc_feedback_split``), else ``val``.
+
+    Distinct from ``gate_split``: under ``hc_feedback_split: train`` the gate still runs on val."""
+    if gate_split(run_dir) == "feedback":
+        return "feedback"
+    try:
+        return "train" if run_dir._read_state().get("hc_feedback_split") == "train" else "val"
+    except (AttributeError, OSError, ValueError):
+        return "val"
+
+
+def _hide_val_ids(run_dir, text):
+    """Under ``hc_feedback_split: train`` the proposer may learn the val VERDICT and aggregates, never a val
+    task id. Free text that reaches it (a gate reason naming the tasks a veto counted, an evaluation error)
+    has each val-only id replaced by ``<val task>``. A purely numeric id is replaced only where it is quoted
+    (a list literal): bare, it cannot be told from a number. Structured views (the failure lists, LEDGER's
+    broke/fixed, trajectories) never hold val ids in the first place; this is for the free text."""
+    if not text or feedback_split(run_dir) != "train":
+        return text
+    try:
+        sp = run_dir.read_splits()
+    except (OSError, ValueError):
+        return text
+    hidden = [t for t in {str(t) for t in sp.val} - {str(t) for t in sp.train} if t and t in text]
+    if not hidden:
+        return text
+    hidden.sort(key=len, reverse=True)
+    words = [t for t in hidden if not re.fullmatch(r"[0-9.]+", t)]
+    if words:
+        text = re.sub(r"(?<![A-Za-z0-9_])(?:" + "|".join(map(re.escape, words)) + r")(?![A-Za-z0-9_])",
+                      "<val task>", text)
+    nums = [t for t in hidden if t not in words]
+    if nums:
+        text = re.sub(r"(['\"])(?:" + "|".join(map(re.escape, nums)) + r")\1", r"\1<val task>\1", text)
+    return text
+
+
+def resolve_hc_feedback_split(run_dir, *, pooled: bool = False) -> str:
+    """Resolve ``hc_feedback_split`` ONCE per run, freeze it in state.json, seal val when it is ``train``.
+
+    The legacy hill-climb loop's proposer learns from the returned split; the gate decides on val either way.
+    ``auto`` (the default) is ``train`` when the frozen train and val ids differ as sets and ``val`` when they
+    are the same set (then the two are one split and nothing changes). ``val`` reproduces the loop as it was.
+    ``train`` with train == val is ``val`` for the same reason; with an EMPTY train split it is an error.
+
+    ``pooled`` (rule P2 / ``split_mode: pooled`` / HC-2): the proposer already reads F and the gate C, so the
+    key is not used: ``feedback`` is returned, nothing is frozen or sealed, and an explicit ``train`` is a
+    logged no-op (``ignored: true``).
+
+    A value frozen by an earlier call wins over a later spec/env (an event records the request), because
+    switching back to val mid-run would hand the proposer the per-task val data the run has withheld. Under
+    ``train`` the val rollouts are moved to the sealed dir (``RunDir.seal_split``) together with their
+    evidence-ledger rows, and every later val rollout is written there. Logs one ``hc_feedback_split`` event.
+    """
+    from .specfile import spec_for_run
+    requested, source = gatecfg.hc_feedback_split_setting(spec_for_run(run_dir))
+    splits = None if pooled else run_dir.read_splits()
+    if pooled or splits.pooled:
+        run_dir.log_event("hc_feedback_split", value="feedback", ignored=requested == "train",
+                          requested=requested, source=source,
+                          reason="pooled split / rule P2 / HC-2: the proposer reads F, the gate C")
+        return "feedback"
+    tr, va = {str(t) for t in splits.train}, {str(t) for t in splits.val}
+    info = dict(requested=requested, source=source, n_train=len(tr), n_val=len(va), n_overlap=len(tr & va))
+    frozen = run_dir._read_state().get("hc_feedback_split")
+    if frozen in ("train", "val"):
+        value = frozen
+    else:
+        if requested == "train" and not tr:
+            raise ValueError("hc_feedback_split: train needs a non-empty train split")
+        value = "train" if requested != "val" and tr and tr != va else "val"
+    moved = rows = 0
+    if value == "train":
+        # Sealed BEFORE the value is frozen, so a run whose sealed dir cannot be created can still be
+        # restarted with ``hc_feedback_split: val``.
+        try:
+            moved = run_dir.seal_split("val")
+        except OSError as e:
+            raise RuntimeError(
+                f"hc_feedback_split=train keeps the val rollouts in a sealed dir outside the run tree and "
+                f"could not create it ({e}). Set CAPEVOLVE_SEALED_DIR to a writable directory, or set "
+                "hc_feedback_split: val to let the proposer read val as before.") from e
+        rows = eval_index.seal_rows(run_dir, "val")
+    if frozen not in ("train", "val"):
+        value = run_dir.freeze_state(hc_feedback_split=value)[0]["hc_feedback_split"]
+    run_dir.log_event("hc_feedback_split", value=value, frozen=frozen in ("train", "val"),
+                      sealed_val=value == "train", moved_val_rollouts=moved, moved_ledger_rows=rows, **info)
+    return value
+
+
+def _champion_train(adapter, run_dir: RunDir, cid: str, *, n_trials: int, errored_policy=None,
+                    reason: str = "champion") -> tuple:
+    """The TRAIN measurement the proposer of the next step reads for champion ``cid`` (``hc_feedback_split:
+    train``): its own train rollouts when they already cover the train split (the seed's from baseline, a
+    resumed champion's), else ONE evaluation of the full train split at ``n_trials``, tagged ``cid``.
+
+    Always under a budget reservation: it counts against ``max_metric_calls`` like any eval and never runs
+    past it. Returns ``(SplitResult | None, info)``; ``None`` with ``info["unfunded"]`` when the reservation
+    is refused (the caller stops the loop), or with ``info["error"]`` when the evaluation raised."""
+    n_train = len(run_dir.read_splits().train)
+    have = split_result_from_rollouts(run_dir, cid, "train", errored_policy=errored_policy)
+    if have.per_task and len(have.per_task) >= n_train:
+        return have, {"reused": True}
+    need = n_train * max(1, int(n_trials))
+    try:
+        sr = evaluate_candidate(adapter, run_dir.candidate_dir(cid), run_dir=run_dir, split="train",
+                                n_trials=n_trials, tag=cid, errored_policy=errored_policy, budget_reserve=True)
+    except BudgetExhausted as e:
+        run_dir.log_event("champion_train_unfunded", candidate=cid, reason=reason, rollouts=need,
+                          remaining=run_dir.remaining_metric_calls(), error=str(e)[:300])
+        return None, {"unfunded": str(e)[:300], "rollouts": need}
+    except Exception as e:  # noqa: BLE001 — the accept stands; the next proposer keeps the old train view
+        run_dir.log_event("champion_train_error", candidate=cid, reason=reason, error=str(e)[:500])
+        return None, {"error": str(e)[:500]}
+    run_dir.log_event("champion_train", candidate=cid, reason=reason, rollouts=need, reward=sr.reward,
+                      n_scored=sr.n_scored, n_tasks=sr.n_tasks)
+    return sr, {"rollouts": need}
 
 
 def planned_val_ids(run_dir, split: str | None = None) -> list:
@@ -2424,8 +2548,11 @@ def _build_ledger(workdir: Path, run_dir: RunDir) -> None:
     except Exception:  # noqa: BLE001
         rows = []
 
-    table = ["| iter | candidate | parent | outcome | val | Δ vs parent | broke (were passing) "
-             "| fixed | unresolved (moved < 2·SE) |",
+    fb = feedback_split(run_dir)
+    on_train = fb == "train"
+    table = ["| iter | candidate | parent | outcome | val | Δ vs parent | "
+             + ("broke on train (were passing) | fixed on train | unresolved on train (moved < 2·SE) |"
+                if on_train else "broke (were passing) | fixed | unresolved (moved < 2·SE) |"),
              "| --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
     void: list[str] = []
     for i, rec in enumerate(rows, 1):
@@ -2437,15 +2564,21 @@ def _build_ledger(workdir: Path, run_dir: RunDir) -> None:
         # was never tested, only its execution was broken — so name it and say why.
         if rec.get("val") is None and str(rec.get("reason", "")).startswith("indecisive"):
             outcome = "not scored"
-            void.append(f"- **{cid}**: {str(rec.get('reason'))[:600]}")
+            void.append(f"- **{cid}**: {_hide_val_ids(run_dir, str(rec.get('reason')))[:600]}")
         val = rec.get("val")
         pval = rec.get("parent_val")
         d = (f"{val - pval:+.3f}" if isinstance(val, (int, float))
              and isinstance(pval, (int, float)) else "")
-        imp = _candidate_task_impact(run_dir, cid, gate_split(run_dir), parent_of=parent_of) or {}
-        broke = "{" + ", ".join(str(t) for t in (imp.get("broke") or [])[:20]) + "}"
-        fixed = "{" + ", ".join(str(t) for t in (imp.get("fixed") or [])[:20]) + "}"
-        unres = "{" + ", ".join(str(t) for t in (imp.get("unresolved") or [])[:20]) + "}"
+        imp = _candidate_task_impact(run_dir, cid, fb, parent_of=parent_of)
+        if imp is None and on_train:
+            # Only champions are run on train; a rejected candidate has the val verdict and nothing else.
+            broke = fixed = unres = "—"
+            imp = {}
+        else:
+            imp = imp or {}
+            broke = "{" + ", ".join(str(t) for t in (imp.get("broke") or [])[:20]) + "}"
+            fixed = "{" + ", ".join(str(t) for t in (imp.get("fixed") or [])[:20]) + "}"
+            unres = "{" + ", ".join(str(t) for t in (imp.get("unresolved") or [])[:20]) + "}"
         if imp.get("causal") is False:
             # Too few draws per task to call a move causal: counts against the null expectation only.
             broke = fixed = "n/a"
@@ -2471,7 +2604,12 @@ def _build_ledger(workdir: Path, run_dir: RunDir) -> None:
         "task, in either direction, and must not be reasoned about as a regression or a "
         "win. Do not redesign an edit because a task appears there — re-measure it, or "
         "ignore it.\n\n"
-        "## Iterations\n" + "\n".join(table) + "\n\n"
+        + ("Every candidate is judged on the held-out VAL split, whose per-task results are not "
+           "shown to you: `val` and `Δ vs parent` are the val aggregates the gate decided on. The "
+           "per-task columns are TRAIN: each accepted champion is run once on train and compared "
+           "with its parent's train results. A rejected candidate is never run on train, so its "
+           "row has the val verdict only (`—`).\n\n" if on_train else "")
+        + "## Iterations\n" + "\n".join(table) + "\n\n"
         + ("## Not scored — fix the execution, keep the idea\n"
            "These candidates were never measured, so their reward says nothing. Correct the "
            "stated fault and retry the same idea; do not abandon it, and do not resubmit it "
@@ -2543,7 +2681,9 @@ def _reconcile_journal(workdir: Path, run_dir: RunDir, cid: str, *,
     # Framework-owned RESULT: the gate outcome + the tasks this candidate measurably
     # broke/fixed (vs its parent), folded VISIBLY into the journal so the next iteration
     # learns what actually worked/regressed from the narrative — not just a terse comment.
-    impact = _candidate_task_impact(run_dir, cid, gate_split(run_dir)) or {}
+    fb = feedback_split(run_dir)
+    impact = _candidate_task_impact(run_dir, cid, fb) or {}
+    reason = _hide_val_ids(run_dir, reason)
     broke = ", ".join(str(t) for t in (impact.get("broke") or [])[:30]) or "—"
     fixed = ", ".join(str(t) for t in (impact.get("fixed") or [])[:30]) or "—"
     unres = ", ".join(str(t) for t in (impact.get("unresolved") or [])[:30]) or "—"
@@ -2559,7 +2699,15 @@ def _reconcile_journal(workdir: Path, run_dir: RunDir, cid: str, *,
                     "REPLACES its rollouts) or with more trials in ONE evaluation; do not "
                     "redesign it on this round's numbers, and do not re-derive it as a new idea.")
     elif accepted:
-        verdict, guidance = "ACCEPTED (new champion)", ""
+        verdict, guidance = "ACCEPTED (new champion)", (
+            " — judged on val; `fixed`/`broke` above compare its TRAIN results with its parent's."
+            if fb == "train" else "")
+    elif fb == "train":
+        verdict = "REJECTED (champion unchanged)"
+        guidance = (" — judged on the held-out val split, whose per-task results are not shown to you: "
+                    "val/Δ above are the aggregates the gate decided on. A rejected candidate is never "
+                    "run on train, so there is no per-task comparison for it. Weigh the aggregate and the "
+                    "train failures you can see; do not guess at which val tasks moved.")
     elif impact.get("causal") is False:
         verdict = "REJECTED (champion unchanged)"
         guidance = (" — per-task movement at this many trials per task is within re-measurement noise, "
@@ -2716,9 +2864,10 @@ def record_iteration(run_dir: RunDir, workdir: Path, cid: str, *,
 def _prior_trajectories(run_dir: RunDir, cid: str, dst: Path) -> int:
     """Copy candidate ``cid``'s rollouts on the split the proposer may read into ``dst/trajectories/``.
 
-    That split is ``feedback`` under ``split_mode: pooled`` and ``val`` otherwise; confirm and test
+    That split is ``feedback_split``: ``feedback`` under ``split_mode: pooled``, ``train`` under
+    ``hc_feedback_split: train`` (only champions have train rollouts), else ``val``; confirm and test
     rollouts are never copied. Returns the number of files copied."""
-    split = gate_split(run_dir)
+    split = feedback_split(run_dir)
     vdir = run_dir.rollout_dir(split)
     files = sorted(g for t in candidate_rollout_tags(run_dir, cid, split)
                    for g in vdir.glob(f"*__{t}__t*.json"))
@@ -2752,7 +2901,7 @@ def _build_runmap(workdir: Path, run_dir: RunDir) -> None:
         rows = []
 
     prior_root = workdir / "prior_iterations"
-    traj_split = gate_split(run_dir)
+    traj_split = feedback_split(run_dir)
     table = ["| iter | candidate | parent | outcome | val | ./prior_iterations/<id>/ |",
              "| --- | --- | --- | --- | --- | --- |"]
     for i, rec in enumerate(rows, 1):
@@ -2792,9 +2941,15 @@ def _build_runmap(workdir: Path, run_dir: RunDir) -> None:
         "- `diff.patch` — the EXACT capability edit it made vs its parent\n"
         f"- `trajectories/` — that candidate's OWN `{traj_split}` trials: how the agent actually "
         "behaved under the edit. For a rejected candidate, compare them with the parent's trials "
-        "on the same tasks to see what the edit broke or failed to fix.\n\n"
-        f"The live run dir (read-only) is at `{run_dir.root}` if you need "
-        "`rollouts/<split>/` traces or the git log.\n\n"
+        "on the same tasks to see what the edit broke or failed to fix.\n"
+        + ("  Only accepted champions are run on train, so a rejected candidate has no trajectories "
+           "here; its `val` below is the aggregate the gate decided on.\n" if traj_split == "train" else "")
+        + "\n"
+        + (f"The live run dir (read-only) is at `{run_dir.root}` if you need `rollouts/train/` "
+           "traces or the git log. Val rollouts are sealed: they are not in the run dir.\n\n"
+           if traj_split == "train" else
+           f"The live run dir (read-only) is at `{run_dir.root}` if you need "
+           "`rollouts/<split>/` traces or the git log.\n\n")
         + "\n".join(table) + "\n\n"
         "Before proposing, read the PROCESS.md + diff.patch of the prior iterations that "
         "targeted the SAME cluster you are about to work on — so you BUILD ON them rather "
@@ -3105,7 +3260,8 @@ class WikiMemory(MemorySkill):
             "- `results/round-<N>.json` — this iteration's metrics.\n"
             "Full format + examples: `./guidance/memory-wiki/SKILL.md`.\n"
             "- `LEDGER.md` — FACTS (framework, read-only): every iteration's outcome + "
-            "which val tasks it measurably broke/fixed.\n"
+            f"which {'train' if feedback_split(run_dir) == 'train' else 'val'} tasks it measurably "
+            "broke/fixed.\n"
         )
         return f"{instructions}\n\n{pointer}\n"
 
@@ -3551,7 +3707,7 @@ def _tamper_step(run_dir: RunDir, *, cid: str, parent_id, workdir: Path,
     run_dir.log_event(event, candidate=cid, parent=parent_id,
                       report=report.to_dict(), reason=report.reason)
     if rejected is not None:
-        rejected.add(cid, f"candidate {cid} (not scored: invalid)", reason, None)
+        rejected.add(cid, f"candidate {cid} (not scored: invalid)", _hide_val_ids(run_dir, reason), None)
     run_dir.snapshot(cid, workdir, ignore=_SNAPSHOT_IGNORE)  # forensics only — never best
     record_iteration(run_dir, workdir, cid, parent_id=parent_id, accepted=False,
                      reason=reason, val=None, parent_val=current_val.reward,
@@ -3652,7 +3808,7 @@ def run_step(
     rejected=None,
     history=None,
     store=None,
-    eval_split: str = "val",
+    eval_split: str | None = None,
     ctx: "OptimizerContext | None" = None,
     protected_patterns=None,
     footprint_gate: bool = True,
@@ -3677,6 +3833,13 @@ def run_step(
     candidate's edit can causally reach, so tasks outside it stop contributing noise to the
     SE — see ``footprint`` and ``_paired_deltas``. It is a no-op whenever the footprint
     cannot be established, and ``footprint_gate=False`` forces the full-vector behaviour.
+
+    ``eval_split`` (default ``feedback_split(run_dir)``) is the split whose parent rollouts are copied
+    into the proposer's ``trajectories/``. Under ``hc_feedback_split: train`` it is train, and an
+    ACCEPTED candidate is then measured once on train (``_champion_train``, budget-reserved) before its
+    step is recorded, so the next proposer reads the champion's own train results; the step dict carries
+    them as ``champion_train``. A refused reservation stops the loop (``budget_unfunded``). The gate is
+    unchanged: val, against the parent's val. A rejected candidate is never run on train.
     """
     gate_kwargs = dict(gate_kwargs or {})
     sw = pop_paper_switches(gate_kwargs)
@@ -3690,6 +3853,8 @@ def run_step(
         gate_kwargs["min_coverage"] = gcfg.min_joint_coverage
     p2 = pop_p2(gate_kwargs, run_dir)
     promo = pop_promotion(gate_kwargs)
+    if eval_split is None:
+        eval_split = feedback_split(run_dir)
     if p2 is not None:
         footprint_gate = False
         eval_split = "feedback"      # the proposer sees F only; C is the evaluator's
@@ -3943,7 +4108,9 @@ def run_step(
                                      cand_reward[t].get("stderr") or 0.0))
             if regressions:
                 accepted = False
-                decision.reason += f"; REJECTED by no-regression gate (broke {regressions})"
+                decision.reason += (f"; REJECTED by no-regression gate (broke {regressions})"
+                                    if eval_split != "train" else
+                                    f"; REJECTED by no-regression gate (broke {len(regressions)} val task(s))")
         promo_rec, baseline_val, promo_extra_cost = None, None, (0.0, 0)
         if promo is not None:
             import dataclasses
@@ -4014,15 +4181,25 @@ def run_step(
     run_dir.snapshot(cid, workdir, ignore=_SNAPSHOT_IGNORE)
     
     # Validate DIAGNOSIS.json if present (advisory only, never blocks)
-    val_task_ids = [str(t.get("task_id")) for t in (cand_val.per_task or [])]
+    val_task_ids = ([str(t) for t in run_dir.read_splits().train] if eval_split == "train"   # the ids it saw
+                    else [str(t.get("task_id")) for t in (cand_val.per_task or [])])
     diag_validation = _validate_diagnosis_json(workdir, run_dir=run_dir, 
                                               val_tasks=val_task_ids)
     
+    champ_train, champ_info = None, None
     if accepted:
         run_dir.set_best(cid)
         if p2_out is not None:
             baseline_val = _p2_champion_feedback(adapter, run_dir, cid, p2,
                                                  errored_policy=sw["errored_trial_policy"])
+        elif eval_split == "train":
+            # ``hc_feedback_split: train``: the new champion's own TRAIN results are what the next proposer
+            # reads (trajectories, failure lists, LEDGER broke/fixed vs the parent's train results). Measured
+            # before ``record_iteration`` so the JOURNAL stamp already compares them.
+            champ_train, champ_info = _champion_train(adapter, run_dir, cid, n_trials=n_trials,
+                                                      errored_policy=sw["errored_trial_policy"])
+            if champ_info.get("unfunded"):
+                run_dir.mark_unfunded("champion train eval: " + champ_info["unfunded"])
     # ``accepted=None`` leaves the stall counter untouched. An indecisive step is not
     # evidence that the optimizer has run out of ideas — the candidate was never
     # judged — so it must not push the run toward an early "stalled" stop.
@@ -4047,6 +4224,10 @@ def run_step(
     if mv["n_shared"]:
         _step_extra.update(broke=mv["broke"], fixed=mv["fixed"],
                            n_broke=len(mv["broke"]), n_fixed=len(mv["fixed"]))
+    if champ_info is not None:
+        _step_extra["champion_train"] = {**champ_info, **({"reward": champ_train.reward,
+                                                            "n_scored": champ_train.n_scored}
+                                                           if champ_train is not None else {})}
     # Charge the budget, write the iteration record, fold the JOURNAL — the shared step
     # every algorithm routes through (see ``record_iteration``).
     record_iteration(run_dir, workdir, cid, parent_id=parent_id, accepted=accepted,
@@ -4085,7 +4266,7 @@ def run_step(
                 # Authoring smells the candidate carries are part of why it is worth
                 # revisiting — the next iteration should see them, not rediscover them.
                 reason += " | validation warnings: " + "; ".join(validation.warnings[:5])
-            rejected.add(cid, summary, reason, cand_val.reward)
+            rejected.add(cid, summary, _hide_val_ids(run_dir, reason), cand_val.reward)
     if store is not None:
         store.commit(f"iter {run_dir.spent.iterations}: "
                      f"{'ACCEPT' if accepted else 'reject'} {summary}",
@@ -4108,6 +4289,9 @@ def run_step(
         # publishes (``movement``), recorded whether or not any veto is enabled.
         "broke": mv["broke"],
         "fixed": mv["fixed"],
+        **({"champion_train": champ_train.to_dict() if champ_train is not None else None}
+           if champ_info is not None else {}),
+        **({"budget_unfunded": True} if (champ_info or {}).get("unfunded") else {}),
         "optimizer_seconds": optimizer_seconds,
         "optimizer_usd": opt_cost_usd,
         "optimizer_tokens": opt_tokens,
@@ -4264,8 +4448,22 @@ def _capability_brief(capabilities) -> str:
     return "\n".join(lines)
 
 
-def _algorithm_brief(current_val: SplitResult, algorithm: str) -> str:
-    """How acceptance works, so the optimizer aims for a real, significant gain."""
+def _algorithm_brief(current_val: SplitResult, algorithm: str, split: str = "val") -> str:
+    """How acceptance works, so the optimizer aims for a real, significant gain.
+
+    ``split="train"`` (``hc_feedback_split: train``): the failures shown are train tasks and the judge is
+    val, whose per-task results the proposer never sees; ``current_val`` is still the VAL result."""
+    if split == "train":
+        return (
+            "## How your edit is judged\n"
+            f"Algorithm: {algorithm}. The failures above are from the TRAIN split. Your edited "
+            "candidate is scored on a separate, held-out VAL split and compared to the current best "
+            f"(val reward {current_val.reward:.3f}). You never see val tasks or per-task val results: "
+            "only the accept/reject verdict and the aggregate val numbers come back. It is ACCEPTED "
+            "only if the per-task improvement on val clears a significance bar (a noise margin), so a "
+            "tiny or lucky change is rejected. Aim for a real, generalizing gain across a CLASS of "
+            "failures — a patch that only fits the train tasks you can see will not move val."
+        )
     return (
         "## How your edit is judged\n"
         f"Algorithm: {algorithm}. Your edited candidate is re-scored on the SAME held-out "
@@ -4882,12 +5080,17 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
                         optimizer_name: str | None = None,
                         seed_empty: bool | None = None,
                         target_reader: str = "", run_dir=None, optimizer=None,
-                        feedback_budget: "feedback_digest.Budget | None" = None) -> str:
+                        feedback_budget: "feedback_digest.Budget | None" = None,
+                        split: str = "val", gate_val: SplitResult | None = None) -> str:
     """Render one iteration's INSTRUCTIONS by substituting dynamic blocks into the
     optimizer-instructions template. ``run_dir`` enables the full-feedback files and, with the
     run's ``optimizer``, the feedback summaries (``feedback_digest``); without them long entries
     are cut, not summarized. ``feedback_budget`` is what is left of this prompt's feedback
     budget after the caller's own feedback blocks (default: all of it).
+
+    ``current_val`` is the result the failure lists are built from, on ``split``. Under
+    ``hc_feedback_split: train`` that is the parent's TRAIN result (``split="train"``) and ``gate_val``
+    is its val result, of which only the aggregate reward reaches the prompt (the judged-by brief).
 
     The static framing (analyze → ideate → edit, the read-pointers, the code-bearing
     tools guidance, the economy footer) lives in the template file — authored by the
@@ -4909,9 +5112,10 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
     # The counts are over the FOCUS SET; ``_passing_block`` below counts the whole val
     # split. Say which, or a narrow focus renders "0 solid" one line above
     # "Currently PASSING (1 task(s))" and the prompt contradicts itself.
-    scope = "tasks" if focus_ids is None else f"focused task(s) of {len(per_all)} on val"
+    on = "train" if split == "train" else "val"
+    scope = "tasks" if focus_ids is None else f"focused task(s) of {len(per_all)} on {on}"
     focus_summary = (
-        f"Focus: {label}. Current val reward {current_val.reward:.3f}: "
+        f"Focus: {label}. Current {on} reward {current_val.reward:.3f}: "
         f"{len(solid)} solid / {len(flaky)} flaky / {len(always_fail)} failing"
         + (f" / {len(errored)} infra-errored" if errored else "") + f" of {n} {scope}."
     )
@@ -4919,7 +5123,8 @@ def _focus_instructions(current_val: SplitResult, focus_ids, label: str,
                                budget=feedback_budget)
     passing = _passing_block(protect) if history_enabled() else ""
     cap = _capability_brief(capabilities)
-    algo = _algorithm_brief(current_val, algorithm)
+    algo = (_algorithm_brief(gate_val if gate_val is not None else current_val, algorithm, split="train")
+            if on == "train" else _algorithm_brief(current_val, algorithm))
     bench = (f"- The benchmark / runner source is at `{bench_repo}` — read-only context "
              "you may consult to understand tools, scoring, or task structure."
              if bench_repo else "")
@@ -5236,7 +5441,8 @@ class OptimizerContext:
                      algorithm: str, parent_dir: Path | None = None,
                      extra: str = "", run_dir: RunDir | None = None,
                      optimizer: "OptimizerFn | None" = None,
-                     feedback_budget: "feedback_digest.Budget | None" = None) -> str:
+                     feedback_budget: "feedback_digest.Budget | None" = None,
+                     split: str = "val", gate_val: SplitResult | None = None) -> str:
         """Render this iteration's prompt from the shared template.
 
         ``parent_dir`` (the candidate being forked) enables the empty-seed note;
@@ -5244,6 +5450,8 @@ class OptimizerContext:
         feedback too (GEPA's reflection, SkillOpt's slow update), the caller builds it from a
         ``feedback_digest.Budget`` and passes the same object as ``feedback_budget``, so the
         whole prompt's feedback stays inside ONE budget.
+
+        ``split``/``gate_val``: see ``_focus_instructions`` (hill-climb's ``hc_feedback_split: train``).
         """
         seed_empty = (_capability_is_empty(list(self.capabilities), parent_dir)
                       if parent_dir is not None else None)
@@ -5252,7 +5460,7 @@ class OptimizerContext:
             algorithm=algorithm, instructions_file=self.instructions_file,
             bench_repo=self.bench_repo, optimizer_name=self.optimizer_name,
             seed_empty=seed_empty, target_reader=self.target_reader, run_dir=run_dir,
-            optimizer=optimizer, feedback_budget=feedback_budget)
+            optimizer=optimizer, feedback_budget=feedback_budget, split=split, gate_val=gate_val)
         return (text.rstrip() + "\n\n" + extra.strip() + "\n") if extra.strip() else text
 
 
@@ -5333,9 +5541,24 @@ def hill_climb_loop(
     per-piece kwargs below it (``capabilities`` … ``target_profile_file``) are then unused,
     kept only for the callers/tests that predate ``OptimizerContext``. Pass one or the
     other, not both.
+
+    The proposer learns from ``hc_feedback_split`` (``resolve_hc_feedback_split``, once per run): by
+    default TRAIN when the frozen train and val ids differ. Then the failure lists, the focus order and
+    ``trajectories/`` come from the parent's train results (the seed's from baseline, each new champion's
+    from one train eval after its accept), while every candidate is still gated on val against the
+    parent's val (``current_val``); the proposer gets the val verdict and aggregates only, and the val
+    rollouts are sealed. ``hc_feedback_split: val`` (or train == val) is the loop as it always was.
     """
     gate_kwargs = dict(gate_kwargs or {})
     rejected, history, store = _init_memory_store(run_dir, store)
+    _errored = gate_kwargs.get("errored_trial_policy")
+    _pooled = (pop_p2(dict(gate_kwargs), run_dir) is not None
+               or gatecfg.GateConfig.for_run(run_dir).split_mode == "pooled")
+    fb = resolve_hc_feedback_split(run_dir, pooled=_pooled)
+    on = "train" if fb == "train" else "val"     # what the prompt calls the split it shows
+    # The parent's result on the split the proposer reads. Under train it is read (or, for a parent with
+    # no train rollouts, measured) only once a step is actually going to run — see the loop.
+    current_fb = None if fb == "train" else current_val
 
     # The shared optimizer read-context (see ``OptimizerContext``). Callers that pass the
     # individual pieces instead of a ``ctx`` get one assembled from them, so hill-climb,
@@ -5350,17 +5573,21 @@ def hill_climb_loop(
             project_dir=project_dir, instructions_file=instructions_file,
             bench_repo=bench_repo, target_reader=_tp.reader_block(_profile))
 
-    # Establish the focus order when a narrow focus is requested. It must be over VAL
-    # ids: ``_focus_instructions`` filters the parent's val per-task rows, and the
-    # splits are disjoint slices of one shuffled id list (``splits.py:117-119``), so a
-    # focus set of TRAIN ids intersects those rows in nothing at all and the optimizer
-    # prompt renders zero failures. ``current_val`` already holds every focused task's
-    # reward, so hardest-first orders straight off it — no extra evaluation to buy.
-    order = list(run_dir.read_splits().val)
-    if focus == "hardest-first":
-        score_by = {pt.get("task_id"): float(pt.get("reward", 0.0) or 0.0)
-                    for pt in current_val.per_task}
-        order.sort(key=lambda t: score_by.get(t, 0.0))  # hardest (lowest) first
+    # Establish the focus order when a narrow focus is requested. It must be over the ids of
+    # the split the PROPOSER reads (train, F, or val): ``_focus_instructions`` filters the
+    # parent's per-task rows on that split, and the splits are disjoint slices of one shuffled
+    # id list (``splits.py:117-119``), so a focus set from another split intersects those rows
+    # in nothing at all and the optimizer prompt renders zero failures. ``current_fb`` already
+    # holds every focused task's reward, so hardest-first orders straight off it.
+    def _focus_order(cur: SplitResult) -> list:
+        sp = run_dir.read_splits()
+        ids = list(sp.train if fb == "train" else sp.feedback if sp.pooled else sp.val)
+        if focus == "hardest-first":
+            score_by = {pt.get("task_id"): float(pt.get("reward", 0.0) or 0.0) for pt in cur.per_task}
+            ids.sort(key=lambda t: score_by.get(t, 0.0))  # hardest (lowest) first
+        return ids
+
+    order = _focus_order(current_fb) if current_fb is not None else None
 
     def _heal(cur: SplitResult) -> SplitResult:
         """Coverage policy ``tipping``: retry the incumbent's missing cells, quarantine what stays missing."""
@@ -5372,6 +5599,8 @@ def hill_climb_loop(
                              errored_policy=(gate_kwargs or {}).get("errored_trial_policy"))
 
     current_val = _heal(current_val)
+    if fb != "train":
+        current_fb = current_val
     steps = []
     baseline_val = current_val.reward   # the bar every candidate must clear, at loop entry
     convergence_stop = ""
@@ -5380,17 +5609,31 @@ def hill_climb_loop(
         exhausted, why = run_dir.budget_exhausted()
         if exhausted:
             break
+        if current_fb is None:
+            # ``hc_feedback_split: train``, first step: the parent's train result (the seed's from baseline,
+            # a resumed champion's from its rollouts; measured now, budget-reserved, only when missing).
+            parent = run_dir.best_id or "seed"
+            current_fb, _info = _champion_train(adapter, run_dir, parent, n_trials=n_trials,
+                                                errored_policy=_errored, reason="loop_entry")
+            if current_fb is None and _info.get("error"):
+                raise RuntimeError(f"hc_feedback_split=train: measuring {parent} on train raised: "
+                                   f"{_info['error']}")
+            if current_fb is None:
+                run_dir.mark_unfunded("champion train eval: " + _info["unfunded"])
+                budget_stop = "budget_reserved"
+                break
+            order = _focus_order(current_fb)
         if focus == "all":
-            focus_ids, label = None, "every failing task on the val split"
+            focus_ids, label = None, f"every failing task on the {on} split"
         elif focus in ("cyclic", "hardest-first"):
             focus_ids = [order[i % len(order)]] if order else None
-            label = f"task {focus_ids[0]}" if focus_ids else "the whole val split"
+            label = f"task {focus_ids[0]}" if focus_ids else f"the whole {on} split"
         else:
             focus_ids, label = None, focus
         parent_dir = run_dir.candidate_dir(run_dir.best_id)
-        instructions = ctx.instructions(current_val, focus_ids, label,
+        instructions = ctx.instructions(current_fb, focus_ids, label,
                                         algorithm=algorithm, parent_dir=parent_dir, run_dir=run_dir,
-                                        optimizer=optimizer)
+                                        optimizer=optimizer, split=on, gate_val=current_val)
         if convergence:
             # Pure: recomputed from the steps so far, so a resumed run rebuilding the
             # same observation list gets the identical signal.
@@ -5414,11 +5657,18 @@ def hill_climb_loop(
         )
         steps.append(step)
         if step.get("budget_unfunded"):
+            if step["accepted"]:     # accepted, then its champion train eval could not be funded
+                current_val = SplitResult.from_dict(step.get("baseline_val") or step["candidate_val"])
             budget_stop = "budget_reserved"
             break
         if step["accepted"]:
             # Under rule P the next baseline is the incumbent's FRESH confirmation measurement.
             current_val = _heal(SplitResult.from_dict(step.get("baseline_val") or step["candidate_val"]))
+            if fb != "train":
+                current_fb = current_val
+            elif step.get("champion_train"):
+                current_fb = SplitResult.from_dict(step["champion_train"])
+            # (a champion train eval that raised keeps the parent's train view; see champion_train_error)
 
     _, why = run_dir.budget_exhausted()
     internal = _internal_estimate(adapter, run_dir, gate_kwargs)
