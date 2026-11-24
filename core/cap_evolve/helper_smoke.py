@@ -3,7 +3,12 @@
 For each such file (``helpers.executable_files``) a subprocess, with no network, no process
 spawning, gold/evaluator paths unreadable and every write refused (see ``_helper_smoke_runner``):
 
-1. imports it;
+1. imports it. A skill script (``skills/<skill>/scripts/*.py``) is imported the way the target gets it
+   (``helpers.skills_loader: kernel``, the default): the candidate's whole skills tree goes through
+   ``helpers.kernel_bootstrap``, so ``skills.<skill>.<script>`` is defined from text, in file-name order,
+   with no file on disk. A helper whose sibling import only works from a real file is refused here,
+   instead of failing every rollout. Any other helper file (and ``skills_loader: file``) is imported from
+   its file;
 2. for each fixture row that targets it, runs it TWICE (different ``PYTHONHASHSEED``, fresh
    identical workspaces) and requires: no exception, identical stdout/return value/output bytes,
    and writes only to the row's declared ``outputs``.
@@ -119,7 +124,10 @@ def _materialize(ws: Path, row: dict, cfg: dict) -> None:
             raise ValueError(f"fixture file {rel!r}: expected text, {{'src': path}} or {{'b64': data}}")
 
 
-def _run_once(root: Path, script: Path, row: dict | None, cfg: dict, seed: str, mode: str) -> dict:
+def _run_once(root: Path, script: Path, row: dict | None, cfg: dict, seed: str, mode: str, *,
+              bootstrap: str | None = None, module: str | None = None) -> dict:
+    """One runner subprocess. With ``bootstrap`` (kernel loader) the runner execs that source instead of
+    importing ``script`` from its file, and a ``call`` row calls ``module`` (``skills.<skill>.<script>``)."""
     tmp = Path(tempfile.mkdtemp(prefix="capevolve_helper_smoke_"))
     try:
         ws, rt = tmp / "ws", tmp / "rt"
@@ -136,6 +144,7 @@ def _run_once(root: Path, script: Path, row: dict | None, cfg: dict, seed: str, 
             "argv": [str(a).replace("{ws}", str(ws)) for a in (row or {}).get("argv") or []],
             "stdin": (row or {}).get("stdin"), "call": (row or {}).get("call"),
             "args": (row or {}).get("args") or [], "kwargs": (row or {}).get("kwargs") or {},
+            "loader": "kernel" if bootstrap is not None else "file", "bootstrap": bootstrap, "module": module,
         }
         (rt / "spec.json").write_text(json.dumps(spec), encoding="utf-8")
         env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "PYTHONHASHSEED": seed,
@@ -172,6 +181,26 @@ def _declared(ws: Path, outputs, res) -> set:
     return ok
 
 
+KERNEL_IMPORT_LABEL = "skills import (as the target loads them: skills.<skill>.<script>, from text, in file-name order)"
+
+
+def _skill_module(cand: Path, f: Path) -> str | None:
+    """``skills.<skill>.<script>`` when ``f`` is one of the files ``kernel_bootstrap`` loads, else None."""
+    rel = f.relative_to(cand).parts
+    if len(rel) == 4 and rel[0] == "skills" and rel[2] == "scripts" and f.suffix == ".py":
+        return f"skills.{helpers._ident(rel[1])}.{helpers._ident(f.stem)}"
+    return None
+
+
+def _removed_skill_scripts(cand: Path, parent: Path | None) -> list[str]:
+    """Skill scripts the parent has and the candidate does not: the tree the target loads changed even
+    when no remaining file did."""
+    if parent is None or not Path(parent).is_dir():
+        return []
+    return sorted(f.relative_to(parent).as_posix() for f in Path(parent).glob("skills/*/scripts/*.py")
+                  if not (cand / f.relative_to(parent)).exists())
+
+
 def _why(label: str, r: dict) -> str:
     bits = list(r.get("violations") or [])
     if r.get("exception"):
@@ -183,25 +212,52 @@ def run_smoke(cand: Path, cfg: dict, *, parent: Path | None = None, fixtures: li
     """``{name, ok, detail, skipped, files, runs}`` for the pregate. Not enabled / nothing to run => skipped."""
     cand = Path(cand).resolve()
     files = helpers.changed_files(cand, parent, helpers.executable_files(cand, cfg))
-    if not files:
+    kernel = cfg.get("skills_loader", "kernel") == "kernel"
+    removed = _removed_skill_scripts(cand, parent) if kernel else []
+    if not files and not removed:
         return {"name": "helper_smoke", "ok": True, "detail": "no new or changed helper files",
                 "skipped": True, "files": [], "runs": 0}
     rows = fixtures or []
     problems: list[str] = []
     runs = 0
+    boot: dict = {}            # the one whole-tree import: {"src", "ok"} once it ran
+
+    def kernel_import(f: Path) -> bool:
+        nonlocal runs
+        if not boot:
+            try:
+                boot["src"] = helpers.kernel_bootstrap(cand / "skills")   # the target's own call: same limit
+            except ValueError as e:      # oversize tree, or two files that import as one module
+                boot.update(src=None, ok=False)
+                problems.append(f"{KERNEL_IMPORT_LABEL}: {e}"[:300])
+                return False
+            r = _run_once(cand, f, None, cfg, _SEEDS[0], "import", bootstrap=boot["src"])
+            runs += 1
+            boot["ok"] = bool(r.get("ok"))
+            if not boot["ok"]:
+                problems.append(_why(KERNEL_IMPORT_LABEL, r))
+        return boot["ok"]
+
     for f in files:
         rel = f.relative_to(cand).as_posix()
-        r = _run_once(cand, f, None, cfg, _SEEDS[0], "import")
-        runs += 1
-        if not r.get("ok"):
-            problems.append(_why(f"{rel} import", r))
-            continue
+        module = _skill_module(cand, f) if kernel else None
+        if module is not None:
+            if not kernel_import(f):
+                continue
+        else:
+            r = _run_once(cand, f, None, cfg, _SEEDS[0], "import")
+            runs += 1
+            if not r.get("ok"):
+                problems.append(_why(f"{rel} import", r))
+                continue
         for i, row in enumerate(x for x in rows if x.get("helper") == rel):
             label = f"{rel} fixture {row.get('id', i)}"
             mode = "call" if row.get("kind") == "call" else "cli"
+            kw = ({"bootstrap": boot["src"], "module": module}
+                  if module is not None and mode == "call" else {})   # a cli row runs the file, as before
             try:
-                a = _run_once(cand, f, row, cfg, _SEEDS[0], mode)
-                b = _run_once(cand, f, row, cfg, _SEEDS[1], mode)
+                a = _run_once(cand, f, row, cfg, _SEEDS[0], mode, **kw)
+                b = _run_once(cand, f, row, cfg, _SEEDS[1], mode, **kw)
             except ValueError as e:
                 problems.append(f"{label}: {e}")
                 continue
@@ -211,5 +267,7 @@ def run_smoke(cand: Path, cfg: dict, *, parent: Path | None = None, fixtures: li
             elif (a["stdout"], a["value"], a["outputs"]) != (b["stdout"], b["value"], b["outputs"]):
                 problems.append(f"{label}: not deterministic (two runs differ in "
                                 f"{'stdout' if a['stdout'] != b['stdout'] else 'return value' if a['value'] != b['value'] else 'output bytes'})")
+    if removed and not boot:      # only deletions: an unchanged sibling may import a removed script
+        kernel_import(cand / "skills")
     return {"name": "helper_smoke", "ok": not problems, "detail": "; ".join(problems), "skipped": False,
             "files": [f.relative_to(cand).as_posix() for f in files], "runs": runs}
