@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Keep ONE benchmark leg's raw run data on the runner, outside the workspace, as a capture source
-# for the full backup procedure (docs/FULL_BACKUP.md, §5.3(b)).
+# Keep ONE benchmark leg's raw run data, packed, as a capture source for the full backup procedure
+# (docs/FULL_BACKUP.md, §5.3(b)): on the runner, outside the workspace, and, when RAW_DATA_LOCATION
+# is set, uploaded to that staging area (then removed from the runner).
 #
 #   backup_run.sh <out_dir> <run_id> <slug>
 #     out_dir  the leg's output dir (ci/benchmarks/.work/suite_<tier>_<bench>)
@@ -23,7 +24,15 @@
 #     backup.json                what this is: run, attempt, bench, tier, who triggered it, runner,
 #                                archive sha256 and size, member count and bytes
 # and a copy of backup.json at <out_dir>/backup.json, which publish_results.sh puts in the run's
-# ci_runs/ folder, so the capture dir can be found from the run's page later.
+# ci_runs/ folder, so the capture can be found from the run's page later.
+#
+# Staging (RAW_DATA_LOCATION=<remote>:<path>): the capture dir is copied, write-once
+# (rclone copy --immutable), to <path>/<capture dir name>/ and checked (rclone check). Only when the
+# check passes is the runner's copy removed. The copy in <out_dir> then also says
+#   "staged": "<remote>:<path>/<capture dir name>/", "kept_on_runner": false
+# and, when staging fails, "staged": null, "kept_on_runner": true, "staging_error": "<why>" (the
+# capture stays on the runner). The staging area is a SOURCE for the backup, never the backup
+# location itself.
 #
 # WHY: the published results (ci_runs/, ci_ui/, the record) are a summary; the raw run data is
 # lost when the next job's checkout cleans the workspace. This keeps it until an operator runs
@@ -43,6 +52,10 @@
 #   PROJECT_WORK        default <out_dir>_proj (as run_suite.sh lays it out)
 #   BACKUP_MIN_FREE_GB  default 20
 #   GITHUB_RUN_ATTEMPT  the run attempt (default 1)
+#   RAW_DATA_LOCATION   rclone path <remote>:<path> of the staging area; empty = keep on the runner only
+#   RAW_DATA_RCLONE_CONFIG  rclone config text defining <remote> (CI: a secret). Written to a 0600
+#                       temp file for rclone --config and removed on exit; never printed. Empty =
+#                       rclone's own config on the runner.
 #   PY                  python for the sections.json lookup and backup.json (default python3)
 set -uo pipefail
 
@@ -170,5 +183,58 @@ PY
 mv "$tmp" "$dst" || fail "moving $tmp into place"
 cp "$dst/backup.json" "$out/backup.json" 2>/dev/null || log "could not copy backup.json into $out"
 log "kept $name -> $dst/$name.$ext ($((bytes / 1024 / 1024)) MB)"
-[ -n "${GITHUB_STEP_SUMMARY:-}" ] && echo "Raw run data kept on runner \`${RUNNER_NAME:-?}\` for the full backup: \`$dst/$name.$ext\` ($((bytes / 1024 / 1024)) MB, sha256 \`${sha:0:12}…\`)" >> "$GITHUB_STEP_SUMMARY"
+
+# ---- staging: upload the capture dir, check it, then free the runner's disk -----------------------
+summary() { [ -n "${GITHUB_STEP_SUMMARY:-}" ] && echo "$1" >> "$GITHUB_STEP_SUMMARY"; return 0; }
+note_out() {  # note_out <staged or ""> <kept_on_runner true|false> [error]: record the outcome in <out_dir>/backup.json
+  "$PY" - "$out/backup.json" "$1" "$2" "${3:-}" <<'PY' || log "could not record the staging outcome in $out/backup.json"
+import json, sys
+path, staged, kept, err = sys.argv[1:]
+b = json.load(open(path))
+b["staged"] = staged or None
+b["kept_on_runner"] = kept == "true"
+if err:
+    b["staging_error"] = err
+json.dump(b, open(path, "w"), indent=2)
+PY
+}
+loc="${RAW_DATA_LOCATION:-}"
+if [ -z "$loc" ]; then
+  summary "Raw run data kept on runner \`${RUNNER_NAME:-?}\`: \`$dst/$name.$ext\` ($((bytes / 1024 / 1024)) MB, sha256 \`${sha:0:12}…\`)"
+  exit 0
+fi
+stage_fail() {
+  echo "::warning::staging the raw run data of $name failed ($1); it stays on runner ${RUNNER_NAME:-?} in $dst"
+  note_out "" true "$1"
+  summary "Raw run data of $name NOT staged ($1); kept on runner \`${RUNNER_NAME:-?}\`: \`$dst/$name.$ext\`"
+  exit 0
+}
+loc="${loc%/}"
+case "$loc" in
+  *:?*) remote="${loc%%:*}" ;;
+  *) stage_fail "RAW_DATA_LOCATION is not of the form <remote>:<path>" ;;
+esac
+[ -n "$remote" ] && [ "${remote#*/}" = "$remote" ] || stage_fail "RAW_DATA_LOCATION is not of the form <remote>:<path>"
+command -v rclone >/dev/null 2>&1 || stage_fail "rclone is not installed on the runner"
+rc_args=()
+if [ -n "${RAW_DATA_RCLONE_CONFIG:-}" ]; then
+  cfg="$(umask 077; mktemp)" || stage_fail "cannot create a temp file for the rclone config"
+  trap 'rm -f "$cfg"' EXIT
+  printf '%s\n' "$RAW_DATA_RCLONE_CONFIG" > "$cfg" || stage_fail "cannot write the rclone config"
+  rc_args=(--config "$cfg")
+fi
+rclone "${rc_args[@]}" listremotes 2>/dev/null | grep -qxF "$remote:" \
+  || stage_fail "remote '$remote' is not defined in the rclone config"
+target="$loc/$dirname_"
+rclone "${rc_args[@]}" copy --immutable --retries 3 --low-level-retries 10 "$dst" "$target" >/dev/null 2>&1 \
+  || stage_fail "rclone copy to $target failed"
+chk="$(rclone "${rc_args[@]}" check --one-way "$dst" "$target" 2>&1)" || stage_fail "rclone check of $target failed"
+if printf '%s' "$chk" | grep -qi "no common hash"; then  # sizes only: compare contents instead
+  rclone "${rc_args[@]}" check --one-way --download "$dst" "$target" >/dev/null 2>&1 \
+    || stage_fail "rclone check --download of $target failed"
+fi
+note_out "$target/" false
+rm -rf "$dst" || log "staged, but could not remove $dst from the runner"
+log "staged $name -> $target/ (checked); removed it from the runner"
+summary "Raw run data staged to \`$target/\` ($((bytes / 1024 / 1024)) MB, sha256 \`${sha:0:12}…\`, checked)"
 exit 0

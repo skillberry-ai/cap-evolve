@@ -23,7 +23,12 @@ WHAT THIS PINS
 8. An unreadable file or directory does not stop the capture: it is listed in unreadable.txt and
    backup.json, and the rest is kept.
 9. The workflow runs it best-effort (continue-on-error), before publishing, with the user name
-   passed through the environment.
+   passed through the environment, and only on a dispatch that names a staging area
+   (raw_data_location, empty by default); the rclone config comes from a secret, via the environment.
+10. Staging: with RAW_DATA_LOCATION the capture dir is uploaded write-once and checked, and only then
+   removed from the runner; <out_dir>/backup.json says where it is staged. The rclone config is a
+   0600 temp file, removed afterwards. A failed upload (bad path, unknown remote) leaves the capture
+   on the runner and says why.
 """
 
 import hashlib
@@ -248,10 +253,126 @@ def test_the_run_folder_says_where_the_archive_is(tmp_path):
 def test_workflow_keeps_the_raw_data_best_effort_before_publishing():
     src = WORKFLOW.read_text()
     names = re.findall(r"^      - name: (.+)$", src, re.M)
-    assert names.index("Write run metadata") < names.index("Keep the raw run data on the runner for the full backup") \
+    assert names.index("Write run metadata") < names.index("Keep the raw run data for the full backup") \
         < names.index("Publish results to skillberry-runs")
-    step = src[src.index("      - name: Keep the raw run data on the runner for the full backup"):]
+    step = src[src.index("      - name: Keep the raw run data for the full backup"):]
     step = step[:step.index("\n      - name:", 10)]
-    assert "continue-on-error: true" in step and "if: always()" in step and "timeout-minutes:" in step
+    assert "continue-on-error: true" in step and "timeout-minutes:" in step
+    # opt-in: runs only on a dispatch that names a staging area (empty by default, never on PR labels)
+    assert re.search(r"^        if: always\(\) && github\.event_name == 'workflow_dispatch' "
+                     r"&& inputs\.raw_data_location != ''$", step, re.M)
+    inp = src[src.index("      raw_data_location:"):]
+    inp = inp[:inp.index("\n  pull_request:")]
+    assert "type: string" in inp and 'default: ""' in inp
+    run = step[step.index("run: |"):]
     assert "BACKUP_USER: ${{ github.triggering_actor }}" in step
-    assert "${{ github.triggering_actor }}" not in step[step.index("run: |"):], "user name must not be in the shell source"
+    assert "RAW_DATA_LOCATION: ${{ inputs.raw_data_location }}" in step
+    assert "RAW_DATA_RCLONE_CONFIG: ${{ secrets.RAW_DATA_RCLONE_CONFIG }}" in step
+    # rclone is installed (pinned) before the script, and its install never fails the step
+    assert run.index("bash ci/benchmarks/lib/install_rclone.sh || true") < run.index('export PATH="$HOME/.local/bin:$PATH"') \
+        < run.index("bash ci/benchmarks/lib/backup_run.sh")
+    for expr in ("${{ github.triggering_actor }}", "inputs.raw_data_location", "secrets."):
+        assert expr not in run, f"{expr} must reach the script through the environment, not the shell source"
+
+
+# ---- staging --------------------------------------------------------------------------------------
+
+needs_rclone = pytest.mark.skipif(not shutil.which("rclone"), reason="needs rclone")
+STG_CONF = "[stg]\ntype = local\n"
+
+
+def _stage(tmp_path, out, loc, conf=STG_CONF, **env):
+    tmpdir = tmp_path / "tmpdir"
+    tmpdir.mkdir(exist_ok=True)
+    return _run(tmp_path, out, RAW_DATA_LOCATION=loc, RAW_DATA_RCLONE_CONFIG=conf, TMPDIR=str(tmpdir),
+                RCLONE_CONFIG=str(tmp_path / "no-such-rclone.conf"), **env)
+
+
+@needs_rclone
+def test_staging_uploads_checks_then_frees_the_runner(tmp_path):
+    out = _work(tmp_path)
+    r = _stage(tmp_path, out, f"stg:{tmp_path}/staging/")
+    assert r.returncode == 0, r.stdout + r.stderr
+    staged = tmp_path / "staging" / NAME
+    files = sorted(p.name for p in staged.iterdir())
+    assert files == sorted([next(staged.glob(f"{NAME}.tar.*")).name, "backup.json", "members.sha256",
+                            "symlinks.txt", "unreadable.txt"])
+    b = json.loads((staged / "backup.json").read_text())
+    assert b["sha256"] == hashlib.sha256(next(staged.glob(f"{NAME}.tar.*")).read_bytes()).hexdigest()
+    assert not (tmp_path / CAP).exists(), "the runner's copy is removed once the upload is checked"
+    o = json.loads((out / "backup.json").read_text())
+    assert o["staged"] == f"stg:{tmp_path}/staging/{NAME}/" and o["kept_on_runner"] is False
+    assert "staging_error" not in o and o["sha256"] == b["sha256"]
+    assert not list((tmp_path / "tmpdir").iterdir()), "the rclone config temp file is removed"
+    assert "[stg]" not in r.stdout + r.stderr
+
+
+@needs_rclone
+@pytest.mark.parametrize("loc,why", [("nope:x", "remote 'nope' is not defined"),
+                                     ("stg:", "not of the form"), ("/a/local/path", "not of the form")])
+def test_a_failed_staging_keeps_the_capture_on_the_runner(tmp_path, loc, why):
+    out = _work(tmp_path)
+    r = _stage(tmp_path, out, loc)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "::warning::staging the raw run data" in r.stdout and why in r.stdout
+    assert (tmp_path / CAP / "backup.json").is_file()
+    o = json.loads((out / "backup.json").read_text())
+    assert o["staged"] is None and o["kept_on_runner"] is True and why in o["staging_error"]
+    assert not list((tmp_path / "tmpdir").iterdir())
+
+
+INSTALL = LIB / "install_rclone.sh"
+
+
+def test_install_rclone_pins_a_version_and_its_hashes():
+    src = INSTALL.read_text()
+    assert re.search(r'^RCLONE_VERSION="\d+\.\d+\.\d+"$', src, re.M)
+    hashes = re.findall(r'^  \[(amd64|arm64)\]="([0-9a-f]{64})"$', src, re.M)
+    assert sorted(a for a, _ in hashes) == ["amd64", "arm64"]
+
+
+def _fake_release(tmp_path, payload: bytes):
+    import zipfile
+    v = re.search(r'^RCLONE_VERSION="(.+)"$', INSTALL.read_text(), re.M).group(1)
+    arch = {"x86_64": "amd64", "aarch64": "arm64", "arm64": "arm64"}[os.uname().machine]
+    d = tmp_path / "dl" / f"v{v}"
+    d.mkdir(parents=True)
+    with zipfile.ZipFile(d / f"rclone-v{v}-linux-{arch}.zip", "w") as z:
+        z.writestr(f"rclone-v{v}-linux-{arch}/rclone", payload)
+    return v
+
+
+@pytest.mark.skipif(os.uname().sysname != "Linux", reason="pinned builds are Linux")
+def test_install_rclone_refuses_a_download_with_the_wrong_hash(tmp_path):
+    _fake_release(tmp_path, b"#!/bin/sh\necho tampered\n")
+    r = subprocess.run(["bash", str(INSTALL)], capture_output=True, text=True, timeout=60,
+                       env={**os.environ, "RCLONE_PREFIX": str(tmp_path / "prefix"),
+                            "RCLONE_BASE_URL": f"file://{tmp_path}/dl", "PY": sys.executable})
+    assert r.returncode == 1 and "expected" in r.stdout and "not installed" in r.stdout
+    assert not (tmp_path / "prefix" / "bin" / "rclone").exists()
+
+
+def test_install_rclone_is_a_no_op_when_the_version_is_there(tmp_path):
+    v = re.search(r'^RCLONE_VERSION="(.+)"$', INSTALL.read_text(), re.M).group(1)
+    b = tmp_path / "prefix" / "bin"
+    b.mkdir(parents=True)
+    (b / "rclone").write_text(f"#!/bin/sh\necho 'rclone v{v}'\n")
+    (b / "rclone").chmod(0o755)
+    r = subprocess.run(["bash", str(INSTALL)], capture_output=True, text=True, timeout=60,
+                       env={**os.environ, "RCLONE_PREFIX": str(tmp_path / "prefix"),
+                            "RCLONE_BASE_URL": "file:///nonexistent", "PY": sys.executable})
+    assert r.returncode == 0 and "already at" in r.stdout
+
+
+def test_the_run_folder_says_where_the_staged_archive_is(tmp_path):
+    sys.path.insert(0, str(LIB))
+    spec = importlib.util.spec_from_file_location("run_folder", LIB / "run_folder.py")
+    rf = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(rf)
+    out = _work(tmp_path)
+    (out / "backup.json").write_text(json.dumps({"archive": f"{NAME}.tar.zst", "runner": "r1",
+                                                 "capture_dir": f"/home/ci/capevolve-ci-capture/{NAME}",
+                                                 "bytes": 5_000_000, "staged": f"stg:raw/{NAME}/",
+                                                 "kept_on_runner": False}))
+    readme = (rf.build(out, tmp_path / "folder", None, None, None, None, "tau", False) / "README.md").read_text()
+    assert f"staged at `stg:raw/{NAME}/`" in readme and "kept on runner" not in readme
