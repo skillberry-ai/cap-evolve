@@ -231,13 +231,13 @@ trap 'rm -rf "$rtmp"' EXIT
 rlog="$rtmp/rclone.log"
 rc_args=(--log-file "$rlog")
 # rclone's last error lines, one line, for staging_error (rclone does not log config values). The
-# raw-data area's path is replaced by "<raw-data area>" (a literal match): staging_error is published.
+# raw-data area's path is replaced by "<AREA>" (a literal match): staging_error is published.
 why() {
   local t p="${loc#*:}"
   t="$(tail -n 2 "$rlog" 2>/dev/null | sed -E 's/^[0-9\/]+ [0-9:]+ //' | tr '\n' ' ')"
-  t="${t//"$loc"/<raw-data area>}"
-  [ -n "$p" ] && t="${t//"$p"/<raw-data area>}"
-  p="${p#/}"; [ -n "$p" ] && t="${t//"$p"/<raw-data area>}"
+  t="${t//"$loc"/<AREA>}"
+  [ -n "$p" ] && t="${t//"$p"/<AREA>}"
+  p="${p#/}"; [ -n "$p" ] && t="${t//"$p"/<AREA>}"
   t="$(printf '%s' "$t" | cut -c1-300)"
   echo "${t:+: $t}"
 }
@@ -246,7 +246,7 @@ if [ -n "${RAW_DATA_RCLONE_CONFIG:-}" ]; then
   printf '%s\n' "$RAW_DATA_RCLONE_CONFIG" > "$cfg" || stage_fail "cannot write the rclone config"
   rc_args+=(--config "$cfg")
   # Refuse an interactive-login refresh token (see Credentials above), in the remote and in every
-  # remote it wraps (crypt, alias, chunker, union, ...); accept service-account, JWT and
+  # remote it wraps (crypt, alias, chunker, union, combine, ...); accept service-account, JWT and
   # client-credentials setups, which rclone can renew without rewriting a refresh token.
   "$PY" - "$cfg" "$remote" 2>/dev/null <<'PY'
 import configparser, sys
@@ -268,7 +268,7 @@ while todo:
         sys.exit(1)
     for ref in (s.get("remote", "") + " " + s.get("upstreams", "")).split():
         if ":" in ref:
-            todo.append(ref.split(":", 1)[0])
+            todo.append(ref.split("=", 1)[-1].split(":", 1)[0])  # combine: dir=remote:path
 sys.exit(0)
 PY
   case $? in

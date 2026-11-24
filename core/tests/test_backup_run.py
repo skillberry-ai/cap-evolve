@@ -390,6 +390,14 @@ def test_a_wrapper_over_an_interactive_login_remote_is_refused_too(tmp_path):
 
 
 @needs_rclone
+def test_a_combine_over_an_interactive_login_remote_is_refused_too(tmp_path):
+    conf = ('[box]\ntype = box\ntoken = {"access_token":"a","refresh_token":"r"}\n\n'
+            '[stg]\ntype = combine\nupstreams = area=box:area\n')
+    r = _stage(tmp_path, _work(tmp_path), "stg:area", conf=conf)
+    assert "(or a remote it wraps) uses a refresh token" in r.stdout
+
+
+@needs_rclone
 def test_a_config_that_is_not_valid_is_reported_as_such(tmp_path):
     r = _stage(tmp_path, _work(tmp_path), "stg:raw", conf="token = no section header here\n")
     assert r.returncode == 0, r.stdout + r.stderr
@@ -409,7 +417,7 @@ def test_a_failed_upload_does_not_publish_the_area_path(tmp_path):
         ro.chmod(0o755)
     assert r.returncode == 0, r.stdout + r.stderr
     o = json.loads((out / "backup.json").read_text())
-    assert o["kept_on_runner"] is True and "<raw-data area>" in o["staging_error"], o
+    assert o["kept_on_runner"] is True and "<AREA>" in o["staging_error"], o
     for text in (o["staging_error"], r.stdout):
         assert "private-area-name" not in text and str(ro) not in text, text
 
@@ -427,6 +435,7 @@ def _fake_rclone(tmp_path, check_says="", rewrite_config=False):
     """A wrapper around the real rclone: logs each call, can make `check` (without --download) say
     `check_says`, and can append to the --config file (as a token refresh would)."""
     real = shutil.which("rclone")
+    rewrite = "[ -n \"$cfg\" ] && echo '# rewritten' >> \"$cfg\"" if rewrite_config else ""
     d = tmp_path / "fakebin"
     d.mkdir()
     (d / "rclone").write_text(f"""#!/usr/bin/env bash
@@ -436,7 +445,7 @@ for a in "$@"; do [ "$prev" = --config ] && cfg="$a"; [ "$prev" = --log-file ] &
 {real} "$@"; rc=$?
 case " $* " in *" check "*) case " $* " in *" --download "*) ;; *)
   [ -n "{check_says}" ] && echo "{check_says}" >> "${{logf:-/dev/stderr}}" ;; esac ;; esac
-{"[ -n \"$cfg\" ] && echo '# rewritten' >> \"$cfg\"" if rewrite_config else ""}
+{rewrite}
 exit $rc
 """)
     (d / "rclone").chmod(0o755)
