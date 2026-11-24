@@ -106,14 +106,21 @@ GATE_CHECKS = ("files_exist", "frontmatter_valid", "run_report_exists", "pipelin
 # Behavior checks. Those in CONDITIONAL count only on a case they actually test.
 BEHAVIOR_CHECKS = ("recommendation_consistency", "revision_flag_consistency",
                    "architecture_context_used", "classification_signal",
-                   "needs_attention_expectation", "revision_coverage")
+                   "needs_attention_expectation", "revision_coverage",
+                   "first_review_expectation", "evidence_fidelity")
+# Judges reported as metrics only: never in the reward, never in the optimizer's feedback.
+# self_score_calibration (whether the pipeline's own review scores are accurate) is kept
+# out on purpose: when the quality judge graded it, optimized candidates lowered their own
+# scores, which left review tables inconsistent and triggered needless splits (full-v2).
+DIAGNOSTIC_JUDGES = ("self_score_calibration",)
 # A 1-5 judge score -> 0-1, convex so the top step (4 -> 5) is worth the most: most cases
 # already score 4-5, and a linear 0.75 -> 1.0 step hides that gap in trial noise.
 SCORE_MAP = {5: 1.0, 4: 0.6, 3: 0.3, 2: 0.1, 1: 0.0}
 QUALITY_WEIGHTS = {"quality": 3.0, "revision_quality": 1.0}   # "quality" = the type's own judge
 # Per failed check, the reward is multiplied by the factor: the rare behavior failures the
 # cases are built to test cost more than the always-applicable consistency checks.
-KEY_CHECKS = ("classification_signal", "needs_attention_expectation", "revision_coverage")
+KEY_CHECKS = ("classification_signal", "needs_attention_expectation", "revision_coverage",
+              "first_review_expectation", "evidence_fidelity")
 KEY_CHECK_FACTOR, OTHER_CHECK_FACTOR = 0.85, 0.95
 GATE_FACTOR = 0.5   # a broken pipeline halves the reward instead of zeroing it, so the case still ranks
 
@@ -127,24 +134,39 @@ def applicable_checks(annotations: dict) -> list[str]:
         out.append("needs_attention_expectation")
     if "revision-expected" in (annotations.get("tags") or []):
         out.append("revision_coverage")
+    # Newer rfe-creator configs: each passes vacuously where it does not apply (a pass never
+    # changes the product), so both always count when the config defines them.
+    out += ["first_review_expectation", "evidence_fidelity"]
     return out
 
 
-def _as01(rec: dict | None) -> float | None:
-    """A check -> 1.0/0.0, a 1-5 judge score -> SCORE_MAP; None when the judge gave no value."""
+def judge_ranges(cfg: dict) -> dict:
+    """``{judge: (lo, hi)}`` for every judge of the eval config that declares a score_range."""
+    return {j["name"]: tuple(float(x) for x in j["score_range"])
+            for j in (cfg.get("judges") or []) if j.get("name") and j.get("score_range")}
+
+
+def _as01(rec: dict | None, rng: tuple | None = None) -> float | None:
+    """A check -> 1.0/0.0; a 1-5 judge score -> SCORE_MAP; a judge on any other declared
+    range (e.g. rfe-creator's 0-10 per-criterion quality judge) -> linear over that range.
+    None when the judge gave no value."""
     v = (rec or {}).get("value")
     if v is None:
         return None
     if isinstance(v, bool):
         return 1.0 if v else 0.0
+    if rng and tuple(rng) != (1.0, 5.0) and rng[1] > rng[0]:
+        return max(0.0, min(1.0, (float(v) - rng[0]) / (rng[1] - rng[0])))
     return SCORE_MAP[max(1, min(5, round(float(v))))]
 
 
-def compose_reward(per_judge: dict, quality_judge: str, annotations: dict) -> tuple[float, dict]:
+def compose_reward(per_judge: dict, quality_judge: str, annotations: dict,
+                   ranges: dict | None = None) -> tuple[float, dict]:
     """``gate x penalty x quality`` -> (reward, components).
 
     quality   weighted mean of the type's quality judge (x3) and revision_quality (x1),
-              each mapped through SCORE_MAP; a judge with no value is left out.
+              each mapped by ``_as01`` over its declared range (``ranges``); a judge with no
+              value is left out.
     penalty   KEY_CHECK_FACTOR per failed applicable KEY_CHECKS check, OTHER_CHECK_FACTOR per
               any other failed check (gate checks included).
     gate      GATE_FACTOR if any GATE_CHECKS judge failed, else 1.
@@ -152,8 +174,9 @@ def compose_reward(per_judge: dict, quality_judge: str, annotations: dict) -> tu
     anywhere scores 0 (it was not measured — the caller marks it errored).
     """
     gate_failed = [g for g in GATE_CHECKS if _as01(per_judge.get(g)) == 0.0]
-    q_parts = [(w, _as01(per_judge.get(quality_judge if k == "quality" else k)))
-               for k, w in QUALITY_WEIGHTS.items()]
+    ranges = ranges or {}
+    q_names = [(quality_judge if k == "quality" else k, w) for k, w in QUALITY_WEIGHTS.items()]
+    q_parts = [(w, _as01(per_judge.get(n), ranges.get(n))) for n, w in q_names]
     q_parts = [(w, v) for w, v in q_parts if v is not None]
     quality = sum(w * v for w, v in q_parts) / sum(w for w, _ in q_parts) if q_parts else None
     checks = {c: _as01(per_judge.get(c)) for c in (*GATE_CHECKS, *applicable_checks(annotations))}
@@ -171,7 +194,8 @@ def compose_reward(per_judge: dict, quality_judge: str, annotations: dict) -> tu
                     "penalty": penalty if checks else None, "failed_checks": failed}
 
 
-def format_feedback(per_judge: dict, quality_judge: str, annotations: dict, comp: dict) -> str:
+def format_feedback(per_judge: dict, quality_judge: str, annotations: dict, comp: dict,
+                    ranges: dict | None = None) -> str:
     """Every judge's FULL rationale, one labelled section each, worst news first."""
     def label(name: str, rec: dict) -> str:
         v = rec.get("value")
@@ -179,15 +203,19 @@ def format_feedback(per_judge: dict, quality_judge: str, annotations: dict, comp
             return f"{name} — ERROR (not scored)"
         if v is None:
             return f"{name} — skipped"
+        samples = (rec.get("stability") or {}).get("samples")
+        many = f" (judge sampled {samples}x)" if samples and samples > 1 else ""
         if isinstance(v, bool):
-            return f"{name} — {'PASS' if v else 'FAIL'}"
-        return f"{name} — {v:g}/5"
+            return f"{name} — {'PASS' if v else 'FAIL'}{many}"
+        top = (ranges or {}).get(name, (1.0, 5.0))[1]
+        return f"{name} — {v:g}/{top:g}{many}"
 
     applicable = set(applicable_checks(annotations))
     order = ([quality_judge, "revision_quality"] + list(GATE_CHECKS)
              + [c for c in BEHAVIOR_CHECKS if c in applicable]
              + [c for c in BEHAVIOR_CHECKS if c not in applicable])
     order += sorted(k for k in per_judge if k not in order)
+    order = [k for k in order if k not in DIAGNOSTIC_JUDGES]
     q, pen = comp.get("quality"), comp.get("penalty")
     head = (f"reward parts: gate={'FAILED (' + ', '.join(comp['gate_failed']) + ')' if comp['gate_failed'] else 'ok'}"
             f", quality={'n/a' if q is None else f'{q:.3f}'}, check penalty={'n/a' if pen is None else f'{pen:.3f}'}"
@@ -377,14 +405,23 @@ class Adapter(CapabilityAdapter):
                          n=0, raw={"errored": True})
 
         per_judge = payload.get("per_judge") or {}
-        reward, comp = compose_reward(per_judge, quality_judge, annotations)
+        try:
+            cfg = yaml.safe_load(Path(rollout.metadata["config"]).read_text(encoding="utf-8")) or {}
+        except (OSError, yaml.YAMLError):
+            cfg = {}
+        ranges = judge_ranges(cfg)
+        reward, comp = compose_reward(per_judge, quality_judge, annotations, ranges)
         unmeasured = comp["quality"] is None and comp["penalty"] is None
         metrics = [{"name": "reward", "value": reward, "direction": "higher", "primary": True}]
         for k in ("quality", "penalty", "gate"):
             if comp[k] is not None:
                 metrics.append({"name": k, "value": float(comp[k]), "direction": "higher", "primary": False})
+        for k in DIAGNOSTIC_JUDGES:
+            v = (per_judge.get(k) or {}).get("value")
+            if isinstance(v, (int, float)) and not isinstance(v, bool):
+                metrics.append({"name": k, "value": float(v), "direction": "higher", "primary": False})
         return Score(task_id=task.id, reward=reward,
-                     feedback=format_feedback(per_judge, quality_judge, annotations, comp),
+                     feedback=format_feedback(per_judge, quality_judge, annotations, comp, ranges),
                      trial_rewards=[reward], metrics=metrics,
                      raw={"per_judge": per_judge, "components": comp, "harness_reward": payload.get("reward"),
                           **({"errored": True} if unmeasured else {})})
