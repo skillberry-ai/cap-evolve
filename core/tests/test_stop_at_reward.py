@@ -165,6 +165,7 @@ def test_no_shipped_template_pairs_stop_at_reward_with_num_trials_1():
     headroom remains (reproduced by review of #415: val drew 1.0, sealed test 0.667).
     Ship the ceiling on only where trials give `best_val` a real standard error.
     """
+    import re
     from pathlib import Path
     from cap_evolve.specfile import read_yaml
 
@@ -174,7 +175,10 @@ def test_no_shipped_template_pairs_stop_at_reward_with_num_trials_1():
 
     offenders = []
     for path in templates:
-        spec = read_yaml(path.read_text(encoding="utf-8"))
+        # Some templates hold `@NAME@` placeholders that a setup script fills in
+        # (not valid YAML until rendered); render them with a dummy value first.
+        text = re.sub(r"@[A-Z_]+@", "placeholder", path.read_text(encoding="utf-8"))
+        spec = read_yaml(text, source=str(path))
         ceiling = float(spec.get("stop_at_reward") or 0.0)
         trials = int(spec.get("num_trials") or 1)
         if ceiling > 0.0 and trials < 2:

@@ -385,7 +385,7 @@ ERRORED_POLICIES = ("drop", "fail")
 ERRORED_POLICY_ENV = "CAPEVOLVE_ERRORED_TRIAL_POLICY"
 
 
-def resolve_errored_policy(explicit=None, run_dir=None) -> str:
+def resolve_errored_policy(explicit=None, run_dir=None, *, warn: bool = True) -> str:
     """explicit argument > env ``CAPEVOLVE_ERRORED_TRIAL_POLICY`` > the run's spec > ``drop``.
 
     The spec fallback matters in agent orchestration mode, where ``act.py`` / ``gate_check.py`` /
@@ -395,11 +395,14 @@ def resolve_errored_policy(explicit=None, run_dir=None) -> str:
     The env var is how ONE rule reaches every evaluation of a run: ``cap-evolve run`` and the
     algorithm scripts export it, so baseline/seed, resume, candidates, ``gate_check`` and the
     finalize bookend all read trials the same way (both sides of every pair).
+
+    ``warn=False`` is for read-only viewers (the dashboard): a spec with a syntax error is
+    then read without the ``spec_unreadable`` event and stderr warning (``spec_for_run``).
     """
     pol = explicit or os.environ.get(ERRORED_POLICY_ENV)
     if not pol and run_dir is not None:
         from .specfile import spec_for_run
-        pol = (spec_for_run(run_dir) or {}).get("errored_trial_policy")
+        pol = (spec_for_run(run_dir, warn=warn) or {}).get("errored_trial_policy")
     pol = pol or "drop"
     if pol not in ERRORED_POLICIES:
         raise ValueError(f"errored_trial_policy must be one of {ERRORED_POLICIES}, got {pol!r}")
@@ -429,7 +432,9 @@ def resolve_budget_reserve(explicit=None, run_dir=None) -> bool:
         return env.strip().lower() in ("1", "true", "yes", "on")
     if run_dir is not None:
         from .specfile import spec_for_run
-        return bool((spec_for_run(run_dir) or {}).get("budget_reserve"))
+        # _truthy, not bool(): `budget_reserve: "no"` / "off" (a string) must be off
+        from .gatecfg import _truthy
+        return _truthy((spec_for_run(run_dir) or {}).get("budget_reserve"))
     return False
 
 
@@ -888,7 +893,8 @@ def parse_tags(s) -> list[str]:
 
 
 def split_result_from_rollouts(run_dir: RunDir, tag, split: str = "val", ks=(1, 2),
-                               errored_policy: str | None = None, min_trial: int = 0) -> SplitResult:
+                               errored_policy: str | None = None, min_trial: int = 0,
+                               *, warn: bool = True) -> SplitResult:
     """Reconstruct a candidate's SplitResult from its persisted rollouts.
 
     Used to RESUME a run from the current best candidate (its val score is read
@@ -902,10 +908,13 @@ def split_result_from_rollouts(run_dir: RunDir, tag, split: str = "val", ks=(1, 
     already on disk (see ``round.py``'s ``control_replicates``). Pooling is not the same as
     averaging their means: it merges the underlying trials, so a task measured by only one
     replicate is not silently upweighted.
+
+    ``warn=False``: the caller only reads (the dashboard), so reading the run's spec must not
+    write a ``spec_unreadable`` event into the run (see ``resolve_errored_policy``).
     """
     import json as _json
     from .stats import mean, stderr
-    errored_policy = resolve_errored_policy(errored_policy, run_dir)
+    errored_policy = resolve_errored_policy(errored_policy, run_dir, warn=warn)
     tags = [tag] if isinstance(tag, str) else [str(t) for t in tag]
     # A tag becomes part of a glob under the rollout dir: refuse one that is not a plain
     # rollout-file tag (no path separators, no glob metacharacters, no "..").

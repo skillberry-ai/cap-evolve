@@ -12,10 +12,13 @@ contracts that must not bend for any of them.
 
 import io
 import json
+import os
 import re
 import sys
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
+
+import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 CORE = REPO / "core"
@@ -169,6 +172,107 @@ def test_missing_spec_names_the_command_that_creates_it(tmp_path):
     assert path is None
     assert "no spec at" in err["error"]
     assert err["fix"].startswith("cap-evolve init")
+
+
+def test_run_and_estimate_report_a_missing_spec_the_same_way(tmp_path):
+    """Both commands share one find-and-read-the-spec helper: same error, same output."""
+    proj = str(tmp_path / "nothing")
+    rc_run, out_run, err_run = _run("run", "--project", proj, "--dashboard", "off")
+    rc_est, out_est, err_est = _run("estimate", "--project", proj)
+    assert rc_run == rc_est == 1
+    assert json.loads(out_run) == json.loads(out_est)
+    assert json.loads(out_run)["step"] == "spec"
+    assert "no spec at" in err_run and err_run == err_est
+    assert "→ cap-evolve init" in err_run
+
+
+def _assert_clean_spec_error(rc, out, err, words):
+    assert rc == 1
+    payload = json.loads(out)
+    assert payload["step"] == "spec" and words in payload["error"]
+    assert "→ " in err and "Traceback" not in out + err
+
+
+def test_spec_that_is_a_folder_fails_cleanly_for_run_and_estimate(tmp_path):
+    proj = _project(tmp_path, "a", "deterministic")
+    (proj / "sub").mkdir()
+    for argv in (("run", "--dashboard", "off"), ("estimate",)):
+        rc, out, err = _run(*argv, "--project", str(proj), "--spec", "sub")
+        _assert_clean_spec_error(rc, out, err, "not a file")
+        assert "capevolve.yaml" in err
+
+
+def test_spec_that_is_not_utf8_fails_cleanly(tmp_path):
+    proj = _project(tmp_path, "a", "deterministic")
+    (proj / "capevolve.yaml").write_bytes(b"algorithm_skill: \xff\xfe bad\n")
+    rc, out, err = _run("estimate", "--project", str(proj))
+    _assert_clean_spec_error(rc, out, err, "not UTF-8")
+    assert "→ save the spec as UTF-8" in err
+
+
+def test_load_spec_reports_an_unreadable_path(tmp_path):
+    from cap_evolve import cli
+    spec, err = cli._load_spec(tmp_path, str(tmp_path))
+    assert spec is None and err["step"] == "spec" and str(tmp_path) in err["error"]
+    assert "is unreadable" in err["error"]
+
+
+@pytest.mark.skipif(not hasattr(os, "geteuid") or os.geteuid() == 0,
+                    reason="root can read a chmod 000 file")
+def test_spec_without_read_permission_fails_cleanly(tmp_path):
+    proj = _project(tmp_path, "a", "deterministic")
+    spec = proj / "capevolve.yaml"
+    spec.chmod(0)
+    try:
+        for argv in (("run", "--dashboard", "off"), ("estimate",)):
+            rc, out, err = _run(*argv, "--project", str(proj))
+            _assert_clean_spec_error(rc, out, err, "is unreadable")
+            assert str(spec) in err and "→ point --spec at a readable" in err
+    finally:
+        spec.chmod(0o644)
+
+
+def test_relative_spec_resolves_under_project_for_run_and_estimate(tmp_path, monkeypatch):
+    """``--spec capevolve.yaml`` means ``<project>/capevolve.yaml``, not ``<cwd>/...``."""
+    from cap_evolve import cli
+    proj = _project(tmp_path, "work", "agent")
+    monkeypatch.chdir(tmp_path)                 # no capevolve.yaml here
+    rel_proj = str(proj.relative_to(tmp_path))
+
+    path, err = cli._resolve_spec("capevolve.yaml", rel_proj)
+    assert err is None and path == (proj / "capevolve.yaml").resolve()
+
+    rc, out, _e = _run("run", "--project", rel_proj, "--spec", "capevolve.yaml",
+                       "--dashboard", "off", "--plan-only")
+    assert rc == 0
+    assert json.loads(out)["spec_path"] == str((proj / "capevolve.yaml").resolve())
+
+    rc, out, err_text = _run("estimate", "--project", rel_proj, "--spec", "capevolve.yaml")
+    assert "no spec at" not in out + err_text and "outside" not in out + err_text
+
+
+def test_absolute_and_cwd_relative_spec_still_work(tmp_path, monkeypatch):
+    from cap_evolve import cli
+    proj = _project(tmp_path, "work", "agent")
+    monkeypatch.chdir(tmp_path)
+    rel_proj = str(proj.relative_to(tmp_path))
+    want = (proj / "capevolve.yaml").resolve()
+    path, err = cli._resolve_spec(str(proj / "capevolve.yaml"), rel_proj)
+    assert err is None and path == want
+    # the older documented spelling, relative to the cwd, still lands in the project
+    path, err = cli._resolve_spec(f"{rel_proj}/capevolve.yaml", rel_proj)
+    assert err is None and path == want
+
+
+def test_estimate_fix_hints_name_estimate(tmp_path):
+    a = _project(tmp_path, "a", "deterministic")
+    b = _project(tmp_path, "b", "agent")
+    rc, _out, err_text = _run("estimate", "--project", str(a), "--spec", "missing.yaml")
+    assert rc == 1 and "no spec at" in err_text
+    assert "→ cap-evolve estimate --project" in err_text
+    rc, _out, err_text = _run("estimate", "--project", str(a), "--spec", str(b / "capevolve.yaml"))
+    assert rc == 1 and "outside" in err_text
+    assert "→ cap-evolve estimate --project" in err_text
 
 
 # ---- doctor ----------------------------------------------------------------
@@ -413,3 +517,70 @@ def test_check_flags_a_real_project_as_passing(tmp_path):
     rc, out, _ = _run("check", "--project", str(proj))
     assert json.loads(out)["ok"] is True, out
     assert rc == 0
+
+
+def test_estimate_prices_must_be_finite(tmp_path):
+    import pytest
+    proj = _project(tmp_path, "p", "deterministic")
+    for bad in (["--price-in", "nan", "--price-out", "3"],
+                ["--price-in", "3", "--price-out", "inf"]):
+        from cap_evolve import cli
+        err = io.StringIO()
+        with pytest.raises(SystemExit) as exc, redirect_stderr(err), \
+                redirect_stdout(io.StringIO()):
+            cli.main(["estimate", "--project", str(proj), *bad])
+        assert exc.value.code != 0
+        assert "must be a finite number" in err.getvalue()
+    # both valid prices still give a cost
+    rc, out, _err = _run("estimate", "--project", str(proj), "--price-in", "3",
+                         "--price-out", "15")
+    assert rc == 0
+    cost = json.loads(out)["cost_usd"]
+    assert cost is not None and cost["expected"] >= 0
+
+
+def test_non_numeric_spec_numbers_fail_cleanly_in_doctor_estimate_and_dry_run(tmp_path):
+    """``max_iterations: ten`` used to crash estimate/run --dry-run/doctor with a
+    ValueError traceback, and ``max_usd: five`` passed doctor as "ok"."""
+    from cap_evolve.cli import _doctor_checks
+    for line, key in (("max_iterations: ten", "max_iterations"),
+                      ("max_usd: five", "max_usd"),
+                      ("split_train: abc", "split_train"),
+                      ("num_trials: -2", "num_trials")):
+        proj = _project(tmp_path, key, "deterministic")
+        spec = proj / "capevolve.yaml"
+        text = spec.read_text(encoding="utf-8").replace("max_iterations: 3\n", "")
+        spec.write_text(text + line + "\n", encoding="utf-8")
+
+        rows = [r for r in _doctor_checks(proj) if r["status"] == "fail" and key in r["detail"]]
+        assert rows, f"doctor did not FAIL on {line!r}"
+        assert key in rows[0]["fix"]
+        assert not any(r["status"] == "ok" and r["name"] == "budget" and key == "max_usd"
+                       for r in _doctor_checks(proj))
+
+        rc, out, err = _run("estimate", "--project", str(proj))
+        assert rc == 1, out
+        assert key in err and "Traceback" not in err
+        assert json.loads(out)["problems"][0]["key"] == key
+
+        rc, out, err = _run("run", "--project", str(proj), "--dry-run")
+        assert rc == 1, out
+        assert key in err and "Traceback" not in err
+
+
+def test_good_spec_numbers_still_pass(tmp_path):
+    from cap_evolve.cli import _doctor_checks
+    from cap_evolve.specfile import numeric_spec_errors
+    proj = _project(tmp_path, "p", "deterministic")
+    spec = proj / "capevolve.yaml"
+    spec.write_text(spec.read_text(encoding="utf-8")
+                    + "max_usd: 5.0\nnum_trials: 2\nsplit_train: 0.5\nsplit_seed: 0\n",
+                    encoding="utf-8")
+    assert not [r for r in _doctor_checks(proj) if r["name"] == "spec-numbers"]
+    budget = [r for r in _doctor_checks(proj) if r["name"] == "budget"]
+    assert budget and budget[0]["status"] == "ok"
+    rc, out, _err = _run("estimate", "--project", str(proj))
+    assert rc == 0 and "spec_summary" in json.loads(out)
+    assert numeric_spec_errors({"max_iterations": None, "workers": 4}) == []
+    assert numeric_spec_errors({"max_iterations": True})[0]["key"] == "max_iterations"
+    assert numeric_spec_errors({"max_iterations": 2.5})[0]["key"] == "max_iterations"
