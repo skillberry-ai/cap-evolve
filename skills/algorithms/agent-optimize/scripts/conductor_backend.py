@@ -502,7 +502,7 @@ class RealBackend(P2Port, conductor.Backend):
         parents = kw.pop("parents", None)
         graph.append_node(self.run_dir, node_id=tag, parents=parents, status=status, **kw)
 
-    def commit_accept(self, tag, evidence):
+    def commit_accept(self, tag, evidence, verdict=None, reference=None):
         sr = harness.split_result_from_rollouts(self.run_dir, tag, "val")
         why = "the conductor's one-shot proposer writes hypothesis.json only; no agent session keeps a journal or ranked list"
         extra = ["--missing-handover-justification", why,
@@ -520,7 +520,12 @@ class RealBackend(P2Port, conductor.Backend):
                       f"{(evidence or {}).get('confirmation', 'accept')}" + (" (val = feedback-stratum estimate)" if per_task else "")]
         else:
             extra += ["--val", "0.0"]
-        rc, res = act.commit(self.ctx, tag, "accept", "conductor: " + json.dumps(evidence, default=str)[:200], extra)
+        try:
+            rc, res = act.commit(self.ctx, tag, "accept", "conductor: " + json.dumps(evidence, default=str)[:200], extra,
+                                 verdict=verdict, reference=reference)
+        except act.Refused as e:
+            # e.g. the eval-surface tamper guard: a refusal that a relaunch cannot clear, so exit 2, not a crash
+            raise conductor.Refused(f"accept of {tag} blocked: {e}") from e
         if rc != 0:
             raise RuntimeError(f"commit.py refused the accept of {tag}: {res}")
         self._rediagnose(tag)

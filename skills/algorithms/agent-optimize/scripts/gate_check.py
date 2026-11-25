@@ -173,6 +173,9 @@ def build_parser() -> argparse.ArgumentParser:
                         "reward maximize + cost minimize, with cap_evolve.gate's own "
                         "cost->latency->tokens fallback. Mirror capevolve.yaml's `objectives:` "
                         "block when the project declares one.")
+    p.add_argument("--advisory", default=None, metavar="PURPOSE",
+                   help="mark this run a side check (e.g. raw_vs_parent): its gate_check event is "
+                        "kept for the record but commit.py --decision accept never counts it")
     p.add_argument("--metrics-candidate", default=None,
                    help="--mode pareto only: JSON dict of the candidate's non-reward objective "
                         "values, e.g. '{\"cost\": 0.42}'. You source this yourself (e.g. the "
@@ -310,6 +313,13 @@ def main(argv=None) -> int:
     next_cmd = f"scripts/commit.py --decision {'accept' if accept else 'reject'}"
     if directionally_positive_but_inconclusive:
         next_cmd += " (or --decision provisional, then scripts/grow.py, to buy more n on this candidate)"
+    # Leave a record commit.py --decision accept can rely on (it refuses an accept with no
+    # passing gate). Newest event per candidate wins, so a later reject cancels an earlier accept.
+    run_dir.log_event("gate_check", candidate=args.candidate, verdict=verdict, mode=args.mode,
+                      reference=cur_tag, k_se=args.k_se, threshold=args.threshold,
+                      allow_regression=args.allow_regression,
+                      candidate_min_trial=args.candidate_min_trial, **({"advisory": True, "purpose": args.advisory}
+                                            if args.advisory else {}))
     print(json.dumps({
         "current": {"tag": cur_tag, "reward": cur.reward, "stderr": cur.stderr,
                     "pooled_tags": cur_tags if len(cur_tags) > 1 else None},

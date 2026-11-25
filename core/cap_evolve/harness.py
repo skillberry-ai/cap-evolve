@@ -1133,6 +1133,72 @@ def reused_seed_test(run_dir: RunDir) -> dict | None:
     return rec
 
 
+def _earlier_seal_was_on_time(prior: Path) -> bool:
+    """True when the earlier run sealed its eval surface at its baseline (late=False, at="baseline")."""
+    try:
+        ev_path = RunDir.open(prior).events_path
+    except Exception:  # noqa: BLE001
+        ev_path = prior / "events.jsonl"
+    try:
+        lines = Path(ev_path).read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return False
+    ok = False
+    for line in lines:
+        try:
+            ev = json.loads(line)
+        except Exception:  # noqa: BLE001
+            continue
+        if ev.get("kind") == "eval_surface_recorded":
+            ok = ev.get("late") is False and ev.get("at") == "baseline"
+            break
+    return ok
+
+
+def _carry_eval_surface(prior: Path, run_dir: RunDir) -> None:
+    """Check today's eval surface against the earlier run's baseline-time seal.
+
+    Only an earlier seal made at its baseline counts. If it matches this run's project (file hashes by
+    relative path), a fresh seal is recorded for this run's own project. If it differs, that is reported
+    like a TAMPERED surface and nothing is sealed. With no usable earlier seal nothing is sealed either,
+    so the first act call seals late and warns."""
+    try:
+        src = RunDir.open(prior).private_dir / integrity.EVAL_SURFACE_MANIFEST
+    except Exception:  # noqa: BLE001
+        src = prior / "private" / integrity.EVAL_SURFACE_MANIFEST
+    if not src.is_file() or not _earlier_seal_was_on_time(prior):
+        return
+    project = run_dir.eval_surface_project()
+    if project is None:
+        return
+    try:
+        old = integrity.read_manifest(src)
+        old_files, old_targets = old["files"], old.get("targets") or {}
+        if old.get("kind") != "eval_surface" or not isinstance(old_files, dict) or not old_files:
+            raise ValueError("malformed or empty")
+    except Exception as e:  # noqa: BLE001
+        run_dir.log_event("eval_surface_carried", ok=False, reason=f"unreadable earlier manifest: {e}")
+        return
+    now = integrity.eval_surface_snapshot(project)
+    modified = sorted(r for r, h in now["files"].items() if r in old_files and (
+        old_files[r] != h or old_targets.get(r) != now["targets"].get(r)))
+    added = sorted(r for r in now["files"] if r not in old_files)
+    removed = sorted(r for r in old_files if r not in now["files"])
+    if not (modified or added or removed):
+        dst = Path(run_dir.private_dir) / integrity.EVAL_SURFACE_MANIFEST
+        integrity.record_eval_surface(dst, project)
+        run_dir.log_event("eval_surface_carried", ok=True, project=str(project),
+                          reason=f"{len(old_files)} eval-surface file(s) unchanged since the earlier run's baseline")
+        run_dir.log_event("eval_surface_recorded", project=str(project), late=False, at="baseline",
+                          carried=True)
+        return
+    bits = [f"{k} {v}" for k, v in (("modified", modified), ("added", added), ("removed", removed)) if v]
+    reason = ("TAMPERED: the project's eval surface (adapter/scorer/tasks) changed since the earlier run's "
+              "baseline (" + "; ".join(bits) + ")")
+    run_dir.log_event("eval_surface_carried", ok=False, project=str(project), reason=reason)
+    print(f"WARNING: reused baseline: {reason}", file=sys.stderr)
+
+
 def reuse_baseline(prior_run_dir: Path, *, run_dir: RunDir) -> SplitResult:
     """Reuse a PRIOR run's baseline instead of recomputing it.
 
@@ -1172,7 +1238,9 @@ def reuse_baseline(prior_run_dir: Path, *, run_dir: RunDir) -> SplitResult:
     # Copy the seed candidate snapshot so this run can read/serve it as best.
     prior_seed = prior / "candidates" / "seed"
     if prior_seed.is_dir():
-        run_dir.snapshot("seed", prior_seed)
+        # The baseline score is the earlier run's, so today's files must not be sealed as "on time".
+        run_dir.snapshot("seed", prior_seed, seal_eval_surface=False)
+    _carry_eval_surface(prior, run_dir)
 
     # The seed's val and train rollouts only: finalize's bookend and diagnose read them by tag, so
     # with them on disk neither re-evaluates the seed. The prior run's CANDIDATE rollouts are not

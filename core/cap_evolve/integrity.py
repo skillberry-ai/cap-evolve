@@ -213,3 +213,156 @@ def set_readonly(root: Path, manifest: dict) -> None:
                 continue
             mode = p.stat().st_mode & 0o7777
             p.chmod(mode & ~0o222)
+
+
+# ---- the project's eval surface (adapter / scorer / tasks), sealed per run ---------------------
+#
+# ``snapshot`` above hashes a candidate workdir copy. The files that actually MEASURE a candidate --
+# the project's ``adapters/`` folder, a scorer, the tasks file(s) -- live in the project, outside
+# that copy. These helpers hash them once per run (at the first use) into the run's private area and
+# report which ones changed since, so a verb that moves ``best_id`` or scores test can refuse.
+
+EVAL_SURFACE_MANIFEST = "eval_surface.json"
+#: folders hashed recursively (the adapter and anything it ships next to it, e.g. ``tasks.jsonl``)
+EVAL_SURFACE_DIRS: tuple[str, ...] = ("adapters", "tasks")
+#: top-level files of the project (fnmatch on the bare name)
+EVAL_SURFACE_FILES: tuple[str, ...] = ("adapter.py", "*scorer*.py", "tasks*.jsonl", "tasks*.json",
+                                       "tasks*.yaml", "tasks*.csv")
+#: interpreter / OS noise that changes without anyone editing the eval surface
+_NOISE_DIRS = {"__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache"}
+_NOISE_FILES = ("*.pyc", "*.pyo", ".DS_Store")
+
+
+#: hard cap on hashed eval-surface files, so a symlink to a huge tree cannot stall every verb
+_EVAL_SURFACE_MAX_FILES = 20000
+
+
+def _content_hash(path: Path) -> str:
+    """SHA-256 of the bytes ``path`` points at, FOLLOWING symlinks (unlike :func:`_hash_file`).
+
+    The eval surface is read by the adapter wherever it really lives, so a symlinked adapter (or a
+    symlinked ``adapters/`` folder, as the parsec scaffolds create) must be sealed by its content."""
+    h = hashlib.sha256()
+    with Path(path).open("rb") as f:
+        while chunk := f.read(_CHUNK):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _eval_surface_entries(project: Path) -> tuple[dict[str, str], dict[str, str]]:
+    """``({relpath: sha256 of content}, {relpath: resolved path})`` of the project's eval surface.
+
+    Symlinks (files and folders, also ones pointing outside ``project``) are followed and their
+    target's CONTENT is hashed; the resolved path of every entry that does not live where its
+    project-relative name says is recorded too, so retargeting a link is a change as well. Relative
+    paths are built from directory entries (never from link targets), so they cannot contain ``..``.
+    A link that cannot be read (dangling, no permission) is recorded as ``unreadable``."""
+    project = Path(project)
+    files: dict[str, str] = {}
+    targets: dict[str, str] = {}
+
+    def add(p: Path, rel: str) -> None:
+        if len(files) >= _EVAL_SURFACE_MAX_FILES:
+            files["<truncated>"] = f"more than {_EVAL_SURFACE_MAX_FILES} files; the rest is not sealed"
+            return
+        try:
+            files[rel] = _content_hash(p)
+        except OSError:
+            files[rel] = "unreadable"
+        try:
+            real = p.resolve()
+        except (OSError, RuntimeError):
+            real = None
+        if real is None or real != project / rel:
+            targets[rel] = str(real) if real is not None else "unresolvable"
+
+    with contextlib.suppress(OSError):
+        for p in sorted(project.iterdir()):
+            if any(fnmatch.fnmatch(p.name, g) for g in EVAL_SURFACE_FILES) and (p.is_file() or p.is_symlink()):
+                if not p.is_dir():
+                    add(p, p.name)
+    for d in EVAL_SURFACE_DIRS:
+        top = project / d
+        if not top.is_dir():  # is_dir follows a symlinked folder
+            continue
+        seen: set[tuple[int, int]] = set()
+        for dirpath, dirnames, filenames in os.walk(top, followlinks=True):
+            try:
+                st = os.stat(dirpath)
+            except OSError:
+                dirnames[:] = []
+                continue
+            if (st.st_dev, st.st_ino) in seen:  # a symlink loop: walk each real folder once
+                dirnames[:] = []
+                continue
+            seen.add((st.st_dev, st.st_ino))
+            dirnames[:] = sorted(n for n in dirnames if n not in _NOISE_DIRS)
+            sub = Path(dirpath).relative_to(top).as_posix()
+            for name in sorted(filenames):
+                if any(fnmatch.fnmatch(name, g) for g in _NOISE_FILES):
+                    continue
+                rel = "/".join(x for x in (d, "" if sub == "." else sub, name) if x)
+                add(Path(dirpath) / name, rel)
+    return dict(sorted(files.items())), dict(sorted(targets.items()))
+
+
+def _eval_surface_files(project: Path) -> dict[str, str]:
+    """{relpath: sha256} of the project's eval surface (see :func:`_eval_surface_entries`)."""
+    return _eval_surface_entries(project)[0]
+
+
+def eval_surface_snapshot(project: Path) -> dict:
+    """Manifest of the project's eval surface (see :data:`EVAL_SURFACE_DIRS` / ``_FILES``)."""
+    project = Path(project).resolve()
+    files, targets = _eval_surface_entries(project)
+    return {"version": VERSION, "kind": "eval_surface", "root": str(project),
+            "files": files, "targets": targets}
+
+
+def record_eval_surface(manifest_path: Path, project: Path) -> tuple[dict, bool]:
+    """Write the eval-surface manifest at ``manifest_path`` unless one is already there.
+
+    Returns ``(manifest, created)``. An existing manifest is never overwritten: the first use of a
+    run is the reference every later check compares against.
+    """
+    manifest_path = Path(manifest_path)
+    if manifest_path.exists():
+        return read_manifest(manifest_path), False
+    man = eval_surface_snapshot(project)
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    write_manifest(manifest_path, man)
+    return man, True
+
+
+def verify_eval_surface(manifest: dict, project: Path | None = None) -> TamperReport:
+    """Re-hash the eval surface named by ``manifest`` and diff.
+
+    ``project`` (when given) must be the project the manifest was recorded for: pointing a later
+    verb at a different project is itself a change of eval surface and is reported as such.
+    """
+    root = Path(manifest.get("root") or "")
+    if manifest.get("kind") != "eval_surface" or not str(manifest.get("root") or ""):
+        return TamperReport(False, reason="TAMPERED: the eval-surface manifest is unreadable or malformed")
+    if project is not None and Path(project).resolve() != root:
+        return TamperReport(False, modified=[str(Path(project).resolve())],
+                            reason=(f"TAMPERED: this verb names project {Path(project).resolve()} but the run's "
+                                    f"eval surface was recorded for {root}"))
+    expected = manifest.get("files")
+    exp_targets = manifest.get("targets") or {}
+    if not isinstance(expected, dict) or not isinstance(exp_targets, dict):
+        return TamperReport(False, reason="TAMPERED: the eval-surface manifest is unreadable or malformed")
+    if not expected:
+        return TamperReport(False, reason=(f"TAMPER-UNKNOWN: no eval-surface file (adapters/, tasks/, adapter.py, "
+                                           f"*scorer*.py, tasks*) was found in {root} at the run's first act "
+                                           "call, so nothing can show the adapter/scorer is unchanged"))
+    actual, act_targets = _eval_surface_entries(root)
+    modified = sorted(r for r, h in actual.items()
+                      if r in expected and (expected[r] != h or exp_targets.get(r) != act_targets.get(r)))
+    added = sorted(r for r in actual if r not in expected)
+    removed = sorted(r for r in expected if r not in actual)
+    if not (modified or added or removed):
+        return TamperReport(True, reason=f"{len(expected)} eval-surface file(s) unchanged")
+    bits = [f"{k} {v}" for k, v in (("modified", modified), ("added", added), ("removed", removed)) if v]
+    return TamperReport(False, modified, added, removed,
+                        reason=("TAMPERED: the project's eval surface (adapter/scorer/tasks) changed since the "
+                                "run's first act call (" + "; ".join(bits) + ")"))

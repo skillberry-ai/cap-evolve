@@ -55,6 +55,42 @@ def _num(sr: SplitResult | None) -> dict:
             "coverage": round(sr.coverage, 4), "pass_k": sr.pass_k}
 
 
+def _override_count(run_dir, final: dict | None = None) -> int:
+    """How many times the test split was re-scored with the seal guard overridden (0 = never)."""
+    n = len(run_dir.test_rescore_overrides())
+    if not n and isinstance(final, dict):
+        ov = final.get("test_rescore_override")
+        if isinstance(ov, dict) and ov.get("used"):
+            n = int(ov.get("count") or 1)
+    return n
+
+
+def _reuse_count(run_dir, final: dict | None = None) -> int:
+    """How many other runs already scored this test split (0 = none / not recorded)."""
+    for fin in (final, None):
+        if fin is None:
+            try:
+                fin = json.loads((run_dir.root / "final.json").read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                return 0
+        if isinstance(fin, dict) and fin.get("test_reuse_count"):
+            try:
+                return int(fin["test_reuse_count"])
+            except (TypeError, ValueError):
+                return 0
+    return 0
+
+
+def _reuse_status(n: int) -> str:
+    return (f"WARNING: this test split was already scored by {n} other run(s), so this is "
+            "not a first, clean held-out score")
+
+
+def _rescore_status(n: int) -> str:
+    return (f"WARNING: the test split was re-scored {n} time(s) (seal override), so this is "
+            "not a single clean held-out score")
+
+
 def _compare(seed: SplitResult | None, best: SplitResult | None, *, split: str,
              k_se: float, mode: str) -> dict:
     """Paired delta + the gate decision on one split. Gate is only meaningful on val."""
@@ -215,6 +251,8 @@ def main(argv=None) -> int:
     )
 
     rows: list = []
+    override_n = 0
+    reuse_n = 0
 
     # ---- val: free, straight off the rollouts the gate used ------------------
     if not va:
@@ -278,7 +316,14 @@ def main(argv=None) -> int:
         rows.append({"split": "test", "status": "skipped by --skip-test (seal untouched)"})
     elif splits.test_used and final_path.is_file():
         fin = json.loads(final_path.read_text(encoding="utf-8"))
-        rows.append({"split": "test", "status": "already sealed — reporting final.json",
+        override_n = _override_count(run_dir, fin)
+        reuse_n = _reuse_count(run_dir, fin)
+        _st = (_rescore_status(override_n) if override_n else "")
+        if reuse_n:
+            _st = (_st + "; " if _st else "") + _reuse_status(reuse_n)
+        rows.append({"split": "test",
+                     "status": (_st + " — reporting final.json"
+                                if _st else "already sealed — reporting final.json"),
                      "seed": _num(SplitResult.from_dict(fin["test_baseline"])),
                      "best": _num(SplitResult.from_dict(fin["test"])),
                      "test_delta": fin.get("test_delta"),
@@ -296,7 +341,12 @@ def main(argv=None) -> int:
                        SplitResult.from_dict(fin["test"]),
                        split="test", k_se=k_se, mode=mode)
         row["test_delta"] = fin.get("test_delta")
-        row["status"] = "sealed now (once)"
+        override_n = _override_count(run_dir, fin)
+        reuse_n = _reuse_count(run_dir)
+        _st = _rescore_status(override_n) if override_n else ""
+        if reuse_n:
+            _st = (_st + "; " if _st else "") + _reuse_status(reuse_n)
+        row["status"] = _st or "sealed now (once)"
         rows.append(row)
 
     payload = {
@@ -313,6 +363,10 @@ def main(argv=None) -> int:
         "spent": run_dir.spent.to_dict(),
         "screen_ledger": _screen_ledger(run_dir),
     }
+    if reuse_n:
+        payload["test_reuse_count"] = reuse_n
+    if override_n:
+        payload["test_rescore_override"] = {"used": True, "count": override_n}
     if best_id == "seed":
         payload["warning"] = ("best_id == 'seed': nothing cleared the val gate, so every "
                               "delta below is 0 by construction. Report this as a null "

@@ -22,10 +22,12 @@ accounting can't be bypassed by a skill. Pure stdlib.
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import json
 import os
 import shutil
 import time
+import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -42,7 +44,9 @@ def _atomic_write(path: Path, text: str) -> None:
     partial one. ``fsync`` before the replace so the bytes are durable first.
     """
     path = Path(path)
-    tmp = path.with_name(f".{path.name}.tmp.{os.getpid()}")
+    # Unique per call (not only per process): two threads writing the same file at once
+    # must not share a temp file, or one's replace moves it away under the other.
+    tmp = path.with_name(f".{path.name}.tmp.{os.getpid()}.{uuid.uuid4().hex}")
     try:
         with tmp.open("w", encoding="utf-8") as f:
             f.write(text)
@@ -213,11 +217,13 @@ class Spent:
 
 
 def _allow_test_rescore() -> bool:
-    """Deliberate, disclosed override for the re-score guard in ``reserve_test``.
+    """Operator-only override for the re-score guard in ``begin_test_attempt``.
 
     Deliberately an env var and not a quiet default: the guard exists to stop a retry loop from
-    turning the held-out split into a selection surface, and anyone bypassing it should have to say
-    so somewhere a reader of the run can see.
+    turning the held-out split into a selection surface. Its name is kept OUT of every refusal
+    message and every agent-visible skill doc (#799: an optimizer read it there and switched the
+    guard off). Every use is recorded: a ``test_rescore_override`` event in events.jsonl, and a
+    ``test_rescore_override`` field in final.json (see ``commit_test``).
     """
     return str(os.environ.get("CAPEVOLVE_ALLOW_TEST_RESCORE", "")).strip().lower() in {
         "1", "true", "yes", "on"}
@@ -797,26 +803,108 @@ class RunDir:
         splits = self.read_splits()
         splits.check_test_unused()
         spent = sorted((self.rollouts / "test").glob("*.json")) if self.rollouts.exists() else []
-        if spent and not _allow_test_rescore():
+        if not spent:
+            return
+        if not _allow_test_rescore():
+            # Do NOT name the override here: the optimizer agent reads this text (#799).
             raise TestSealError(
-                f"TEST split was already SCORED by an earlier finalize attempt in this run "
-                f"({len(spent)} test rollout(s) under {self.rollouts / 'test'}) even though the "
-                "seal was never committed - a finalize that dies after scoring but before writing "
-                "leaves exactly this state. The held-out set has been observed, so re-scoring it "
-                "would make the headline number a SECOND look at test.\n"
+                f"TEST split is sealed: it was already SCORED by an earlier finalize attempt in "
+                f"this run ({len(spent)} test rollout(s) under {self.rollouts / 'test'}) even "
+                "though the seal was never committed - a finalize that dies after scoring but "
+                "before writing leaves exactly this state. The held-out set has been observed, so "
+                "re-scoring it would make the headline number a SECOND look at test.\n"
                 "  * To report what the earlier attempt computed, read those rollouts instead of "
-                "re-running.\n"
-                "  * To override deliberately, set CAPEVOLVE_ALLOW_TEST_RESCORE=1 - it is recorded "
-                "in the run so the disclosure survives into the report."
+                "re-running."
             )
+        self._record_test_rescore_override(len(spent))
+
+    def _record_test_rescore_override(self, n_spent: int) -> None:
+        """Record that the seal was bypassed: an event now, and state so final.json gets marked."""
+        rec = {"t": time.time(), "existing_test_rollouts": int(n_spent)}
+        with _file_lock(self._state_lock):
+            st = self._read_state()
+            uses = st.get("test_rescore_override")
+            uses = uses if isinstance(uses, list) else []
+            uses.append(rec)
+            st["test_rescore_override"] = uses
+            self._write_state(st)
+        self.log_event("test_rescore_override", existing_test_rollouts=int(n_spent),
+                       note="test split re-scored with the seal guard overridden; "
+                            "the headline number is a second look at test")
+
+    def test_rescore_overrides(self) -> list:
+        """Every recorded override of the re-score guard in this run (empty list if none)."""
+        try:
+            uses = self._read_state().get("test_rescore_override")
+        except (OSError, ValueError):
+            return []
+        return uses if isinstance(uses, list) else []
+
+    def _mark_final_with_overrides(self) -> None:
+        """Stamp final.json with the recorded overrides, so a reader sees the seal was bypassed."""
+        uses = self.test_rescore_overrides()
+        final = self.root / "final.json"
+        if not uses or not final.is_file():
+            return
+        try:
+            payload = json.loads(final.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return
+        if not isinstance(payload, dict):
+            return
+        payload["test_rescore_override"] = {"used": True, "count": len(uses), "uses": uses}
+        _atomic_write(final, json.dumps(payload, indent=2))
 
     def commit_test(self) -> Splits:
-        """Burn the seal (flip + persist). Call ONLY after test is scored+written."""
+        """Burn the seal (flip + persist). Call ONLY after test is scored+written.
+
+        Every caller writes final.json just before this, so this is also where a recorded
+        override of the re-score guard is stamped into final.json.
+        """
         with _file_lock(self._state_lock):
             splits = self.read_splits()
             splits.mark_test_used()  # raises TestSealError if already used (double commit)
             self.write_splits(splits)
-            return splits
+        self._mark_final_with_overrides()
+        self._record_test_reuse(splits)
+        return splits
+
+    def _record_test_reuse(self, splits: Splits) -> None:
+        """Warn (never refuse) when another run folder already scored the same test ids.
+
+        Keeps ``test_ledger.jsonl`` beside the runs; logs a ``test_reuse`` event and stamps
+        ``test_reuse_count`` (only when > 0) into final.json.
+        """
+        try:
+            th = hashlib.sha256(json.dumps(sorted(map(str, splits.test))).encode()).hexdigest()
+            ledger = self.root.parent / "test_ledger.jsonl"
+            earlier: list = []
+            # Read and append under one lock hold, so two runs finalizing together each see the other.
+            # An empty test split scored nothing: no ledger entry, no warning (count 0).
+            with _file_lock(self.root.parent / "test_ledger.lock"):
+                if splits.test and ledger.is_file():
+                    for line in ledger.read_text(encoding="utf-8").splitlines():
+                        try:
+                            e = json.loads(line)
+                        except ValueError:
+                            continue
+                        if isinstance(e, dict) and e.get("test_hash") == th and e.get("run") != self.root.name:
+                            earlier.append(e["run"])
+                if splits.test:
+                    with ledger.open("a", encoding="utf-8") as f:
+                        f.write(json.dumps({"test_hash": th, "run": self.root.name, "time": time.time()}) + "\n")
+            earlier = sorted(set(earlier))
+            if earlier:
+                self.log_event("test_reuse", count=len(earlier), runs=earlier,
+                               msg="this test split was already scored by another run")
+            final = self.root / "final.json"
+            if earlier and final.is_file():
+                payload = json.loads(final.read_text(encoding="utf-8"))
+                if isinstance(payload, dict):
+                    payload["test_reuse_count"] = len(earlier)
+                    _atomic_write(final, json.dumps(payload, indent=2))
+        except Exception:  # noqa: BLE001 - a warning aid must never break finalize
+            pass
 
     # Back-compat shim: ``consume_test`` flipped+persisted the seal BEFORE scoring,
     # which permanently burned the headline number on a transient finalize crash.
@@ -827,7 +915,7 @@ class RunDir:
         return self.commit_test()
 
     # ---- candidates ---------------------------------------------------------
-    def snapshot(self, candidate_id: str, src_dir: Path, ignore=None) -> Path:
+    def snapshot(self, candidate_id: str, src_dir: Path, ignore=None, seal_eval_surface: bool = True) -> Path:
         """Persist ``src_dir`` as candidate ``candidate_id``.
 
         ``ignore`` is an optional iterable of top-level names to exclude (e.g. the
@@ -840,7 +928,54 @@ class RunDir:
             shutil.rmtree(dst)
         ig = shutil.ignore_patterns(*ignore) if ignore else None
         shutil.copytree(src_dir, dst, ignore=ig)
+        if candidate_id == "seed" and seal_eval_surface:
+            self._seal_eval_surface_at_baseline()
         return dst
+
+    def eval_surface_project(self) -> Path | None:
+        """The project this run's eval surface belongs to: the one in its spec_resolved / run_config event,
+        else the sibling ``<work>/.capevolve/project``; None when neither is a real project."""
+        project = None
+        try:  # (1) the project the run was started with, from its spec_resolved / run_config event
+            with Path(self.events_path).open(encoding="utf-8") as f:
+                for line in f:
+                    try:
+                        ev = json.loads(line)
+                    except Exception:  # noqa: BLE001
+                        continue
+                    if ev.get("kind") in ("run_config", "spec_resolved") and ev.get("project"):
+                        project = Path(str(ev["project"]))
+                        break
+        except Exception:  # noqa: BLE001
+            pass
+        if project is None:  # (2) the standard sibling <work>/.capevolve/project; (3) else nothing
+            sib = self.root.resolve().parent / "project"
+            if sib.is_dir():
+                project = sib
+        if project is None or not (
+                (project / "adapters").is_dir() or (project / "adapter.py").is_file()):
+            return None
+        return project
+
+    def _seal_eval_surface_at_baseline(self) -> None:
+        """Record the project's eval-surface manifest when the seed is snapshotted, i.e. before the
+        baseline is scored, so a scorer edited after the baseline is caught. The project is the one
+        this run was started with (the ``project`` of its spec_resolved / run_config event); failing that, the standard
+        sibling ``<work>/.capevolve/project`` next to the run folder. If no project is found for
+        sure, nothing is recorded (act.py records it on its first call). Best effort."""
+        try:
+            from . import integrity
+            path = self.private_dir / integrity.EVAL_SURFACE_MANIFEST
+            if path.exists():
+                return
+            project = self.eval_surface_project()
+            if project is None or not (
+                    (project / "adapters").is_dir() or (project / "adapter.py").is_file()):
+                return
+            integrity.record_eval_surface(path, project)
+            self.log_event("eval_surface_recorded", project=str(project), late=False, at="baseline")
+        except Exception:  # noqa: BLE001 - sealing is an aid here; act.py records it later if this fails
+            pass
 
     def candidate_dir(self, candidate_id: str) -> Path:
         return self.candidates / candidate_id

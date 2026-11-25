@@ -122,6 +122,69 @@ def _memory_skill_from_spec(run_dir: RunDir) -> str | None:
     return None
 
 
+def _spec_value(run_dir: RunDir, key: str):
+    """``key`` from the spec THIS run was started with (run_config/spec_resolved), or None.
+
+    Falls back to ``<base>/project/capevolve.yaml`` when the run logged no spec path.
+    """
+    spec: dict = {}
+    try:
+        from cap_evolve.specfile import spec_for_run
+        spec = spec_for_run(run_dir) or {}
+    except Exception:  # noqa: BLE001
+        spec = {}
+    if not spec:
+        fallback = run_dir.root.parent / "project" / "capevolve.yaml"
+        try:
+            for line in fallback.read_text(encoding="utf-8").splitlines():
+                if line.startswith(key + ":"):
+                    return line.split(":", 1)[1].split("#", 1)[0].strip().strip("'\"")
+        except OSError:
+            pass
+        return None
+    return spec.get(key)
+
+
+def _spec_number(run_dir: RunDir, key: str) -> float | None:
+    v = _spec_value(run_dir, key)
+    try:
+        return None if v is None else float(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def _spec_known(run_dir: RunDir) -> bool:
+    try:
+        from cap_evolve.specfile import resolve_spec_path
+        if resolve_spec_path(run_dir) is not None:
+            return True
+    except Exception:  # noqa: BLE001
+        pass
+    return (run_dir.root.parent / "project" / "capevolve.yaml").is_file()
+
+
+def _looser_gate_settings(run_dir: RunDir, rec: dict) -> list[str]:
+    """Ways the gate run behind ``rec`` was looser than the run's spec (mode / k_se / threshold)."""
+    if not _spec_known(run_dir) or rec.get("kind") == "promote_gate" and rec.get("k_se") is None:
+        return []
+    out = []
+    if rec.get("k_se") is not None:
+        want_k = _spec_number(run_dir, "gate_k_se")
+        want_k = 0.2 if want_k is None else want_k
+        if float(rec["k_se"]) < want_k:
+            out.append(f"k_se {rec['k_se']} < spec gate_k_se {want_k}")
+    if rec.get("mode") in ("strict", "threshold"):
+        want_m = str(_spec_value(run_dir, "gate_mode") or "paired")
+        if rec["mode"] != want_m:
+            out.append(f"mode {rec['mode']} is looser than spec gate_mode {want_m}")
+    if rec.get("threshold") is not None:
+        want_t = _spec_number(run_dir, "gate_threshold")
+        want_t = 0.0 if want_t is None else want_t
+        if float(rec["threshold"]) < want_t:
+            out.append(f"threshold {rec['threshold']} < spec gate_threshold {want_t}")
+    return out
+
+
 def _round_gate_numbers(run_dir: RunDir, candidate_id: str) -> dict:
     """The gate's NUMBERS for ``candidate_id``, read back from ``round.py``'s own table.
 
@@ -444,6 +507,76 @@ def _gate_row(run_dir: RunDir, candidate_id: str) -> dict | None:
     return None
 
 
+def _reference_is_champion(run_dir, ref_ids) -> bool:
+    """True if every tag in the reference is the current champion or a byte-identical copy of it."""
+    best = str(run_dir.best_id)
+    if not ref_ids or any(not t for t in ref_ids):
+        return False
+    if all(t == best for t in ref_ids):
+        return True
+    from cap_evolve import eval_index
+    hashes = {}
+    for r in eval_index.rows(run_dir):
+        if r.get("tag") and r.get("cap_hash"):
+            hashes.setdefault(r["tag"], r["cap_hash"])
+    want = hashes.get(best)
+    return want is not None and all(t == best or hashes.get(t) == want for t in ref_ids)
+
+
+def _newest_gate_record(run_dir: RunDir, candidate_id: str) -> dict | None:
+    """The NEWEST non-advisory gate record for a candidate, across every kind (#763).
+
+    Kinds: a round-table row (reference = the table's ``parent.tag``), a ``gate_check`` event
+    (reference = its ``--current``), a ``promote_gate`` event (reference = the champion when
+    act.py promote ran). Side checks (``advisory`` events) never count. Newest by time wins, so a
+    later reject beats an earlier accept of any kind.
+    """
+    recs: list[tuple[float, int, dict]] = []
+    work = run_dir.root / "work"
+    if work.is_dir():
+        # Round-table records are ordered by file mtime. That is safe only because nothing rewrites an
+        # old round table (a re-gate writes a new ``.rN.json`` beside it); a touched old file would
+        # look newest.
+        for log in work.iterdir():
+            if not log.is_file() or log.suffix != ".json":
+                continue
+            try:
+                payload = json.loads(log.read_text(encoding="utf-8"))
+                mt = log.stat().st_mtime
+            except Exception:  # noqa: BLE001 — not a round table
+                continue
+            if not isinstance(payload, dict):
+                continue
+            for row in payload.get("candidates") or []:
+                if isinstance(row, dict) and str(row.get("tag")) == str(candidate_id):
+                    parent = payload.get("parent")
+                    ref = parent.get("tag") if isinstance(parent, dict) else None
+                    recs.append((mt, 0, {"verdict": row.get("verdict"), "reference": ref,
+                                         "kind": "round_table",
+                                         "k_se": row.get("k_se"),
+                                         "mode": row.get("mode"),
+                                         "threshold": row.get("threshold")}))
+    try:
+        with run_dir.events_path.open(encoding="utf-8") as f:
+            for n, line in enumerate(f):
+                try:
+                    ev = json.loads(line)
+                except Exception:  # noqa: BLE001
+                    continue
+                if (ev.get("kind") in ("promote_gate", "gate_check") and not ev.get("advisory")
+                        and str(ev.get("candidate")) == str(candidate_id)):
+                    recs.append((float(ev.get("t") or 0), 1 + n, {
+                        "verdict": ev.get("verdict"), "reference": ev.get("reference"),
+                        "kind": ev["kind"], "mode": ev.get("mode"),
+                        **{k: ev.get(k) for k in ("k_se", "threshold", "allow_regression",
+                                                   "candidate_min_trial")}}))
+    except FileNotFoundError:
+        pass
+    if not recs:
+        return None
+    return max(recs, key=lambda r: (r[0], r[1]))[2]
+
+
 def _gate_verdict(run_dir: RunDir, candidate_id: str) -> str | None:
     row = _gate_row(run_dir, candidate_id)
     return row.get("verdict") if row else None
@@ -575,6 +708,10 @@ def main(argv=None) -> int:
     # has 2+ parents this script has no other way to learn — those scripts produce a
     # merged artifact dir, not a commit. An ordinary edit's single parent is already
     # known (best_id at gate time, below) and needs no flag.
+    p.add_argument("--accept-without-gate", default=None, metavar="REASON",
+                   help="explicit escape: book --decision accept for a candidate with NO passing "
+                        "gate record. REASON is recorded in events.jsonl and on the decision. "
+                        "Without a passing gate row (round table or act.py promote) accept exits 2.")
     p.add_argument("--parents", default=None,
                    help="comma-separated parent candidate ids, for a MERGE candidate "
                         "(2+ parents). Omit for an ordinary edit.")
@@ -678,6 +815,58 @@ def main(argv=None) -> int:
     # "the gate rejected it" makes events.jsonl assert a judgement no measurement supports.
     gate_verdict = _gate_verdict(run_dir, args.candidate_id)
     overrode_gate = bool(args.decision == "reject" and gate_verdict == "accept")
+    # #763: an accept moves the champion, so it needs a passing gate record for THIS candidate
+    # (a round-table row, or the promote_gate event act.py promote writes). Else exit 2.
+    accepted_without_gate = None
+    gate_reference = None
+    gate_settings = None
+    if accepted:
+        rec = _newest_gate_record(run_dir, args.candidate_id)
+        # The newest gate record must be an accept AND must have compared against the champion
+        # as it stands NOW; a gate against an older/weaker reference proves nothing.
+        # A pooled reference ("seed,seed_rep", or a list) counts only if EVERY tag in it is the
+        # champion or has the champion's cap_hash (a byte-identical copy). Pooling the champion
+        # with a weaker candidate would lower the bar; a tag with no known hash does not count.
+        ref = rec.get("reference") if rec else None
+        ref_ids = ([str(x).strip() for x in ref] if isinstance(ref, (list, tuple))
+                   else [p.strip() for p in str(ref).split(",")]) if ref is not None else []
+        passing = bool(rec and rec.get("verdict") == "accept" and ref is not None
+                       and _reference_is_champion(run_dir, ref_ids))
+        loose = _looser_gate_settings(run_dir, rec) if rec and passing else []
+        if loose and not args.accept_without_gate:
+            print(json.dumps({
+                "error": f"--decision accept for {args.candidate_id}: its gate run used looser "
+                         f"settings than the run's spec ({'; '.join(loose)})",
+                "newest_gate_record": rec,
+                "fix": "re-run gate_check.py with the spec's settings, or pass "
+                       "--accept-without-gate REASON to override on the record",
+            }, indent=2))
+            return 2
+        if loose:
+            accepted_without_gate = args.accept_without_gate
+            run_dir.log_event("accept_without_gate", candidate=args.candidate_id,
+                              reason=accepted_without_gate, gate_verdict=rec.get("verdict"),
+                              looser_settings=loose)
+        if rec:
+            gate_verdict = rec.get("verdict")
+        gate_reference = rec.get("reference") if rec else None
+        gate_settings = ({k: rec.get(k) for k in ("mode", "k_se", "threshold", "allow_regression",
+                                                  "candidate_min_trial")} if rec else None)
+        if not passing:
+            if not args.accept_without_gate:
+                print(json.dumps({
+                    "error": f"--decision accept for {args.candidate_id}, but it has no passing "
+                             "gate record: its newest gate record must be an accept measured "
+                             f"against the current champion ({run_dir.best_id})",
+                    "newest_gate_record": rec,
+                    "gate_verdict": gate_verdict,
+                    "fix": "gate it first (round.py / gate_check.py, or act.py promote), or pass "
+                           "--accept-without-gate REASON to override on the record",
+                }, indent=2))
+                return 2
+            accepted_without_gate = args.accept_without_gate
+            run_dir.log_event("accept_without_gate", candidate=args.candidate_id,
+                              reason=accepted_without_gate, gate_verdict=gate_verdict)
     # ``gate_verdict is None`` means no round table has a row for this candidate at all — no
     # gate ever ran. ``--reject-basis gate`` asserts a gate rejection happened; with no gate
     # row to back that up, that assertion is exactly as unsupported as the accept/inconclusive
@@ -926,6 +1115,8 @@ def main(argv=None) -> int:
     run_dir.log_event(args.decision, candidate=args.candidate_id, val=args.val,
                       val_unverified=args.val_unverified,
                       gate_verdict=gate_verdict, overrode_gate=overrode_gate,
+                      accepted_without_gate=accepted_without_gate,
+                      gate_reference=gate_reference, gate_settings=gate_settings,
                       note=args.note,
                       reject_basis=args.reject_basis,
                       bypassed_screen_and_gate=bypassed_screen_and_gate,

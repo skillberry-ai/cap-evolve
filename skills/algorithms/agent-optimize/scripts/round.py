@@ -842,17 +842,24 @@ def _objective_metrics(run_dir: RunDir, tags, split: str, names: set[str]) -> tu
     return values, stderrs
 
 
+_GATE_THRESHOLD = 0.0  # set by main() from --threshold (default: the spec's gate_threshold)
+
+
 def _gate(run_dir: Path, tag: str, k_se: float, mode: str, veto: bool,
           current: str | None = None, *, objectives: list | None = None,
           metrics_candidate: dict | None = None, metrics_current: dict | None = None,
           metrics_stderr_candidate: dict | None = None, metrics_stderr_current: dict | None = None,
-          constraints: list | None = None) -> dict:
+          constraints: list | None = None, purpose: str = "round") -> dict:
     """Run gate_check.py for one tag. ``objectives``/``metrics-*``/``constraints`` are forwarded
     verbatim for ``--mode pareto``/``epsilon_constraint`` (issue #684 items 1-2) — see
     ``_objective_metrics`` for where the candidate's own ``metrics_candidate`` values come from.
     """
     cmd = [sys.executable, str(HERE / "gate_check.py"), "--run-dir", str(run_dir),
-           "--candidate", tag, "--k-se", str(k_se), "--mode", mode]
+           "--candidate", tag, "--k-se", str(k_se), "--mode", mode,
+           "--threshold", str(_GATE_THRESHOLD)]
+    # The round table row is this round's gate record; every gate_check run made from here is a
+    # measurement behind it (or a side check) and must never count as an accept for commit.py.
+    cmd += ["--advisory", purpose]
     if current:
         cmd += ["--current", current]
     if veto:
@@ -1036,6 +1043,8 @@ def build_parser() -> argparse.ArgumentParser:
                    help="comma-separated tags that already exist under $R/work/")
     p.add_argument("--n-trials", type=int, required=True)
     p.add_argument("--k-se", type=float, default=0.2)
+    p.add_argument("--threshold", type=float, default=None,
+                   help="minimum delta for --mode threshold (default: the spec's gate_threshold)")
     # choices= derived from gate_check.py's GATE_MODES verbatim: this value is forwarded to
     # _gate() and a value only one side accepts empties the whole round table (run 33492876620
     # round 3, `--mode val` — the caller meant `--split val`, which is the default anyway).
@@ -1165,6 +1174,13 @@ def main(argv=None) -> int:
 
 def _main(argv=None) -> int:
     args = build_parser().parse_args(argv)
+    global _GATE_THRESHOLD
+    if args.threshold is None:
+        try:
+            args.threshold = float(spec_for_run(RunDir.open(Path(args.run_dir)), args.project).get("gate_threshold") or 0.0)
+        except Exception:  # noqa: BLE001
+            args.threshold = 0.0
+    _GATE_THRESHOLD = args.threshold
 
     # A gate too coarse to resolve its own verdict is refused, not warned about. Measured on
     # run 32861747778: the driver gated at --concurrency 100 after SKILL.md had told it "do not
@@ -1667,6 +1683,8 @@ def _main(argv=None) -> int:
             "stderr": (g.get("candidate") or {}).get("stderr"),
             "n": g.get("paired_n"),
             "k_se": args.k_se,
+            "mode": args.mode,
+            "threshold": args.threshold,
             "resolvable_effect_size": (g.get("gate") or {}).get("resolvable_effect_size"),
             # Which val tasks the delta was actually measured over. A row whose footprint is
             # `restricted: false` was measured across the whole split, so its SE carries the
@@ -1794,7 +1812,7 @@ def _main(argv=None) -> int:
                             "--gate-against control, which never reuses) to buy that."),
             }
             g_par = _gate(Path(args.run_dir), r["tag"], args.k_se, args.mode,
-                         args.veto_regressions, current=best)
+                         args.veto_regressions, current=best, purpose="raw_vs_parent")
             r["raw_vs_parent"] = {
                 "reference": best,
                 "gate_delta": (g_par.get("gate") or {}).get("delta"),

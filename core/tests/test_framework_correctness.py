@@ -30,6 +30,8 @@ def _commit(run_dir, cid, from_dir, decision, val=None, extra=()):
            "--note", "t", "--missing-handover-justification", "fixture",
            "--missing-ranked-issues-justification", "fixture",
            "--missing-diagnosis-justification", "fixture"]
+    if decision == "accept":
+        cmd += ["--accept-without-gate", "fixture: gate not under test"]
     if val is not None:
         cmd += ["--val", str(val)]
     return subprocess.run(cmd + list(extra), capture_output=True, text=True,
@@ -192,7 +194,7 @@ def test_pooled_p2_accept_commits_without_full_val_rollouts(tmp_path):
     for f in cand.iterdir():
         (be.ctx.work("cand_1") / f.name).write_bytes(f.read_bytes())
     assert run_dir.best_id == "seed"
-    be.commit_accept("cand_1", {"stage": "confirm", "confirmation": "accept"})
+    be.commit_accept("cand_1", {"stage": "confirm", "confirmation": "accept"}, verdict="accept", reference="seed")
     assert RunDir_best(run_dir.root) == "cand_1"
     ev = [json.loads(l) for l in (run_dir.root / "events.jsonl").read_text().splitlines()]
     acc = [e for e in ev if e.get("kind") == "accept"][-1]

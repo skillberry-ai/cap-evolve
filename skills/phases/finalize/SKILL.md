@@ -55,11 +55,8 @@ between them is the whole design:
   headline was that second look. `begin_test_attempt` refuses a retry once test
   rollouts exist on disk, before anything is spent.
 
-The seal refuses that mistake by default; it is not unbypassable.
-`CAPEVOLVE_ALLOW_TEST_RESCORE=1` is a deliberate opt-in override
-(`rundir.py:166`). Its own message promises the use "is recorded in the run" —
-nothing records it (issue #341), so a run that took a second look currently looks
-identical to an honest one. If you set it, disclose it in the write-up yourself.
+The seal refuses that mistake. Do not try to get around it: if finalize says
+test was already scored, report what is on disk and stop.
 
 Corollary: **all selection happens before finalize.** Choose the single best
 candidate on val, *then* finalize it. Finalists that genuinely need comparing get
