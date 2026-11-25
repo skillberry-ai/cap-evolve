@@ -474,3 +474,57 @@ def test_realbackend_commit_accept_logs_the_measured_reference(tmp_path, monkeyp
     g = [e for e in _events(r.rd) if e["kind"] == "promote_gate"][0]
     assert g["verdict"] == "accept" and g["reference"] == "seed"
     assert r.best() == "candA"
+
+
+# --- round.py gates at the spec's threshold and records it (T-103) -------------------------
+
+_THRESH_SPEC = "gate_mode: threshold\ngate_threshold: 0.05\n"
+
+
+def _round_row_with_threshold(r, threshold):
+    (r.rd.root / "work").mkdir(exist_ok=True)
+    (r.rd.root / "work" / "round_i0.json").write_text(json.dumps(
+        {"parent": {"tag": "seed"},
+         "candidates": [{"tag": "candA", "verdict": "accept", "mode": "threshold",
+                         "threshold": threshold}]}), encoding="utf-8")
+
+
+def test_round_table_looser_threshold_than_spec_is_refused(tmp_path):
+    r = _Real(tmp_path)
+    _write_spec(r, _THRESH_SPEC)
+    w = r.mk("candA", 12)
+    _round_row_with_threshold(r, 0.0)
+    p = r.commit("candA", w)
+    assert p.returncode == 2, p.stdout + p.stderr
+    assert "threshold" in p.stdout
+    assert r.best() == "seed"
+
+
+def test_round_table_threshold_at_spec_value_commits(tmp_path):
+    r = _Real(tmp_path)
+    _write_spec(r, _THRESH_SPEC)
+    w = r.mk("candA", 12)
+    _round_row_with_threshold(r, 0.05)
+    p = r.commit("candA", w)
+    assert p.returncode == 0, p.stdout + p.stderr
+    assert r.best() == "candA"
+
+
+def test_round_default_threshold_comes_from_the_runs_logged_spec(tmp_path):
+    sys_path = str(Path(__file__).resolve().parents[2] / "skills/algorithms/agent-optimize/scripts")
+    sys.path.insert(0, sys_path)
+    try:
+        import round as round_mod
+    finally:
+        sys.path.remove(sys_path)
+    r = _Real(tmp_path)
+    d = r.rd.root.parent / "project"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "capevolve.yaml").write_text("gate_mode: paired\n", encoding="utf-8")
+    (d / "capevolve.agentopt.yaml").write_text(_THRESH_SPEC, encoding="utf-8")
+    r.rd.log_event("run_config", spec=str(d / "capevolve.agentopt.yaml"))
+    # concurrency over the cap returns 2 right after the threshold is resolved
+    rc = round_mod._main(["--run-dir", str(r.rd.root), "--project", str(d), "--mode", "threshold",
+                          "--candidates", "candA", "--n-trials", "1", "--concurrency", "100000"])
+    assert rc == 2
+    assert round_mod._GATE_THRESHOLD == 0.05

@@ -1177,7 +1177,7 @@ def _main(argv=None) -> int:
     global _GATE_THRESHOLD
     if args.threshold is None:
         try:
-            args.threshold = float(spec_for_run(Path(args.run_dir), args.project).get("gate_threshold") or 0.0)
+            args.threshold = float(spec_for_run(RunDir.open(Path(args.run_dir)), args.project).get("gate_threshold") or 0.0)
         except Exception:  # noqa: BLE001
             args.threshold = 0.0
     _GATE_THRESHOLD = args.threshold
