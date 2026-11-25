@@ -25,7 +25,7 @@ sys.path.append(str(Path(__file__).resolve().parents[5] / "core"))
 
 import assert_itest  # noqa: E402
 
-TAU2 = EX.parent / "tau2_airline"
+TAU2 = EX.parents[2] / "tau2" / "examples" / "airline"
 ITEST_TASK = "82e2fac_1"
 
 
