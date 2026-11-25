@@ -62,8 +62,14 @@ STORE_REPO = "https://github.com/aviweit/skillberry-store.git"
 # * keeps the quotes in a tool's return value. The vMCP server stripped every `"`, so a tool
 #   returning a dict or list handed the agent JSON that no longer parsed.
 STORE_REF = "c39d472e8d138a854fd75a42ab6ae410ea8feaa1"   # a commit: clone + checkout
-AGENT_REPO = "https://github.com/skillberry-ai/skillberry-agent.git"
-AGENT_REF = "e359494f18267e339f9561acbd7a930e3b51189e"   # a commit: clone + checkout
+AGENT_REPO = "https://github.com/aviweit/skillberry-agent.git"
+# feat/sbcontext-history-trim-and-skill-render @ 98cd157, on top of e359494:
+# * opt-in Skillberry-context hooks: skillberry-context-history_start_regex drops the chat history
+#   before the first matching message; skillberry-context-template-* renders the injected SKILL.md
+#   as a Jinja template (both no-ops without their header, so tau2 is unaffected);
+# * skill prompts are never truncated (no fallback to the store's <=100-char description);
+# * incoming request headers are logged at INFO (credential headers masked).
+AGENT_REF = "98cd15731b5d1943c53238a521001c7b55d06f86"   # a commit: clone + checkout
 
 # SPA's port is FIXED at 7000 (+7001 for its config UI): `uvicorn.run(..., port=7000)`
 # in SPA's main.py, and consumers hardcode it too. A knob here would move the health

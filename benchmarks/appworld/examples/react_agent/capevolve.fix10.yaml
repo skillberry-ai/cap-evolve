@@ -1,0 +1,48 @@
+# 10-TASK spec: the full capevolve.yaml with only the split, trials, iterations and budgets changed,
+# so direct and blackbox can be compared on the same 10 tasks. Run it with
+#   AW_SPEC=capevolve.fix10.yaml <this approach's launch script>
+# cap-evolve spec for the AppWorld example (README: cap-evolve arm).
+# scripts/setup_project.sh renders @OPT_MODEL@, @INSTRUCTIONS@ and @AW_EVAL@ and copies this into the project.
+
+# --- what to optimize -------------------------------------------------------
+capabilities: [system-prompt, tools]     # the ReAct prompt + REPL helpers / API notes
+capability_path: seed_capability
+actions: [edit]
+capability_sources: [reference/api_index.md, reference/react_agent_notes.md]
+runner_repo_path: @AW_EVAL@/reference
+
+# --- who proposes edits -----------------------------------------------------
+optimizer_skill: claude-code
+optimizer_model: @OPT_MODEL@
+optimizer_max_turns: 200
+optimizer_usd_per_iter: 15.0
+optimizer_instructions_file: @INSTRUCTIONS@
+target_model: openai/gpt-oss-120b-a100
+
+# --- how to iterate ---------------------------------------------------------
+algorithm_skill: hill-climb
+algorithm_focus: all
+orchestration_mode: deterministic
+memory_skill: md-files
+
+# --- data + splits ----------------------------------------------------------
+dataset_source: adapter
+split_seed: 0
+split_ids_file: fix10_split.json                # 10 fixed train+dev tasks (seed 0) + 5 held-out test tasks from other train+dev scenarios (seed 1), never shown to the optimizer
+
+# --- scoring ----------------------------------------------------------------
+num_trials: 5
+
+# --- acceptance gate --------------------------------------------------------
+gate_mode: paired
+gate_k_se: 1.0
+
+# --- budget -----------------------------------------------------------------
+max_iterations: 3
+stall: 0
+max_metric_calls: 250                      # 10 tasks x 5 trials x (seed + 3 candidates) = 200
+max_optimizer_usd: 45.0                    # 3 x optimizer_usd_per_iter
+
+# --- iteration store --------------------------------------------------------
+protected_paths: [default]
+store: git

@@ -119,6 +119,60 @@ class _Progress:
                 self.log(f"{self.done}/{self.total} episodes, passed {self.passed}, infra errors {self.errors}")
 
 
+def _native_sims_enabled() -> bool:
+    """Whether to keep each episode's own ReAct message list (default: yes).
+    Opt out with CAPEVOLVE_NATIVE_SIMS=0, as CI does."""
+    return str(os.environ.get("CAPEVOLVE_NATIVE_SIMS", "")).strip().lower() not in {"0", "false", "no", "off"}
+
+
+def _split_of(ctx: Path, task_ids: list[str]) -> str:
+    """Which split this batch is, from the run's own splits.json (run_trials is not told).
+    Ties resolve to val, the split the optimizer reads."""
+    try:
+        splits = json.loads((ctx.parent.parent / "splits.json").read_text(encoding="utf-8"))
+        want = set(task_ids)
+        for name in ("val", "train", "test"):
+            ids = {str(i) for i in (splits.get(name) or [])}
+            if ids and want <= ids:
+                return name
+    except Exception:  # noqa: BLE001 — an unreadable splits.json must not break the eval
+        pass
+    return "eval"
+
+
+def _native_dir(ctx: Path, task_ids: list[str]) -> Path | None:
+    """``<run_dir>/native_sims/<tag>/<split>/``, or None when off or when ctx is not
+    ``candidates/<tag>`` / ``work/<tag>``. Each episode writes ``<task>__t<trial>.json`` there:
+    AppWorld's ReAct agent's own message list (the candidate's prompt messages + every turn)."""
+    if not _native_sims_enabled() or ctx.parent.name not in ("candidates", "work"):
+        return None
+    return ctx.parent.parent / "native_sims" / ctx.name / _split_of(ctx, task_ids)
+
+
+def _write_native(path: Path, record: dict) -> Path | None:
+    """Write one episode's record, never over an earlier one; returns the file written.
+
+    The same ``<tag>/<split>/<task>__t<trial>`` can be scored twice in one run: when a task is in
+    both val and test, the final test resolves to the same split as the baseline (ties go to val).
+    The second record then gets ``__2``, the third ``__3``, and so on. Native traces are a
+    convenience: never let writing one break the eval.
+    """
+    text = json.dumps(record, indent=1, ensure_ascii=False)
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        for n in range(1, 1000):
+            p = path if n == 1 else path.with_name(f"{path.stem}__{n}{path.suffix}")
+            try:
+                with open(p, "x", encoding="utf-8") as f:   # "x": fails if it exists, so nothing is replaced
+                    f.write(text)
+                return p
+            except FileExistsError:
+                continue
+    except OSError:
+        pass
+    return None
+
+
 class Adapter(CapabilityAdapter):
     # ---- data ------------------------------------------------------------------------------
     def tasks(self, split: str) -> list[Task]:
@@ -144,7 +198,7 @@ class Adapter(CapabilityAdapter):
                                   f"only the final window may run them (AW_ALLOW_SEALED={SEAL_VALUE})")
 
     def _episode(self, task: Task, cdir: Path, seed: int, root: Path, workdir: Path,
-                 random_seed: int | None = None) -> Rollout:
+                 random_seed: int | None = None, native_path: Path | None = None) -> Rollout:
         retries = int(os.environ.get("AW_INFRA_RETRIES", "1"))
         last_err = ""
         for attempt in range(retries + 1):
@@ -179,6 +233,10 @@ class Adapter(CapabilityAdapter):
                 # full lm_calls log; the gold-free record above is all that is kept.
                 if os.environ.get("AW_KEEP_OUTPUTS") != "1":
                     shutil.rmtree(root / "experiments" / "outputs" / spec["experiment_name"], ignore_errors=True)
+            native = rec.pop("native", None)    # never part of the rollout: it goes to native_sims/
+            if native is not None and native_path is not None:
+                _write_native(native_path, dict(native, seed=seed, attempt=attempt,
+                                                termination=rec.get("termination")))
             if not rec.get("infra_error"):
                 steps = rec.pop("steps", [])
                 meta = dict(rec, seed=seed, attempt=attempt, cost_source="unpriced",
@@ -211,9 +269,12 @@ class Adapter(CapabilityAdapter):
         progress = _Progress(len(jobs))
         out: dict[str, list] = {t.id: [None] * n_trials for t in tasks}
 
+        native = _native_dir(cdir, [t.id for t in tasks])
+
         def one(job):
             t, k = job
-            r = self._episode(t, cdir, base_seed + k, root, workdir)
+            r = self._episode(t, cdir, base_seed + k, root, workdir,
+                              native_path=native / f"{t.id}__t{k}.json" if native else None)
             progress.bump(r)
             return t.id, k, r
 

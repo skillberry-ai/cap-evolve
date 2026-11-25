@@ -1,18 +1,21 @@
 #!/usr/bin/env bash
 # Scaffold the cape-hc cap-evolve project (README: cap-evolve arm) and run the hard gate.
-#   bash setup_project.sh RUN_DIR     e.g. /tmp/aw_eval/runs/cape_hc_s0
+#   bash setup_project.sh [BASE]      BASE default: $AW_EVAL/.capevolve
+# Laid out like the tau2 examples' .capevolve: the project in BASE/project, and one run folder
+# BASE/run_<YYYYMMDD_HHMMSS> per launch beside it (launch_cape_hc.sh). BASE must be under $AW_EVAL:
+# the optimizer's isolation only binds a working dir inside it.
 set -euo pipefail
 EX="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REPO="$(cd "$EX/../../../.." && pwd)"
 AW_EVAL="${AW_EVAL:-/tmp/aw_eval}"
-PY="$AW_EVAL/venv-aw/bin/python"
-RUN_DIR="${1:?run dir}"
+PY="${AW_VENV:-$AW_EVAL/.venv}/bin/python"
+BASE="${1:-$AW_EVAL/.capevolve}"
 OPT_MODEL="${OPT_MODEL:-aws/claude-sonnet-5-5}"
-PROJECT="$RUN_DIR/.capevolve/project"
+PROJECT="$BASE/project"
 LINT_CACHE="$AW_EVAL/lint_cache.json"
 [ -f "$LINT_CACHE" ] || { echo "missing $LINT_CACHE: run scripts/make_roots.py first" >&2; exit 1; }
 
-"$PY" "$REPO/skills/phases/intake/scripts/run.py" --base "$RUN_DIR/.capevolve" --workdir "$EX" --force >/dev/null
+"$PY" "$REPO/skills/phases/intake/scripts/run.py" --base "$BASE" --workdir "$EX" --force >/dev/null
 mkdir -p "$PROJECT/adapters" "$PROJECT/optimizer" "$PROJECT/reference"
 cp "$EX/adapters/adapter.py" "$EX/adapters/aw_agent.py" "$EX/adapters/lints.py" "$PROJECT/adapters/"
 rm -rf "$PROJECT/seed_capability"; cp -R "$EX/seed_capability" "$PROJECT/seed_capability"
@@ -22,7 +25,10 @@ INSTR="$PROJECT/optimizer/INSTRUCTIONS.md"
 sed -e "s|{AW_REFERENCE}|$AW_EVAL/reference|g" -e "s|{AW_LINT_CACHE}|$LINT_CACHE|g" \
     -e "s|{AW_PY}|$PY|g" -e "s|{AW_LINTS}|$EX/adapters/lints.py|g" \
     "$EX/optimizer/INSTRUCTIONS.template.md" > "$INSTR"
-sed -e "s|@OPT_MODEL@|$OPT_MODEL|" -e "s|@INSTRUCTIONS@|$INSTR|" -e "s|@AW_EVAL@|$AW_EVAL|g" "$EX/capevolve.yaml" > "$PROJECT/capevolve.yaml"
+for spec in capevolve.yaml capevolve.fix10.yaml; do   # fix10: the 10-task comparison spec
+  sed -e "s|@OPT_MODEL@|$OPT_MODEL|" -e "s|@INSTRUCTIONS@|$INSTR|" -e "s|@AW_EVAL@|$AW_EVAL|g" "$EX/$spec" > "$PROJECT/$spec"
+done
+cp "$EX/fix10_split.json" "$PROJECT/"
 mkdir -p "$PROJECT/sandbox"
 for t in optimizer-permissions optimizer-sandbox; do
   sed -e "s|@AW_EVAL@|$AW_EVAL|g" -e "s|@AW_SECRETS_FILE@|${AW_SECRETS_FILE:-$REPO/.env}|g" \
@@ -41,4 +47,4 @@ Example: benchmarks/appworld/examples/react_agent/README.md (repo $REPO). Resolv
 MD
 cd "$PROJECT"
 PYTHONPATH="$PROJECT/adapters" CAPEVOLVE_SKILLS_DIR="$REPO/skills" APPWORLD_ROOT="$AW_EVAL/root_opt" \
-  "$AW_EVAL/venv-aw/bin/cap-evolve" check "$PROJECT"
+  "${AW_VENV:-$AW_EVAL/.venv}/bin/cap-evolve" check "$PROJECT"

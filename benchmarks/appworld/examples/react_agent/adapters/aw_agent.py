@@ -579,6 +579,16 @@ def run_episode(spec: dict[str, Any]) -> dict[str, Any]:
     })
     if spec.get("dump_first_messages"):
         record["first_messages"] = first_messages
+    # The agent's own message list, as AppWorld's ReAct agent holds it: the candidate's prompt split
+    # into role messages (num_prompt_messages of them, the few-shot demo included) then every turn.
+    # Gold-free like the steps: evaluate() runs after the loop and adds nothing to it. The adapter
+    # writes it to native_sims/ and keeps it out of the rollout.
+    record["native"] = {
+        "task_id": task_id, "model": model_config.get("name"),
+        "num_prompt_messages": getattr(agent, "num_instruction_messages", None),
+        "messages": [{k: m[k] for k in ("role", "content", "reasoning_content") if m.get(k)}
+                     for m in agent.messages],
+    }
     return record
 
 

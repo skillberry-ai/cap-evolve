@@ -32,18 +32,27 @@ tests/                  offline tests, one file per module under test (no AppWor
 
 Everything heavy lives under `$AW_EVAL` (default `/tmp/aw_eval`).
 
-1. AppWorld + its agents **from source** at `42b5bcf`, in a Python 3.11 venv `$AW_EVAL/venv-aw`,
-   with cap-evolve itself (`launch_cape_hc.sh` runs `$AW_EVAL/venv-aw/bin/cap-evolve`):
+Needs `git`, `git-lfs` (AppWorld ships its apps and data as LFS bundles: `sudo apt-get install -y
+git-lfs && git lfs install`) and `uv`.
+
+**One command:** `bash setup.sh` runs steps 1, 2 and 4 below (`bash setup.sh --blackbox` sets up the
+blackbox project instead) and only checks step 3. Every step skips what is already in place, so a
+re-run only pays the checks: the environment is created only when missing and never recreated.
+The environment is `$AW_EVAL/.venv` by default; `AW_VENV` points every script at another one.
+The steps it runs:
+
+1. AppWorld + its agents **from source** at `42b5bcf`, in a Python 3.11 venv `$AW_EVAL/.venv`,
+   with cap-evolve itself (`launch_cape_hc.sh` runs `$AW_EVAL/.venv/bin/cap-evolve`):
 
    ```
    git clone https://github.com/StonyBrookNLP/appworld $AW_EVAL/appworld
    cd $AW_EVAL/appworld && git checkout 42b5bcf && git lfs pull
    git apply <repo>/benchmarks/appworld/examples/react_agent/patches/appworld-extra-headers.patch
-   uv venv --python 3.11 $AW_EVAL/venv-aw
-   uv pip install --python $AW_EVAL/venv-aw/bin/python -e . -e "experiments[simplified]" \
+   uv venv --python 3.11 $AW_EVAL/.venv
+   uv pip install --python $AW_EVAL/.venv/bin/python -e . -e "experiments[simplified]" \
        "pydantic>=2.12,<2.13" "fastapi==0.135.0" "starlette>=0.48" -e <repo>/core
-   $AW_EVAL/venv-aw/bin/appworld install --repo
-   $AW_EVAL/venv-aw/bin/appworld download data --root $AW_EVAL/root_full
+   $AW_EVAL/.venv/bin/appworld install --repo
+   $AW_EVAL/.venv/bin/appworld download data --root $AW_EVAL/root_full
    ```
 
    The PyPI release `0.1.3.post1` has no simplified ReAct agent, and the head agents need pydantic 2.
@@ -57,7 +66,7 @@ Everything heavy lives under `$AW_EVAL` (default `/tmp/aw_eval`).
    exported: each episode worker reads only the key named by `AW_KEY_ENV` and the endpoint URL
    (`RITS_URL`/`MODEL_SERVER_URL`) from it and ignores every other line. Model endpoint: `AW_MODEL_NAME`, `AW_MODEL_URL`,
    `AW_KEY_HEADER`, `AW_KEY_ENV` (see `adapters/aw_agent.py`).
-4. `bash scripts/setup_project.sh $AW_EVAL/runs/cape_hc_s0` scaffolds the cap-evolve project
+4. `bash scripts/setup_project.sh` (base folder `$AW_EVAL/.capevolve` by default) scaffolds the cap-evolve project
    (intake), writes `split_ids.json` (train = val = train ∪ dev, test = []), renders the spec and
    settings, and runs `cap-evolve check`.
 
@@ -170,13 +179,37 @@ one iteration the gate usually rejects the edit; that is a pass.
 
 ## Running
 
+`run.sh` picks the spec and the approach (run the isolation check first, below):
+
+```
+bash run.sh --smoke                 # direct:   1 task, 1 trial, 1 iteration (scripts/itest.sh)
+bash run.sh --fix10                 # direct:   10 fixed tasks (fix10_split.json), 5 trials, 3 iterations
+bash run.sh                         # direct:   the full search
+bash run.sh --blackbox --smoke      # blackbox: 1 task, 1 trial, 1 iteration
+bash run.sh --blackbox --fix10      # blackbox: the same 10 fixed tasks
+bash run.sh --blackbox              # blackbox: the full search
+```
+
+The 10 fixed tasks were drawn once from train + dev with seed 0 and are the same in both approaches,
+so their runs compare directly. `fix10_split.json` also holds 5 test tasks, the same in both
+approaches: drawn with seed 1 from train + dev scenarios that none of the 10 comes from (one task per
+scenario), never shown to the optimizer, and scored once on the best candidate when the run ends. The steps underneath:
+
 ```
 bash scripts/check_optimizer_isolation.sh sandbox            # must PASS (or namespace, with AW_ISOLATION=namespace)
-bash scripts/launch_cape_hc.sh $AW_EVAL/runs/cape_hc_s0       # cape-hc search (~5 h)
+bash scripts/launch_cape_hc.sh                               # cape-hc search (~5 h)
 python scripts/scan_isolation.py
 python scripts/final_window.py freeze && python scripts/final_window.py run
 python scripts/analyze.py
 ```
+
+Like the tau2 examples' `.capevolve`, one base folder (default `$AW_EVAL/.capevolve`) holds the
+project and every run: `project/` and one `run_<YYYYMMDD_HHMMSS>` per launch, named by its start time.
+It must be under `$AW_EVAL`, because the optimizer's isolation only binds a working dir inside it.
+`scan_isolation.py`, `final_window.py`, `analyze.py` and `status.py` use the newest run there, or the
+one named by `AW_CAPE_RUN=<YYYYMMDD_HHMMSS>`. Resume a run with
+`AW_RUN_TS=<YYYYMMDD_HHMMSS> bash scripts/launch_cape_hc.sh "" --resume`. `itest.sh` keeps its own
+base, `$AW_EVAL/.capevolve-itest`, with the fixed run `run_itest`.
 
 `python scripts/status.py --every 300` keeps `$AW_EVAL/progress/PROGRESS.md` current. Offline tests:
 `python -m pytest benchmarks/appworld/examples/react_agent/tests`.
