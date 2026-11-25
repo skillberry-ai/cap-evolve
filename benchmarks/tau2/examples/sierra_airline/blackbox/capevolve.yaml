@@ -39,7 +39,7 @@ split_ids_file: split_ids_budget.json    # pinned no-holdout split (train = val 
 # --- scoring -------------------------------------------------------------------
 num_trials: 5                            # trials per task (mean + SE + pass^k)
 metrics_display: []
-metric_primary: ""                       # blank = the tau2 reward
+metric_primary: ""                       # reserved, not used yet (the gate uses the tau2 reward)
 metric_directions: []
 
 # --- acceptance gate -----------------------------------------------------------

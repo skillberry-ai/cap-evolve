@@ -51,8 +51,9 @@ gate will correctly reject marginal gains"), so the cost is visible at report ti
    prepared, so the user carries as little of the research as possible.
 4. **Then ask the FEWEST questions, as ONE numbered batch**, each with the detected
    value pre-filled as a default plus a free-text escape — including the ones only a
-   human can answer: which metric gates accept/reject and each shown metric's
-   direction, GitHub mirroring, deterministic vs agent orchestration (plus
+   human can answer: which `Score.metrics` entry is the primary (gate) metric and
+   each shown metric's direction — these go into the adapter's `score()`, not into
+   `capevolve.yaml` — GitHub mirroring, deterministic vs agent orchestration (plus
    `stop_condition` in agent mode), splits, trials, budget, and `memory_skill`
    (default `md-files`; offer `wiki` — the weakness-graph format, see
    `inputs/INPUTS.md` — when the user wants weaknesses tracked as a persistent graph

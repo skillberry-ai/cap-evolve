@@ -1523,6 +1523,19 @@ def _doctor_checks(project: Path) -> list[dict]:
             f"remove the key, or set algorithm_skill to one of "
             f"{', '.join(sorted(CONVERGENCE_ALGORITHMS))}")
 
+    # Reserved metric keys: documented once as working settings, but nothing reads them.
+    # "null" / "~" count as blank too: a spec loaded without PyYAML (or hand-quoted)
+    # can carry them as literal strings.
+    def _blank(v):
+        return v in (None, [], {}) or (isinstance(v, str) and v.strip() in ("", "null", "~"))
+    reserved = [k for k in ("metric_primary", "metrics_display", "metric_directions")
+                if not _blank(spec.get(k))]
+    if reserved:
+        add("metrics", "warn",
+            f"{', '.join(reserved)} {'has' if len(reserved) == 1 else 'have'} no effect yet "
+            "(reserved); the gate uses the adapter's `primary` score, not these keys",
+            f"remove or blank {', '.join(reserved)} in {spec_path}")
+
     adapter = project / "adapters" / "adapter.py"
     if not adapter.exists():
         add("adapter", "fail", f"no {adapter}",

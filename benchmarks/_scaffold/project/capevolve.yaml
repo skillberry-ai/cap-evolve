@@ -77,12 +77,16 @@ split_ids_file: ""
 # --- scoring ----------------------------------------------------------------
 num_trials: 1
 
-# --- metrics (display) ------------------------------------------------------
-# The GATE always uses the PRIMARY metric only (= the scalar reward). Secondaries
-# are shown in the dashboard/results but never affect accept/reject.
-metrics_display: []          # names to show, e.g. [accuracy, latency_ms]; empty = just the primary reward
-metric_primary: ""           # which name gates accept/reject (defaults to the reward if blank)
-metric_directions: []        # parallel to metrics_display: higher | lower for each
+# --- metrics (RESERVED: not used yet) ---------------------------------------
+# These three keys are RESERVED for a later feature and have NO effect today:
+# no code reads them, and setting them changes nothing (`cap-evolve doctor` warns).
+# The GATE uses the adapter's `primary` score (the scalar reward your score()
+# returns); multi-objective gate modes also use cost. Extra numbers in
+# Score.metrics are shown only, unless you declare them as a reward_gated
+# objective with `source: metric:<name>`.
+metrics_display: []          # reserved, not used yet
+metric_primary: ""           # reserved, not used yet; the gate uses the adapter's `primary` score
+metric_directions: []        # reserved, not used yet
 
 # --- integrations / stop ----------------------------------------------------
 github_integration: false    # mirror-only: mirror the algorithm's work items as issues + ship winner as PR (Closes #n); WHAT is mirrored is algorithm-specific (evo-graph=weaknesses)
