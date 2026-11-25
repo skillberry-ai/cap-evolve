@@ -316,7 +316,9 @@ def main(argv=None) -> int:
     # Leave a record commit.py --decision accept can rely on (it refuses an accept with no
     # passing gate). Newest event per candidate wins, so a later reject cancels an earlier accept.
     run_dir.log_event("gate_check", candidate=args.candidate, verdict=verdict, mode=args.mode,
-                      reference=cur_tag, **({"advisory": True, "purpose": args.advisory}
+                      reference=cur_tag, k_se=args.k_se, threshold=args.threshold,
+                      allow_regression=args.allow_regression,
+                      candidate_min_trial=args.candidate_min_trial, **({"advisory": True, "purpose": args.advisory}
                                             if args.advisory else {}))
     print(json.dumps({
         "current": {"tag": cur_tag, "reward": cur.reward, "stderr": cur.stderr,

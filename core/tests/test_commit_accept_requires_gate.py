@@ -274,7 +274,7 @@ def test_act_commit_cancels_promote_gate_on_refusal(tmp_path):
     orig = act.sh
     act.sh = lambda cmd: (2, "{}", "")
     try:
-        rc, _ = act.commit(Ctx(), "candB", "accept", "n", [])
+        rc, _ = act.commit(Ctx(), "candB", "accept", "n", [], verdict="accept", reference="seed")
     finally:
         act.sh = orig
     assert rc == 2
@@ -304,3 +304,60 @@ def test_provisional_then_real_grow_accept_then_commit_accepts(tmp_path):
     p = r.commit("candA", w)
     assert p.returncode == 0, p.stdout + p.stderr
     assert r.best() == "candA"
+
+
+# --- gate strictness is recorded and enforced (#1011 review) -------------------------------
+
+def _write_spec(r, text):
+    d = r.rd.root.parent / "project"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "capevolve.yaml").write_text(text, encoding="utf-8")
+
+
+def test_looser_gate_k_se_than_spec_is_refused(tmp_path):
+    r = _Real(tmp_path)
+    _write_spec(r, "gate_k_se: 1.0\n")
+    w = r.mk("candA", 12)
+    p = r.run("gate_check.py", "--candidate", "candA", "--k-se", "0")
+    assert json.loads(p.stdout)["verdict"] == "accept"
+    p = r.commit("candA", w)
+    assert p.returncode == 2, p.stdout + p.stderr
+    assert "looser" in p.stdout
+    assert r.best() == "seed"
+
+
+def test_normal_gate_accept_commits_and_event_carries_settings(tmp_path):
+    r = _Real(tmp_path)
+    _write_spec(r, "gate_k_se: 1.0\n")
+    w = r.mk("candA", 12)
+    assert r.gate("candA") == "accept"
+    p = r.commit("candA", w)
+    assert p.returncode == 0, p.stdout + p.stderr
+    g = [e for e in _events(r.rd) if e["kind"] == "gate_check"][-1]
+    assert g["k_se"] == 1.0 and "threshold" in g and "candidate_min_trial" in g
+    acc = [e for e in _events(r.rd) if e["kind"] == "accept"][-1]
+    assert acc["gate_settings"]["k_se"] == 1.0
+
+
+def test_act_commit_without_measured_verdict_does_not_pass(tmp_path):
+    if str(_S) not in sys.path:
+        sys.path.insert(0, str(_S))
+    import act
+    r = _Real(tmp_path)
+    w = r.mk("candA", 12)
+    proj = tmp_path / "proj"
+    (proj / "adapters").mkdir(parents=True)
+    (proj / "adapters" / "adapter.py").write_text("class Adapter: pass\n", encoding="utf-8")
+
+    class Ctx:
+        root = str(r.rd.root)
+        run_dir = r.rd
+        project = str(proj)
+
+        def work(self, tag):
+            return str(w)
+
+    rc, _ = act.commit(Ctx(), "candA", "accept", "n", ["--val", "1.0", *_J])
+    assert rc == 2
+    assert not [e for e in _events(r.rd) if e["kind"] == "promote_gate" and e["verdict"] == "accept"]
+    assert r.best() == "seed"

@@ -586,20 +586,21 @@ def judge_p(ctx, a, tag, ref, params) -> dict:
             "reward": reward, "gate": gate, "full_gate": out}
 
 
-def commit(ctx, tag, decision, note, extra: list[str]) -> tuple[int, dict]:
+def commit(ctx, tag, decision, note, extra: list[str], verdict=None, reference=None) -> tuple[int, dict]:
     rd = RunDir.open(ctx.root)
     if decision == "accept":
         # best_id only moves on the eval surface the run started with (#762); also covers the conductor
         guard_eval_surface(ctx, "promote")
-        # Every caller (promote, the conductor's confirm step) has a passing gate verdict in hand;
-        # record it WITH the champion it was measured against so commit.py's accept-needs-a-gate
-        # check (#763) can see it.
-        rd.log_event("promote_gate", candidate=tag, verdict="accept", reference=rd.best_id)
+        # The caller passes the verdict it really measured and the champion it measured it against;
+        # we log exactly those so commit.py's accept-needs-a-gate check (#763) sees the truth.
+        # No verdict/reference from the caller = no gate record, and commit.py refuses the accept.
+        if verdict is not None and reference is not None:
+            rd.log_event("promote_gate", candidate=tag, verdict=verdict, reference=reference)
     rc, so, se = sh([PY, HERE / "commit.py", "--run-dir", ctx.root, "--candidate-id", tag,
                      "--from-dir", ctx.work(tag), "--decision", decision, "--note", note, *extra])
     if decision == "accept" and rc != 0:
         # commit.py refused: cancel the gate record so it cannot be reused by a later accept.
-        rd.log_event("promote_gate", candidate=tag, verdict="cancelled", reference=rd.best_id)
+        rd.log_event("promote_gate", candidate=tag, verdict="cancelled", reference=reference or rd.best_id)
     return rc, (jload(so) or {"stdout": so[-500:], "stderr": se[-300:]})
 
 
@@ -637,7 +638,8 @@ def promote(a, ctx):
     accept = j["verdict"] == "accept"
     if accept:
         ctx.check_budget(a)
-        rc, res = commit(ctx, tag, "accept", a.note or "act.py promote", ["--val", str(j["reward"]), *extra])
+        rc, res = commit(ctx, tag, "accept", a.note or "act.py promote", ["--val", str(j["reward"]), *extra],
+                        verdict=j["verdict"], reference=champ)
         if rc != 0:
             raise Refused("commit.py refused the accept", commit=res)
         out["best_id"] = RunDir.open(ctx.root).best_id

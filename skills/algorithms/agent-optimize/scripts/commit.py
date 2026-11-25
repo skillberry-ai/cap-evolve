@@ -122,6 +122,34 @@ def _memory_skill_from_spec(run_dir: RunDir) -> str | None:
     return None
 
 
+def _spec_number(run_dir: RunDir, key: str) -> float | None:
+    """A flat numeric ``key: value`` line of the sibling capevolve.yaml, or None."""
+    spec_path = run_dir.root.parent / "project" / "capevolve.yaml"
+    try:
+        for line in spec_path.read_text(encoding="utf-8").splitlines():
+            if line.startswith(key + ":"):
+                return float(line.split(":", 1)[1].split("#", 1)[0].strip().strip("'\""))
+    except (OSError, ValueError):
+        pass
+    return None
+
+
+def _looser_gate_settings(run_dir: RunDir, rec: dict) -> list[str]:
+    """Ways the gate run behind ``rec`` was looser than the run's spec (k_se / threshold)."""
+    spec_path = run_dir.root.parent / "project" / "capevolve.yaml"
+    if not spec_path.is_file() or rec.get("k_se") is None:
+        return []
+    out = []
+    want_k = _spec_number(run_dir, "gate_k_se")
+    want_k = 0.2 if want_k is None else want_k
+    if float(rec["k_se"]) < want_k:
+        out.append(f"k_se {rec['k_se']} < spec gate_k_se {want_k}")
+    want_t = _spec_number(run_dir, "gate_threshold")
+    if want_t is not None and rec.get("threshold") is not None and float(rec["threshold"]) < want_t:
+        out.append(f"threshold {rec['threshold']} < spec gate_threshold {want_t}")
+    return out
+
+
 def _round_gate_numbers(run_dir: RunDir, candidate_id: str) -> dict:
     """The gate's NUMBERS for ``candidate_id``, read back from ``round.py``'s own table.
 
@@ -498,7 +526,9 @@ def _newest_gate_record(run_dir: RunDir, candidate_id: str) -> dict | None:
                         and str(ev.get("candidate")) == str(candidate_id)):
                     recs.append((float(ev.get("t") or 0), 1 + n, {
                         "verdict": ev.get("verdict"), "reference": ev.get("reference"),
-                        "kind": ev["kind"]}))
+                        "kind": ev["kind"],
+                        **{k: ev.get(k) for k in ("k_se", "threshold", "allow_regression",
+                                                   "candidate_min_trial")}}))
     except FileNotFoundError:
         pass
     if not recs:
@@ -748,6 +778,7 @@ def main(argv=None) -> int:
     # (a round-table row, or the promote_gate event act.py promote writes). Else exit 2.
     accepted_without_gate = None
     gate_reference = None
+    gate_settings = None
     if accepted:
         rec = _newest_gate_record(run_dir, args.candidate_id)
         # The newest gate record must be an accept AND must have compared against the champion
@@ -760,9 +791,21 @@ def main(argv=None) -> int:
                    else [p.strip() for p in str(ref).split(",")]) if ref is not None else []
         passing = bool(rec and rec.get("verdict") == "accept" and ref is not None
                        and _reference_is_champion(run_dir, ref_ids))
+        loose = _looser_gate_settings(run_dir, rec) if rec and passing else []
+        if loose and not args.accept_without_gate:
+            print(json.dumps({
+                "error": f"--decision accept for {args.candidate_id}: its gate run used looser "
+                         f"settings than the run's spec ({'; '.join(loose)})",
+                "newest_gate_record": rec,
+                "fix": "re-run gate_check.py with the spec's settings, or pass "
+                       "--accept-without-gate REASON to override on the record",
+            }, indent=2))
+            return 2
         if rec:
             gate_verdict = rec.get("verdict")
         gate_reference = rec.get("reference") if rec else None
+        gate_settings = ({k: rec.get(k) for k in ("k_se", "threshold", "allow_regression",
+                                                  "candidate_min_trial")} if rec else None)
         if not passing:
             if not args.accept_without_gate:
                 print(json.dumps({
@@ -1027,7 +1070,7 @@ def main(argv=None) -> int:
                       val_unverified=args.val_unverified,
                       gate_verdict=gate_verdict, overrode_gate=overrode_gate,
                       accepted_without_gate=accepted_without_gate,
-                      gate_reference=gate_reference,
+                      gate_reference=gate_reference, gate_settings=gate_settings,
                       note=args.note,
                       reject_basis=args.reject_basis,
                       bypassed_screen_and_gate=bypassed_screen_and_gate,
