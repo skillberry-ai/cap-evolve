@@ -56,21 +56,23 @@ EXEC_SUFFIXES = {".py", ".sh", ".bash", ".js", ".so", ".pyc", ".pyd", ".exe"}
 #: What a staged skill tree may hold (a skill is text + scripts, never binaries or workbooks).
 SKILL_SUFFIXES = {".py", ".md", ".json", ".txt", ".yaml", ".yml"}
 #: Evaluator / gold / split / dataset paths a helper must not name or open.
-DEFAULT_PROTECTED = [r"(?i)golden", r"(?i)ground[_-]?truth", r"(?i)(^|[/\\._-])answer(s)?([._/\\-]|$)",
+_ANSWER_PAT = r"(?i)(^|[/\\._-])answer(s)?([._/\\-]|$)"
+#: Field names that start with "answer_" and are plain data keys, not gold-file names.
+_ANSWER_FIELDS = re.compile(r"(?i)answer_(position|sheet|cell|type|format|value_type)(?![\w/\\.])")
+DEFAULT_PROTECTED = [r"(?i)golden", r"(?i)ground[_-]?truth", _ANSWER_PAT,
                      r"(?i)evaluat(or|ion)\.py", r"(?i)dataset\.json", r"(?i)(^|[/\\])splits?([/\\._]|$)",
                      r"(?i)(^|[/\\])gold([/\\._-]|$)"]
+
+
 def _protected_hit(pat, v: str) -> bool:
-    """``pat`` matches ``v``; the "answer" rule only counts when ``v`` looks like a path
-    (has a slash or backslash, or ends in a file extension) or is exactly the bare folder name
-    "answer"/"answers" (``os.path.join(r, "answers", t)``), so ``t["answer_position"]`` passes."""
+    """``pat`` matches ``v``. The built-in "answer" rule is relaxed only for a string that
+    starts with a known field name (``t["answer_position"]``, ``t["answer_sheet"]``); anything
+    else naming answer(s) -- ``1_x_answer.xlsx``, ``"_answer"``, ``"answer_files"`` -- is a hit."""
     if not pat.search(v):
         return False
-    if pat.pattern == DEFAULT_PROTECTED[2]:
-        return bool(re.search(r"[/\\]|\.\w+$", v) or _BARE_ANSWER.fullmatch(v.strip()))
+    if pat.pattern == _ANSWER_PAT and _ANSWER_FIELDS.match(v.strip()):
+        return False
     return True
-
-
-_BARE_ANSWER = re.compile(r"(?i)answers?")
 
 
 #: Rollout splits no fixture may be harvested from (the hidden confirm stratum, test, and the legacy val/pool).

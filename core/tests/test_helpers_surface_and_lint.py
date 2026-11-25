@@ -517,3 +517,15 @@ def test_bare_answer_folder_name_is_refused():
     assert lint('def f(t):\n    return t["answer_position"]\n') == []
     assert lint('def f(t):\n    return t.get("answer_sheet")\n') == []
     assert lint('def f():\n    return "the answer is wrong"\n') == []
+
+
+def test_answer_style_gold_file_name_parts_are_refused():
+    cfg = helpers.resolve({"helpers": {"enabled": True}})
+    lint = lambda src: helpers.lint_source(src, "f.py", cfg)
+    for body in ['open(f"{d}/1_{tid}_answer{ext}")',
+                 'open(d + "/" + tid + "_answer" + ".xlsx")',
+                 'open(os.path.join(r, "answer_files", t))']:
+        assert lint(f"import os\ndef f(d, tid, ext, r, t):\n    return {body}\n"), body
+    assert lint('def f(t):\n    return t["answer_position"]\n') == []
+    assert lint('def f(t):\n    return t["answer_sheet"]\n') == []
+    assert lint("def f(wb, sheet_name):\n    return wb[sheet_name]\n") == []
