@@ -70,8 +70,14 @@ def _protected_hit(pat, v: str) -> bool:
     else naming answer(s) -- ``1_x_answer.xlsx``, ``"_answer"``, ``"answer_files"`` -- is a hit."""
     if not pat.search(v):
         return False
-    if pat.pattern == _ANSWER_PAT and _ANSWER_FIELDS.match(v.strip()):
-        return False
+    if pat.pattern == _ANSWER_PAT:
+        s = v.strip()
+        m = _ANSWER_FIELDS.match(s)
+        if m:
+            rest = s[m.end():]
+            # the rest must not hold another answer name, a slash, or a file extension
+            if not (pat.search(rest) or re.search(r"[/\\]|\.\w", rest)):
+                return False
     return True
 
 

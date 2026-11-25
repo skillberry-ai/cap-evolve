@@ -498,6 +498,14 @@ def test_answer_word_is_a_gold_path_only_with_a_separator_or_extension():
     assert lint("def f(task_id):\n    if task_id == '10452':\n        return 42\n")
 
 
+def test_field_name_prefix_does_not_hide_a_gold_path():
+    cfg = helpers.resolve({"helpers": {"enabled": True}})
+    lint = lambda src: helpers.lint_source(src, "f.py", cfg)
+    for lit in ['"answer_sheet /data/answers/1_5_answer.xlsx"', '"answer_cell=../1_5_answer.xlsx"',
+                '"answer_type 1_7_answer.xlsx"']:
+        assert lint(f"def f():\n    return open({lit})\n"), lit
+
+
 def test_parse_harvest_keeps_answer_position_argument():
     import json as _j
     row = {"helper": "skills/s/scripts/m.py", "call": "f", "args_kwargs": _j.dumps([["answer_position"], {}])}
