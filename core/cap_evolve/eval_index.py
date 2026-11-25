@@ -186,7 +186,10 @@ _EVALUATE = Path(__file__).resolve().parents[2] / "skills" / "phases" / "evaluat
 
 def eval_cmd(run_dir, project, tag: str, split: str, n_trials: int, *, ids=None,
              trial_offset: int = 0, fixed_seeds: bool = False, skills_dir=None) -> list[str]:
-    script = (Path(skills_dir) / "phases" / "evaluate" / "scripts" / "run.py") if skills_dir else _EVALUATE
+    from .harness import skills_path
+    script = skills_path("phases", "evaluate", skills_dir) / "scripts" / "run.py" if skills_dir else _EVALUATE
+    if not script.is_file() and not skills_dir:
+        script = skills_path("phases", "evaluate") / "scripts" / "run.py"
     cmd = [sys.executable, str(script), "--run-dir", str(run_dir), "--project", str(project),
            "--candidate", str(Path(run_dir) / "work" / tag), "--split", split,
            "--n-trials", str(n_trials)]

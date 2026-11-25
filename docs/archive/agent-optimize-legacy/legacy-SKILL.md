@@ -24,8 +24,8 @@ every step below names the script that decides for you.
 ```bash
 R="<run_dir from the agent-mode handoff>"      # e.g. .capevolve/run_20250101_120000
 P="<project dir>"                              # the dir holding capevolve.yaml + adapters/
-S="${CAPEVOLVE_SKILLS_DIR:?set CAPEVOLVE_SKILLS_DIR to the skills/ dir}"
-A="$S/algorithms/agent-optimize/scripts"       # this skill's helpers
+# A (this skill's helpers), DIAGNOSE, EVALUATE, REPORT (helper skill folders) come from the
+# briefing as absolute paths; do not reset them.
 mkdir -p "$R/work"                             # working copies live here (RunDir does NOT create it)
 ```
 
@@ -78,8 +78,8 @@ bound the run with `max_metric_calls` and report **rollout counts, not dollars**
 
 ```bash
 BEST="$(python "$A/spend.py" --run-dir "$R" | python -c 'import json,sys;print(json.load(sys.stdin)["best_id"])')"
-python "$S/phases/diagnose/scripts/run.py" --run-dir "$R" --tag "$BEST" --split train > "$R/work/diag_t.json"
-python "$S/phases/diagnose/scripts/run.py" --run-dir "$R" --tag "$BEST" --split val > "$R/work/diag_v.json"
+python "$DIAGNOSE/scripts/run.py" --run-dir "$R" --tag "$BEST" --split train > "$R/work/diag_t.json"
+python "$DIAGNOSE/scripts/run.py" --run-dir "$R" --tag "$BEST" --split val > "$R/work/diag_v.json"
 ```
 
 Read `clusters` for what to fix and `kept_good` for what not to break. **With a disjoint train split,
@@ -182,7 +182,7 @@ round is folded in or deferred, with why (`algorithm.md`, "Bucketing edits withi
 the whole split (tags by the candidate **dir name**), then decide off those rollouts:
 
 ```bash
-python "$S/phases/evaluate/scripts/run.py" --run-dir "$R" --project "$P" \
+python "$EVALUATE/scripts/run.py" --run-dir "$R" --project "$P" \
        --candidate "$R/work/$TAG" --split val --n-trials <num_trials>
 python "$A/gate_check.py" --run-dir "$R" --candidate "$TAG" --k-se <gate_k_se>
 ```
@@ -295,7 +295,7 @@ reporting, and the **sealed test** split scored once:
 
 ```bash
 python "$A/measure.py" --run-dir "$R" --project "$P" --train auto
-python "$S/phases/report/scripts/run.py" --run-dir "$R"
+python "$REPORT/scripts/run.py" --run-dir "$R"
 ```
 
 `measure.py` seals test through the same `harness.finalize` the finalize phase calls (interchangeable

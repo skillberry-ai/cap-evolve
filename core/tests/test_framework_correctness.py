@@ -30,6 +30,8 @@ def _commit(run_dir, cid, from_dir, decision, val=None, extra=()):
            "--note", "t", "--missing-handover-justification", "fixture",
            "--missing-ranked-issues-justification", "fixture",
            "--missing-diagnosis-justification", "fixture"]
+    if decision == "accept":
+        cmd += ["--accept-without-gate", "fixture: gate not under test"]
     if val is not None:
         cmd += ["--val", str(val)]
     return subprocess.run(cmd + list(extra), capture_output=True, text=True,

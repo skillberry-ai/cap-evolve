@@ -36,7 +36,7 @@ Stock default has `active_eval` OFF: `probe --auto` then silently runs FULL val.
 
 ```bash
 R="<run_dir from the handoff>"; P="<project dir>"
-S="${CAPEVOLVE_SKILLS_DIR:?set to the skills/ dir}"; A="$S/algorithms/agent-optimize/scripts"
+# R, P, A, DIAGNOSE, EVALUATE, REPORT are set by the briefing (absolute paths; do not reset them).
 mkdir -p "$R/work"
 python "$A/spend.py" --run-dir "$R" --project "$P"      # parses stop_condition; ask the user if constraints.ambiguous
 python "$A/digest.py" --run-dir "$R" --project "$P"     # first line must NOT start with "!! CONFIG"
@@ -50,7 +50,7 @@ present (benchmark facts only; ignore its "one edit" advice).
 ## The loop
 
 ```bash
-python "$S/phases/diagnose/scripts/run.py" --run-dir "$R" --tag "$BEST" --split val --cluster v2 > /dev/null
+python "$DIAGNOSE/scripts/run.py" --run-dir "$R" --tag "$BEST" --split val --cluster v2 > /dev/null
 python "$A/digest.py" --run-dir "$R" --project "$P"
 ```
 
@@ -138,17 +138,31 @@ rollout. Without the flag, nothing here runs and the loop below is unchanged.
 
 ```bash
 python "$A/act.py" finalize --run-dir "$R" --project "$P" --n-confirm 3
-python "$S/phases/report/scripts/run.py" --run-dir "$R"
+python "$REPORT/scripts/run.py" --run-dir "$R"
 ```
 
-Confirms the champion on full val with fresh seeds, tests it against the seed, seals test ONCE, writes
+Confirms the champion on full val with fresh seeds (with `cost_gating` on, the default, the
+confirmation is judged on those fresh trials only, not pooled with the selection-era trials that
+picked it, and the pooled verdict is recorded as a secondary field `pooled_verdict_vs_seed`; with
+`cost_gating` off the confirmation stays pooled, uses the posterior judge, is marked
+`fresh_only: false`, and records no `pooled_verdict_vs_seed`), tests it against the seed, seals test ONCE, writes
 `final.json`. If the confirm does not accept, finalize refuses to seal (`--seal-anyway REASON` records
 "no accepted change"). Report refusals unsoftened: `best_id == seed` is a null result with a diagnosed
 cause; an empty split is `empty`, not 0.0; a no-holdout spec is a FIT metric. No finalize, no result.
 
 ## Invariants
 
-Core enforces the split seal, val-only gating and the tamper guard. Yours: never hand a subset result to
+Enforced by the scripts: test is scored once, by `finalize` only (the split seal); promote and the
+confirmation gate read val only. Eval-surface guard: the first `act.py` call that names `--project`
+hashes the project's `adapters/` and `tasks/` folders and its top-level `adapter.py`, `*scorer*.py`
+and `tasks*` files into the run's private area; `promote` (and every accept) and `finalize` re-hash
+them and refuse with a `tamper` event naming the changed files if any was edited, added, removed or
+re-pointed (`best_id` and the test seal untouched). Symlinks (a linked `adapters/` folder or a linked
+`adapter.py`, also to outside the project) are followed: the target's content and resolved path are
+sealed. A project with none of these files refuses promote/finalize as tamper-unknown (rc 2). Not
+covered: files elsewhere in the project (or imported from outside these folders), `__pycache__`/`.pyc`,
+and a run whose manifest (`private/eval_surface.json`) was itself edited or deleted (a deleted one is
+re-recorded from the current files). Yours: never hand a subset result to
 `gate_check.py`; every round leaves run-dir artifacts (JOURNAL.md entry in `work/TAG`, DIAGNOSIS.json);
 report a broken framework file, do not work around it. Wait for finalize to exit or the seal is wasted.
 

@@ -52,9 +52,9 @@ from cap_evolve.skillcheck import (
 )
 
 HERE = Path(__file__).resolve().parent
-SKILLS = HERE.parents[2]
+SKILLS = harness.skills_root()
 SKILL_MD = HERE.parent / "SKILL.md"
-DIAGNOSE = SKILLS / "phases" / "diagnose" / "scripts" / "run.py"
+DIAGNOSE = harness.skills_path("phases", "diagnose", SKILLS) / "scripts" / "run.py"
 
 
 def _run(c: Checker, label: str, argv: list[str], *, expect_rc: int = 0) -> dict | None:

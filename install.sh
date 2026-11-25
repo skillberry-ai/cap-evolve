@@ -67,7 +67,7 @@ echo "  from: $SRC"
 echo "  to:   $DEST"
 
 shopt -s nullglob
-COMPONENTS=(orchestrate phases capabilities algorithms optimizers interventions)
+COMPONENTS=(orchestrate phases capabilities algorithms optimizers interventions memory)
 for comp in "${COMPONENTS[@]}"; do
   # A skill dir is one that HOLDS a meta.yaml — found at any depth, because a component
   # may group its skills in sub-directories (interventions/llm-proxies/blackbox). A fixed
@@ -99,6 +99,17 @@ for comp in "${COMPONENTS[@]}"; do
     echo "  + $comp/$(basename "$f")"
   done
 done
+
+# The agent-optimize briefing tells the agent to read the legacy algorithm doc, which
+# lives under docs/ in the repo. Ship a copy inside the installed skill. (Link mode
+# resolves back to the repo, where docs/ already exists, so nothing to copy.)
+LEGACY="$SRC/../docs/archive/agent-optimize-legacy"
+if [[ "$LINK" -ne 1 && -f "$LEGACY/legacy-SKILL.md" && -d "$DEST/agent-optimize" ]]; then
+  # Whole folder: legacy-SKILL.md links to algorithm.md, measured-lessons.md, etc.
+  mkdir -p "$DEST/agent-optimize/references/legacy"
+  cp "$LEGACY"/* "$DEST/agent-optimize/references/legacy/" 2>/dev/null || true
+  echo "  + agent-optimize/references/legacy/"
+fi
 
 # (Re)build the manifest for both the repo (component layout) and the installed
 # tree (flat layout). build_manifest handles either, so `cap-evolve run` works whether

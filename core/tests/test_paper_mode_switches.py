@@ -412,7 +412,7 @@ def test_finalize_confirm_fresh_only_refuses_before_any_spend_when_cost_gating_o
     assert not any("--topup-to" in c for c in sh.calls)
 
 
-def test_finalize_default_is_unchanged_without_the_flag(tmp_path, capsys, monkeypatch):
+def test_finalize_default_confirms_on_fresh_trials_only(tmp_path, capsys, monkeypatch):
     _fin_env(monkeypatch)
     import test_digest_and_act_verbs as T
     rd, project, _, val = T._run(tmp_path)
@@ -420,8 +420,31 @@ def test_finalize_default_is_unchanged_without_the_flag(tmp_path, capsys, monkey
     T._ledger(rd, T._h(rd, "cur"), {v: [1, 0] for v in val})
     sh = T.Sh(**{"gate_check.py": T._gate("accept"), "run.py": (0, json.dumps({"test_reward": 0.7}), "")})
     rc, out = T._act(monkeypatch, capsys, ["finalize", *T._args(rd, project)], sh)
-    assert rc == 0 and out["result"]["confirm"]["fresh_only"] is False
-    assert sum(any(x.endswith("gate_check.py") for x in c) for c in sh.calls) == 1
+    assert rc == 0 and out["result"]["confirm"]["fresh_only"] is True
+    gates = [c for c in sh.calls if any(x.endswith("gate_check.py") for x in c)]
+    assert len(gates) == 2 and "--candidate-min-trial" in gates[0] and "--candidate-min-trial" not in gates[1]
+
+
+def test_finalize_confirm_fails_on_weak_fresh_trials_despite_strong_selection_trials(tmp_path, capsys, monkeypatch):
+    """#759: a gate that sees only the selection-era trials accepts; the confirmation must judge the
+    fresh ones (--candidate-min-trial) and so fail. The fake gate_check answers by what it was asked."""
+    _fin_env(monkeypatch)
+    import test_digest_and_act_verbs as T
+    rd, project, _, val = T._run(tmp_path)
+    rd.snapshot("seed", rd.candidate_dir("cur"))
+    T._ledger(rd, T._h(rd, "cur"), {v: [1, 1] for v in val})
+    for v in val:
+        for k in (0, 1):
+            _write_trial(rd, v, "cur", k, 1.0)           # strong selection-era trials
+
+    def gate(argv):
+        pooled = "--candidate-min-trial" not in argv     # pooled sees the strong trials; fresh sees weak ones
+        verdict = "accept" if pooled else "reject"
+        return 0, json.dumps({"verdict": verdict, "candidate": {"reward": 1.0 if pooled else 0.2},
+                              "gate": {"accept": pooled}}), ""
+    sh = T.Sh(**{"gate_check.py": gate})
+    rc, out = T._act(monkeypatch, capsys, ["finalize", *T._args(rd, project)], sh)
+    assert rc == 2 and "confirm gate says reject" in out["error"], out
 
 
 # ---- agent mode: policy comes from the run's spec when the env var is absent --------------------

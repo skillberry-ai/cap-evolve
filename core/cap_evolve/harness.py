@@ -3218,9 +3218,8 @@ def stage_capability_guidance(run_dir: RunDir, dest: Path, *, capabilities=None,
     """
     caps = [c for c in (capabilities or []) if c]
     if caps:
-        skills_root = _capabilities_root()
         for c in caps:
-            src = skills_root / c
+            src = _skill_dir("capabilities", c)
             if not src.is_dir():
                 continue
             try:
@@ -3256,7 +3255,7 @@ def stage_capability_guidance(run_dir: RunDir, dest: Path, *, capabilities=None,
 
     # the diagnose phase skill (the failure-clustering method) as local guidance.
     repo_root = Path(__file__).resolve().parents[2]
-    diag_src = repo_root / "skills" / "phases" / "diagnose"
+    diag_src = _skill_dir("phases", "diagnose")
     if diag_src.is_dir():
         try:
             dst = dest / "guidance" / "diagnose"
@@ -3311,7 +3310,7 @@ def _inject_optimizer_context(adapter, run_dir: RunDir, workdir: Path, *, split:
 
     # 4) the resolved optimizer's features reference (parallel subagents etc.).
     if optimizer_name:
-        ref_src = (repo_root / "skills" / "optimizers" / "run-optimizer"
+        ref_src = (_skill_dir("optimizers", "run-optimizer")
                    / "references" / f"{optimizer_name}.md")
         if ref_src.is_file():
             try:
@@ -3340,8 +3339,7 @@ def _inject_memory_skill_guidance(run_dir: RunDir, workdir: Path, memory_skill: 
     copied — so ``wiki``'s pointer text ("full format: ./guidance/memory-wiki/SKILL.md")
     resolves to a real file instead of a promise. Best-effort: a missing skill dir
     just means the inline pointer text is all the optimizer gets."""
-    repo_root = Path(__file__).resolve().parents[2]
-    src = repo_root / "skills" / "memory" / memory_skill
+    src = _skill_dir("memory", memory_skill)
     if not src.is_dir():
         return
     try:
@@ -3365,7 +3363,7 @@ def _inject_native_skills(run_dir: RunDir, workdir: Path, caps, repo_root: Path,
     guaranteed channel.
     """
     try:
-        reg_path = repo_root / "skills" / "optimizers" / "registry.yaml"
+        reg_path = _optimizer_registry_path()
         if not reg_path.is_file():
             return
         try:
@@ -3379,15 +3377,14 @@ def _inject_native_skills(run_dir: RunDir, workdir: Path, caps, repo_root: Path,
         skills_dir = str(row.get("skills_dir") or "").strip()
         instructions_file = str(row.get("instructions_file") or "").strip()
 
-        cap_root = _capabilities_root()
-        diag_src = repo_root / "skills" / "phases" / "diagnose"
+        diag_src = _skill_dir("phases", "diagnose")
         ignore = shutil.ignore_patterns("__pycache__", "scripts", "*.pyc")
 
         # Native skills dir: copy each chosen capability skill + the diagnose skill.
         if skills_dir:
             native_root = workdir / skills_dir
             for c in [x for x in (caps or []) if x]:
-                src = cap_root / c
+                src = _skill_dir("capabilities", c)
                 if not src.is_dir():
                     continue
                 try:
@@ -4240,20 +4237,19 @@ def _capability_brief(capabilities) -> str:
     caps = [c for c in (capabilities or []) if c]
     if not caps:
         return ""
-    skills_root = _capabilities_root()
     lines = ["## What you are editing (the allowed edit space)",
              "The capability under optimization is composed of these editable artifact(s). "
              "Use the FULL edit space below — do not limit yourself to trivial wording tweaks."]
     for c in caps:
         summary = ""
-        meta = skills_root / c / "meta.yaml"
+        meta = _skill_dir("capabilities", c) / "meta.yaml"
         if meta.exists():
             for ln in meta.read_text(encoding="utf-8").splitlines():
                 if ln.startswith("summary:"):
                     summary = ln.split(":", 1)[1].strip()
                     break
         edit = _CAP_EDIT_SPACE.get(c, "")
-        skill_md = skills_root / c / "SKILL.md"
+        skill_md = _skill_dir("capabilities", c) / "SKILL.md"
         lines.append(f"- **{c}** — {summary}")
         if edit:
             lines.append(f"  - Allowed edits: {edit}")
@@ -4459,8 +4455,7 @@ def _optimizer_parallel(optimizer_name: str | None) -> bool:
     if not optimizer_name:
         return False
     try:
-        repo_root = Path(__file__).resolve().parents[2]
-        reg_path = repo_root / "skills" / "optimizers" / "registry.yaml"
+        reg_path = _optimizer_registry_path()
         if not reg_path.is_file():
             return False
         from .specfile import read_yaml
@@ -4485,15 +4480,50 @@ def _parallel_note(parallel: bool, optimizer_name: str | None) -> str:
             "real, safe fix, not just the biggest one.")
 
 
-def _capabilities_root() -> Path:
-    """Where the capability skills live: ``CAPEVOLVE_SKILLS_DIR`` if set, else the
-    repo's own ``skills/`` (running from source). An installed tree does not sit next
-    to this module, so resolving only relative to ``__file__`` silently finds nothing —
-    and a capability we cannot find is a capability whose rules go unenforced."""
+def _skill_dir(component: str, name: str) -> Path:
+    """Folder of one skill, in either layout: ``<root>/<component>/<name>`` (source
+    checkout) or flat ``<root>/<name>`` (what install.sh makes). Tries
+    ``CAPEVOLVE_SKILLS_DIR`` first, then the repo's own ``skills/`` next to this file.
+    Returns the source-layout path when nothing exists (callers check ``is_dir``)."""
+    roots = []
     env = os.environ.get("CAPEVOLVE_SKILLS_DIR")
-    if env and (Path(env) / "capabilities").is_dir():
-        return Path(env) / "capabilities"
-    return Path(__file__).resolve().parents[2] / "skills" / "capabilities"
+    if env:
+        roots.append(Path(env))
+    roots.append(Path(__file__).resolve().parents[2] / "skills")
+    for root in roots:
+        for cand in (root / component / name, root / name):
+            if cand.is_dir():
+                return cand
+    return roots[-1] / component / name
+
+
+def skills_root() -> Path:
+    """The skills folder: ``CAPEVOLVE_SKILLS_DIR`` if set, else the source checkout's ``skills/``."""
+    env = os.environ.get("CAPEVOLVE_SKILLS_DIR")
+    return Path(env) if env else Path(__file__).resolve().parents[2] / "skills"
+
+
+def skills_path(component: str, name: str, root=None) -> Path:
+    """Layout-neutral folder of one skill (source ``<root>/<component>/<name>`` or the flat
+    ``<root>/<name>`` install.sh makes). ``root`` overrides the search root; the source
+    checkout is the last fallback."""
+    if root is None:
+        return _skill_dir(component, name)
+    for cand in (Path(root) / component / name, Path(root) / name):
+        if cand.is_dir():
+            return cand
+    return Path(root) / component / name
+
+
+def _optimizer_registry_path() -> Path:
+    """``optimizers/registry.yaml``: ``CAPEVOLVE_SKILLS_DIR`` first, then the source checkout."""
+    env = os.environ.get("CAPEVOLVE_SKILLS_DIR")
+    src = Path(__file__).resolve().parents[2] / "skills" / "optimizers" / "registry.yaml"
+    if env:
+        cand = Path(env) / "optimizers" / "registry.yaml"
+        if cand.is_file():
+            return cand
+    return src
 
 
 def _load_capability_abstract(name: str, tag: str) -> tuple:
@@ -4506,7 +4536,7 @@ def _load_capability_abstract(name: str, tag: str) -> tuple:
     """
     import importlib.util
 
-    abstract_path = _capabilities_root() / name / "scripts" / "abstract.py"
+    abstract_path = _skill_dir("capabilities", name) / "scripts" / "abstract.py"
     if not abstract_path.exists():
         return None, f"no abstract.py at {abstract_path}"
     try:
@@ -4812,10 +4842,9 @@ def _capability_is_empty(capabilities, cand_dir: Path) -> bool | None:
         return None
     import importlib.util
 
-    skills_root = _capabilities_root()
     complete = True  # did we get a usable is_empty() from EVERY requested capability?
     for name in caps:
-        abstract_path = skills_root / name / "scripts" / "abstract.py"
+        abstract_path = _skill_dir("capabilities", name) / "scripts" / "abstract.py"
         if not abstract_path.exists():
             complete = False
             continue

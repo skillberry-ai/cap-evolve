@@ -2014,6 +2014,17 @@ def reduce_run(run_dir) -> dict:
         sealed = run_dir.read_splits().test_used
     except Exception:  # noqa: BLE001
         sealed = bool(final)
+    _ov = final.get("test_rescore_override")
+    _ov = _ov if isinstance(_ov, dict) and _ov.get("used") else None
+    try:
+        _ov_count = int((_ov or {}).get("count") or 1)
+    except (TypeError, ValueError):
+        _ov_count = 1
+
+    try:
+        _reuse_n = int(final.get("test_reuse_count") or 0)
+    except (TypeError, ValueError):
+        _reuse_n = 0
 
     # --- per-iteration cost/time (optimizer vs runner), intake row ------
     # Time is ALWAYS available (optimizer_seconds + runner seconds per step);
@@ -2862,6 +2873,8 @@ def reduce_run(run_dir) -> dict:
                                 else final.get("test_baseline_reward"),
         "test_delta": final.get("test_delta"),
         "test_sealed": sealed,
+        **({"test_rescore_override": {"used": True, "count": _ov_count}} if _ov else {}),
+        **({"test_reuse_count": _reuse_n} if _reuse_n > 0 else {}),
         # Sealed-test per-task rewards for the best candidate and for the seed, so the
         # test split can be shown the same way the val TaskMatrix already shows val
         # (#575): per finalize()'s payload, ``test`` is the best candidate's SplitResult
@@ -3471,8 +3484,8 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
        (S.test_delta!=null||S.test_baseline_reward!=null)
          ?((S.test_delta!=null?(S.test_delta>0?'+':'')+S.test_delta.toFixed(3)+' vs seed ':'')+
            (S.test_baseline_reward!=null?fmt(S.test_baseline_reward):'')+
-           (S.test_sealed?' · sealed once':''))
-         :(S.test_sealed?'sealed once':'not finalized')),
+           (S.test_sealed?(S.test_rescore_override?' · re-scored '+S.test_rescore_override.count+' time(s)':(S.test_reuse_count?'':' · sealed once'))+(S.test_reuse_count?' · already scored by '+S.test_reuse_count+' other run(s)':''):''))
+         :(S.test_sealed?(S.test_rescore_override?'re-scored '+S.test_rescore_override.count+' time(s)':(S.test_reuse_count?'':'sealed once'))+(S.test_reuse_count?(S.test_rescore_override?' · ':'')+'already scored by '+S.test_reuse_count+' other run(s)':''):'not finalized')),
     kp('candidates',c.total-(c.seed||0),'',
        `${c.accepted} accept · ${c.rejected} reject · ${c.indecisive||0} indecisive · ${c.failed} no-measure`),
     kp('frontier',S.frontier,'','gated leaves with no accepted child'),
@@ -3527,7 +3540,12 @@ function dsecs(v){v=Math.max(0,Math.round(v||0));if(v<60)return v+'s';
   if(sp)s.append($('p',{class:'muted num',style:'margin:10px 0 0',
     text:`splits · train ${sp.train??'—'} · val ${sp.val??'—'} · test ${sp.test??'—'}`+
          (sp.seed!=null?` · seed ${sp.seed}`:'')+
-         '   —   val decides selection; test is scored exactly once and never optimized against.'}));
+         ((S.test_rescore_override||S.test_reuse_count)
+           ?'   —   val decides selection; '+
+             (S.test_rescore_override?'WARNING: the test split was re-scored '+S.test_rescore_override.count+' time(s) (seal override), so it is not a single clean held-out score.':'')+
+             (S.test_rescore_override&&S.test_reuse_count?' ':'')+
+             (S.test_reuse_count?'WARNING: this test split was already scored by '+S.test_reuse_count+' other run(s), so it is not a first, clean held-out score.':'')
+           :'   —   val decides selection; test is scored exactly once and never optimized against.')}));
 })();
 
 /* ---------- 1c. Phases timeline ---------- */
