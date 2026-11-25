@@ -122,31 +122,66 @@ def _memory_skill_from_spec(run_dir: RunDir) -> str | None:
     return None
 
 
-def _spec_number(run_dir: RunDir, key: str) -> float | None:
-    """A flat numeric ``key: value`` line of the sibling capevolve.yaml, or None."""
-    spec_path = run_dir.root.parent / "project" / "capevolve.yaml"
+def _spec_value(run_dir: RunDir, key: str):
+    """``key`` from the spec THIS run was started with (run_config/spec_resolved), or None.
+
+    Falls back to ``<base>/project/capevolve.yaml`` when the run logged no spec path.
+    """
+    spec: dict = {}
     try:
-        for line in spec_path.read_text(encoding="utf-8").splitlines():
-            if line.startswith(key + ":"):
-                return float(line.split(":", 1)[1].split("#", 1)[0].strip().strip("'\""))
-    except (OSError, ValueError):
+        from cap_evolve.specfile import spec_for_run
+        spec = spec_for_run(run_dir) or {}
+    except Exception:  # noqa: BLE001
+        spec = {}
+    if not spec:
+        fallback = run_dir.root.parent / "project" / "capevolve.yaml"
+        try:
+            for line in fallback.read_text(encoding="utf-8").splitlines():
+                if line.startswith(key + ":"):
+                    return line.split(":", 1)[1].split("#", 1)[0].strip().strip("'\"")
+        except OSError:
+            pass
+        return None
+    return spec.get(key)
+
+
+def _spec_number(run_dir: RunDir, key: str) -> float | None:
+    v = _spec_value(run_dir, key)
+    try:
+        return None if v is None else float(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def _spec_known(run_dir: RunDir) -> bool:
+    try:
+        from cap_evolve.specfile import resolve_spec_path
+        if resolve_spec_path(run_dir) is not None:
+            return True
+    except Exception:  # noqa: BLE001
         pass
-    return None
+    return (run_dir.root.parent / "project" / "capevolve.yaml").is_file()
 
 
 def _looser_gate_settings(run_dir: RunDir, rec: dict) -> list[str]:
-    """Ways the gate run behind ``rec`` was looser than the run's spec (k_se / threshold)."""
-    spec_path = run_dir.root.parent / "project" / "capevolve.yaml"
-    if not spec_path.is_file() or rec.get("k_se") is None:
+    """Ways the gate run behind ``rec`` was looser than the run's spec (mode / k_se / threshold)."""
+    if not _spec_known(run_dir) or rec.get("kind") == "promote_gate" and rec.get("k_se") is None:
         return []
     out = []
-    want_k = _spec_number(run_dir, "gate_k_se")
-    want_k = 0.2 if want_k is None else want_k
-    if float(rec["k_se"]) < want_k:
-        out.append(f"k_se {rec['k_se']} < spec gate_k_se {want_k}")
-    want_t = _spec_number(run_dir, "gate_threshold")
-    if want_t is not None and rec.get("threshold") is not None and float(rec["threshold"]) < want_t:
-        out.append(f"threshold {rec['threshold']} < spec gate_threshold {want_t}")
+    if rec.get("k_se") is not None:
+        want_k = _spec_number(run_dir, "gate_k_se")
+        want_k = 0.2 if want_k is None else want_k
+        if float(rec["k_se"]) < want_k:
+            out.append(f"k_se {rec['k_se']} < spec gate_k_se {want_k}")
+    if rec.get("mode") in ("strict", "threshold"):
+        want_m = str(_spec_value(run_dir, "gate_mode") or "paired")
+        if rec["mode"] != want_m:
+            out.append(f"mode {rec['mode']} is looser than spec gate_mode {want_m}")
+    if rec.get("threshold") is not None:
+        want_t = _spec_number(run_dir, "gate_threshold")
+        want_t = 0.0 if want_t is None else want_t
+        if float(rec["threshold"]) < want_t:
+            out.append(f"threshold {rec['threshold']} < spec gate_threshold {want_t}")
     return out
 
 
@@ -514,7 +549,8 @@ def _newest_gate_record(run_dir: RunDir, candidate_id: str) -> dict | None:
                     parent = payload.get("parent")
                     ref = parent.get("tag") if isinstance(parent, dict) else None
                     recs.append((mt, 0, {"verdict": row.get("verdict"), "reference": ref,
-                                         "kind": "round_table"}))
+                                         "kind": "round_table",
+                                         "k_se": row.get("k_se")}))
     try:
         with run_dir.events_path.open(encoding="utf-8") as f:
             for n, line in enumerate(f):
@@ -526,7 +562,7 @@ def _newest_gate_record(run_dir: RunDir, candidate_id: str) -> dict | None:
                         and str(ev.get("candidate")) == str(candidate_id)):
                     recs.append((float(ev.get("t") or 0), 1 + n, {
                         "verdict": ev.get("verdict"), "reference": ev.get("reference"),
-                        "kind": ev["kind"],
+                        "kind": ev["kind"], "mode": ev.get("mode"),
                         **{k: ev.get(k) for k in ("k_se", "threshold", "allow_regression",
                                                    "candidate_min_trial")}}))
     except FileNotFoundError:
@@ -804,7 +840,7 @@ def main(argv=None) -> int:
         if rec:
             gate_verdict = rec.get("verdict")
         gate_reference = rec.get("reference") if rec else None
-        gate_settings = ({k: rec.get(k) for k in ("k_se", "threshold", "allow_regression",
+        gate_settings = ({k: rec.get(k) for k in ("mode", "k_se", "threshold", "allow_regression",
                                                   "candidate_min_trial")} if rec else None)
         if not passing:
             if not args.accept_without_gate:

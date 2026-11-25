@@ -361,3 +361,39 @@ def test_act_commit_without_measured_verdict_does_not_pass(tmp_path):
     assert rc == 2
     assert not [e for e in _events(r.rd) if e["kind"] == "promote_gate" and e["verdict"] == "accept"]
     assert r.best() == "seed"
+
+
+def test_looser_gate_checked_against_the_runs_own_spec_file(tmp_path):
+    r = _Real(tmp_path)
+    d = r.rd.root.parent / "project"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "capevolve.agentopt.yaml").write_text("gate_k_se: 1.0\n", encoding="utf-8")
+    r.rd.log_event("run_config", spec=str(d / "capevolve.agentopt.yaml"))
+    w = r.mk("candA", 12)
+    r.run("gate_check.py", "--candidate", "candA", "--k-se", "0")
+    p = r.commit("candA", w)
+    assert p.returncode == 2, p.stdout + p.stderr
+    assert r.best() == "seed"
+
+
+def test_round_table_k_se_is_checked(tmp_path):
+    r = _Real(tmp_path)
+    _write_spec(r, "gate_k_se: 1.0\n")
+    w = r.mk("candA", 12)
+    (r.rd.root / "work").mkdir(exist_ok=True)
+    (r.rd.root / "work" / "round_i0.json").write_text(json.dumps(
+        {"parent": {"tag": "seed"},
+         "candidates": [{"tag": "candA", "verdict": "accept", "k_se": 0.0}]}), encoding="utf-8")
+    p = r.commit("candA", w)
+    assert p.returncode == 2, p.stdout + p.stderr
+    assert r.best() == "seed"
+
+
+def test_strict_mode_against_paired_spec_is_refused(tmp_path):
+    r = _Real(tmp_path)
+    _write_spec(r, "gate_mode: paired\ngate_k_se: 1.0\n")
+    w = r.mk("candA", 12)
+    r.run("gate_check.py", "--candidate", "candA", "--mode", "strict", "--k-se", "1.0")
+    p = r.commit("candA", w)
+    assert p.returncode == 2, p.stdout + p.stderr
+    assert r.best() == "seed"
