@@ -1759,6 +1759,12 @@ def _cmd_init(argv) -> int:
     for key, value in (("algorithm_skill", algorithm), ("optimizer_skill", optimizer),
                        ("capability_path", cap_path), ("orchestration_mode", mode)):
         text = _set_spec_key(text, key, value)
+    # Every spec line `cap-evolve algorithms` shows for this algorithm (e.g. gepa's
+    # max_metric_calls: 200) -- that screen promises init writes them.
+    for line in branding.ALGORITHMS.get(algorithm, {}).get("spec", ()):
+        key, value = _split_spec_line(line)
+        if key:
+            text = _set_spec_key(text, key, value)
     spec_path.write_text(text, encoding="utf-8")
 
     workdir = project.resolve().parent.parent
@@ -1775,6 +1781,17 @@ def _cmd_init(argv) -> int:
              "    2  cap-evolve doctor", "    3  cap-evolve run --tui"]
     _screen(lines)
     return 0
+
+
+def _split_spec_line(line: str) -> tuple[str, str]:
+    """``'key: value   # note'`` -> ``('key', 'value')``; a ``#`` inside quotes is kept."""
+    key, sep, rest = line.partition(":")
+    if not sep:
+        return "", ""
+    rest = rest.strip()
+    if rest[:1] in ("'", '"') and rest.find(rest[0], 1) > 0:
+        return key.strip(), rest[: rest.find(rest[0], 1) + 1]
+    return key.strip(), rest.split("#", 1)[0].strip()
 
 
 def _set_spec_key(text: str, key: str, value: str) -> str:
