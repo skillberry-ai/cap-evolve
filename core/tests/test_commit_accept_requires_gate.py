@@ -397,3 +397,18 @@ def test_strict_mode_against_paired_spec_is_refused(tmp_path):
     p = r.commit("candA", w)
     assert p.returncode == 2, p.stdout + p.stderr
     assert r.best() == "seed"
+
+
+def test_round_table_strict_mode_against_paired_spec_is_refused(tmp_path):
+    r = _Real(tmp_path)
+    _write_spec(r, "gate_mode: paired\ngate_k_se: 1.0\n")
+    w = r.mk("candA", 12)
+    r.run("gate_check.py", "--candidate", "candA", "--mode", "strict", "--k-se", "1.0")
+    (r.rd.root / "work").mkdir(exist_ok=True)
+    (r.rd.root / "work" / "round_i0.json").write_text(json.dumps(
+        {"parent": {"tag": "seed"},
+         "candidates": [{"tag": "candA", "verdict": "accept", "k_se": 1.0,
+                         "mode": "strict"}]}), encoding="utf-8")
+    p = r.commit("candA", w)
+    assert p.returncode == 2, p.stdout + p.stderr
+    assert r.best() == "seed"

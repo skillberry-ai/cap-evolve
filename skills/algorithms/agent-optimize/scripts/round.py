@@ -1670,6 +1670,7 @@ def _main(argv=None) -> int:
             "stderr": (g.get("candidate") or {}).get("stderr"),
             "n": g.get("paired_n"),
             "k_se": args.k_se,
+            "mode": args.mode,
             "resolvable_effect_size": (g.get("gate") or {}).get("resolvable_effect_size"),
             # Which val tasks the delta was actually measured over. A row whose footprint is
             # `restricted: false` was measured across the whole split, so its SE carries the

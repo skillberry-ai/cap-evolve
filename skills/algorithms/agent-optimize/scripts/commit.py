@@ -550,7 +550,9 @@ def _newest_gate_record(run_dir: RunDir, candidate_id: str) -> dict | None:
                     ref = parent.get("tag") if isinstance(parent, dict) else None
                     recs.append((mt, 0, {"verdict": row.get("verdict"), "reference": ref,
                                          "kind": "round_table",
-                                         "k_se": row.get("k_se")}))
+                                         "k_se": row.get("k_se"),
+                                         "mode": row.get("mode"),
+                                         "threshold": row.get("threshold")}))
     try:
         with run_dir.events_path.open(encoding="utf-8") as f:
             for n, line in enumerate(f):
