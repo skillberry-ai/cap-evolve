@@ -153,8 +153,7 @@ cause; an empty split is `empty`, not 0.0; a no-holdout spec is a FIT metric. No
 ## Invariants
 
 Enforced by the scripts: test is scored once, by `finalize` only (the split seal); promote and the
-confirmation gate read val only. Eval-surface guard: the baseline step (seed snapshot) records the manifest when the project sits
-at `<project>/.capevolve/<run>`; otherwise the first `act.py` call that names `--project` does, with a
+confirmation gate read val only. Eval-surface guard: the baseline step (seed snapshot) records the manifest for the project the run was started with (the `project` of its `spec_resolved`/`run_config` event, else the standard sibling `<work>/.capevolve/project`; if neither is found nothing is recorded); otherwise the first `act.py` call that names `--project` does, with a
 late-seal warning if the baseline is already scored. If it is still missing at promote/finalize it is recorded then,
 with a loud `late` warning and event (it cannot catch earlier edits). It hashes the project's `adapters/` and `tasks/` folders and its top-level `adapter.py`, `*scorer*.py`
 and `tasks*` files into the run's private area; `promote` (and every accept) and `finalize` re-hash

@@ -234,6 +234,24 @@ def test_stray_adapters_in_work_does_not_seal_the_wrong_root(tmp_path):
     assert rep.ok, rep.reason
 
 
+def test_spec_resolved_project_wins_over_stray_adapters_next_to_spec(tmp_path):
+    (tmp_path / "adapters").mkdir()
+    (tmp_path / "adapters" / "x.py").write_text("X = 1\n")
+    (tmp_path / "capevolve.yaml").write_text("a: 1\n")
+    project = tmp_path / ".capevolve" / "project"
+    (project / "adapters").mkdir(parents=True)
+    (project / "adapters" / "adapter.py").write_text("X = 1\n")
+    rd = RunDir.create(tmp_path / ".capevolve", ts="a")
+    rd.log_event("spec_resolved", spec=str(tmp_path / "capevolve.yaml"), project=str(project))
+    seed = tmp_path / "seedcap"
+    seed.mkdir()
+    (seed / "a.txt").write_text("a")
+    rd.snapshot("seed", seed)
+    man = integrity.read_manifest(Path(rd.private_dir) / integrity.EVAL_SURFACE_MANIFEST)
+    assert integrity.verify_eval_surface(man, project).ok
+    assert not integrity.verify_eval_surface(man, tmp_path).ok
+
+
 def test_a_late_seal_is_flagged_not_silent(tmp_path, capsys, monkeypatch):
     rd, project, _, val = _run(tmp_path)
     (rd.candidates / "seed").mkdir(parents=True, exist_ok=True)  # baseline already scored, no manifest

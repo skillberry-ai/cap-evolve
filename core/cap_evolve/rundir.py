@@ -776,20 +776,28 @@ class RunDir:
     def _seal_eval_surface_at_baseline(self) -> None:
         """Record the project's eval-surface manifest when the seed is snapshotted, i.e. before the
         baseline is scored, so a scorer edited after the baseline is caught. The project is the one
-        this run was started with (the folder of its recorded spec); failing that, the standard
+        this run was started with (the ``project`` of its spec_resolved / run_config event); failing that, the standard
         sibling ``<work>/.capevolve/project`` next to the run folder. If no project is found for
         sure, nothing is recorded (act.py records it on its first call). Best effort."""
         try:
             from . import integrity
-            from .specfile import resolve_spec_path
             path = self.private_dir / integrity.EVAL_SURFACE_MANIFEST
             if path.exists():
                 return
             project = None
-            spec = resolve_spec_path(self)
-            if spec is not None and (spec.parent / "adapters").is_dir():
-                project = spec.parent
-            else:
+            try:  # (1) the project the run was started with, from its spec_resolved / run_config event
+                with Path(self.events_path).open(encoding="utf-8") as f:
+                    for line in f:
+                        try:
+                            ev = json.loads(line)
+                        except Exception:  # noqa: BLE001
+                            continue
+                        if ev.get("kind") in ("run_config", "spec_resolved") and ev.get("project"):
+                            project = Path(str(ev["project"]))
+                            break
+            except Exception:  # noqa: BLE001
+                pass
+            if project is None:  # (2) the standard sibling <work>/.capevolve/project; (3) else nothing
                 sib = self.root.resolve().parent / "project"
                 if sib.is_dir():
                     project = sib
