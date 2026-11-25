@@ -809,8 +809,9 @@ def complete_finalize(ctx, intent: dict) -> dict:
         base = harness.split_result_from_rollouts(run_dir, "FINAL_seed", "test")
         if not base.per_task:
             raise Refused("the earlier finalize died between the champion's and the seed's test scoring; the seed's "
-                          "test rollouts (FINAL_seed) are missing. Scoring them now continues the same sealed finalize "
-                          "but needs CAPEVOLVE_ALLOW_TEST_RESCORE=1, which is recorded in the run")
+                          "test rollouts (FINAL_seed) are missing. The test split is sealed and was already "
+                          "scored, so it cannot be scored again from here; report the FINAL test rollouts "
+                          "on disk and stop")
         payload.update(test_baseline=base.to_dict(), baseline_id="seed", test_delta=round(test.reward - base.reward, 6))
     else:
         payload.update(test_baseline=test.to_dict(), baseline_id=best, test_delta=0.0)
@@ -826,6 +827,24 @@ def complete_finalize(ctx, intent: dict) -> dict:
     return payload
 
 
+def _keep_rescore_mark(ctx, out):
+    """Carry the seal-bypass mark into the final.json we are about to write (#799).
+
+    commit_test stamps it on the on-disk final.json and state.json records every use,
+    but the payloads from the finalize phase and complete_finalize lack it."""
+    uses = RunDir.open(ctx.root).test_rescore_overrides()
+    if uses:
+        out["test_rescore_override"] = {"used": True, "count": len(uses), "uses": uses}
+        return
+    try:
+        prev = json.loads((ctx.root / "final.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        prev = None
+    mark = prev.get("test_rescore_override") if isinstance(prev, dict) else None
+    if isinstance(mark, dict) and mark.get("used"):
+        out["test_rescore_override"] = mark
+
+
 def finalize(a, ctx):
     run_dir = ctx.run_dir
     project = ctx.need_project()
@@ -835,8 +854,9 @@ def finalize(a, ctx):
             return 0, {"already_finalized": True, "final": jload(final_path.read_text(encoding="utf-8"))}
         raise Refused("test is already sealed (scored once) but final.json is missing: a second finalize is refused")
     if intent_path.exists() and (run_dir.rollouts / "test").is_dir() and any((run_dir.rollouts / "test").glob("*.json")):
-        out = {"final": complete_finalize(ctx, jload(intent_path.read_text(encoding="utf-8")) or {}),
-               "champion": ctx.champion(), "completed_from_existing": True}
+        flat = complete_finalize(ctx, jload(intent_path.read_text(encoding="utf-8")) or {})
+        out = {**flat, "champion": ctx.champion(), "completed_from_existing": True, "final": flat}
+        _keep_rescore_mark(ctx, out)
         final_path.write_text(json.dumps(out, indent=2, default=str), encoding="utf-8")
         return 0, out
     champ = ctx.champion()
@@ -884,7 +904,14 @@ def finalize(a, ctx):
                      "--project", project, "--n-trials", str(n_trials)])
     if rc != 0:
         raise Refused(f"finalize phase failed rc={rc}", stderr=(se or so)[-500:])
-    out["final"] = jload(so) or so[-500:]
+    flat = jload(so)
+    if isinstance(flat, dict):
+        # the phase result goes at the TOP level (report/dashboard read final.json["test"]);
+        # "final" keeps a copy for older readers
+        out = {**flat, **out, "final": flat}
+    else:
+        out["final"] = flat or so[-500:]
+    _keep_rescore_mark(ctx, out)
     (ctx.root / "final.json").write_text(json.dumps(out, indent=2, default=str), encoding="utf-8")
     ctx.decision("finalize", champ, verdict=(out.get("confirm") or {}).get("verdict_vs_seed"))
     return 0, out

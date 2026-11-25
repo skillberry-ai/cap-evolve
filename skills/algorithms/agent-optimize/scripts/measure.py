@@ -55,6 +55,21 @@ def _num(sr: SplitResult | None) -> dict:
             "coverage": round(sr.coverage, 4), "pass_k": sr.pass_k}
 
 
+def _override_count(run_dir, final: dict | None = None) -> int:
+    """How many times the test split was re-scored with the seal guard overridden (0 = never)."""
+    n = len(run_dir.test_rescore_overrides())
+    if not n and isinstance(final, dict):
+        ov = final.get("test_rescore_override")
+        if isinstance(ov, dict) and ov.get("used"):
+            n = int(ov.get("count") or 1)
+    return n
+
+
+def _rescore_status(n: int) -> str:
+    return (f"WARNING: the test split was re-scored {n} time(s) (seal override), so this is "
+            "not a single clean held-out score")
+
+
 def _compare(seed: SplitResult | None, best: SplitResult | None, *, split: str,
              k_se: float, mode: str) -> dict:
     """Paired delta + the gate decision on one split. Gate is only meaningful on val."""
@@ -215,6 +230,7 @@ def main(argv=None) -> int:
     )
 
     rows: list = []
+    override_n = 0
 
     # ---- val: free, straight off the rollouts the gate used ------------------
     if not va:
@@ -278,7 +294,10 @@ def main(argv=None) -> int:
         rows.append({"split": "test", "status": "skipped by --skip-test (seal untouched)"})
     elif splits.test_used and final_path.is_file():
         fin = json.loads(final_path.read_text(encoding="utf-8"))
-        rows.append({"split": "test", "status": "already sealed — reporting final.json",
+        override_n = _override_count(run_dir, fin)
+        rows.append({"split": "test",
+                     "status": (_rescore_status(override_n) + " — reporting final.json"
+                                if override_n else "already sealed — reporting final.json"),
                      "seed": _num(SplitResult.from_dict(fin["test_baseline"])),
                      "best": _num(SplitResult.from_dict(fin["test"])),
                      "test_delta": fin.get("test_delta"),
@@ -296,7 +315,8 @@ def main(argv=None) -> int:
                        SplitResult.from_dict(fin["test"]),
                        split="test", k_se=k_se, mode=mode)
         row["test_delta"] = fin.get("test_delta")
-        row["status"] = "sealed now (once)"
+        override_n = _override_count(run_dir, fin)
+        row["status"] = _rescore_status(override_n) if override_n else "sealed now (once)"
         rows.append(row)
 
     payload = {
@@ -313,6 +333,8 @@ def main(argv=None) -> int:
         "spent": run_dir.spent.to_dict(),
         "screen_ledger": _screen_ledger(run_dir),
     }
+    if override_n:
+        payload["test_rescore_override"] = {"used": True, "count": override_n}
     if best_id == "seed":
         payload["warning"] = ("best_id == 'seed': nothing cleared the val gate, so every "
                               "delta below is 0 by construction. Report this as a null "

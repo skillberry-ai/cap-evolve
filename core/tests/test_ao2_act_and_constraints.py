@@ -72,6 +72,7 @@ def test_finalize_with_missing_seed_test_rollouts_refuses_rather_than_rescoring(
     sh = Sh()
     rc, out = _act(monkeypatch, capsys, ["finalize", "--n-confirm", "0", *_args(rd, project)], sh)
     assert rc == 2 and "FINAL_seed" in out["error"] and not sh.calls
+    assert "CAPEVOLVE_ALLOW_TEST_RESCORE" not in out["error"], "the refusal must not name the override (#799)"
     assert not RunDir.open(rd.root).read_splits().test_used
 
 
