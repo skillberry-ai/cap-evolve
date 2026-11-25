@@ -128,3 +128,45 @@ def test_a_better_candidate_is_scored_but_the_seed_is_not(tmp_path):
     assert sorted(adapter.rollouts).count(splits.test[0]) == 1, "test scored for the seed again"
     assert payload["test_baseline"]["reward"] == json.loads(
         (prior.root / "final.json").read_text(encoding="utf-8"))["test"]["reward"]
+
+
+def _project_with_scorer(tmp_path):
+    project = tmp_path / ".capevolve" / "project"
+    (project / "adapters").mkdir(parents=True)
+    (project / "adapters" / "adapter.py").write_text("X = 1\n")
+    (project / "scorer.py").write_text("def score(*a): return 0.0\n")
+    return project
+
+
+def _events(rd, kind):
+    lines = rd.events_path.read_text(encoding="utf-8").splitlines() if rd.events_path.exists() else []
+    return [e for e in map(json.loads, lines) if e.get("kind") == kind]
+
+
+def test_reuse_carries_the_earlier_seal_and_reports_an_edited_scorer(tmp_path, capsys):
+    from cap_evolve import Budget, RunDir, harness, integrity
+
+    project = _project_with_scorer(tmp_path)
+    prior = _prior_run(tmp_path)
+    man = Path(prior.private_dir) / integrity.EVAL_SURFACE_MANIFEST
+    assert man.exists()
+    (project / "scorer.py").write_text("def score(*a): return 1.0\n")  # edited since the earlier run
+    rd = RunDir.create(tmp_path / ".capevolve", ts="next", budget=Budget(max_iterations=0))
+    harness.reuse_baseline(prior.root, run_dir=rd)
+    assert (Path(rd.private_dir) / integrity.EVAL_SURFACE_MANIFEST).read_text() == man.read_text()
+    ev = _events(rd, "eval_surface_carried")
+    assert ev and ev[-1]["ok"] is False and "scorer.py" in ev[-1]["reason"]
+    assert "TAMPERED" in capsys.readouterr().err
+    assert not _events(rd, "eval_surface_recorded")
+
+
+def test_reuse_without_an_earlier_seal_records_no_baseline_seal(tmp_path):
+    from cap_evolve import Budget, RunDir, harness, integrity
+
+    prior = _prior_run(tmp_path)
+    (Path(prior.private_dir) / integrity.EVAL_SURFACE_MANIFEST).unlink(missing_ok=True)
+    _project_with_scorer(tmp_path)
+    rd = RunDir.create(tmp_path / ".capevolve", ts="next", budget=Budget(max_iterations=0))
+    harness.reuse_baseline(prior.root, run_dir=rd)
+    assert not (Path(rd.private_dir) / integrity.EVAL_SURFACE_MANIFEST).exists()
+    assert not _events(rd, "eval_surface_recorded")

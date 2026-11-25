@@ -1135,6 +1135,30 @@ def reused_seed_test(run_dir: RunDir) -> dict | None:
     return rec
 
 
+def _carry_eval_surface(prior: Path, run_dir: RunDir) -> None:
+    """Carry the earlier run's eval-surface seal over and check today's files against it.
+
+    No earlier seal: nothing is recorded, so the first act call seals late and warns."""
+    try:
+        src = RunDir.open(prior).private_dir / integrity.EVAL_SURFACE_MANIFEST
+    except Exception:  # noqa: BLE001
+        src = prior / "private" / integrity.EVAL_SURFACE_MANIFEST
+    if not src.is_file():
+        return
+    dst = Path(run_dir.private_dir) / integrity.EVAL_SURFACE_MANIFEST
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(src, dst)
+    try:
+        rep = integrity.verify_eval_surface(integrity.read_manifest(dst))
+    except Exception as e:  # noqa: BLE001
+        rep = None
+        run_dir.log_event("eval_surface_carried", ok=False, reason=f"unreadable earlier manifest: {e}")
+    if rep is not None:
+        run_dir.log_event("eval_surface_carried", ok=bool(rep.ok), reason=rep.reason)
+        if not rep.ok:
+            print(f"WARNING: reused baseline: {rep.reason}", file=sys.stderr)
+
+
 def reuse_baseline(prior_run_dir: Path, *, run_dir: RunDir) -> SplitResult:
     """Reuse a PRIOR run's baseline instead of recomputing it.
 
@@ -1169,7 +1193,9 @@ def reuse_baseline(prior_run_dir: Path, *, run_dir: RunDir) -> SplitResult:
     # Copy the seed candidate snapshot so this run can read/serve it as best.
     prior_seed = prior / "candidates" / "seed"
     if prior_seed.is_dir():
-        run_dir.snapshot("seed", prior_seed)
+        # The baseline score is the earlier run's, so today's files must not be sealed as "on time".
+        run_dir.snapshot("seed", prior_seed, seal_eval_surface=False)
+    _carry_eval_surface(prior, run_dir)
 
     # The seed's val and train rollouts only: finalize's bookend and diagnose read them by tag, so
     # with them on disk neither re-evaluates the seed. The prior run's CANDIDATE rollouts are not

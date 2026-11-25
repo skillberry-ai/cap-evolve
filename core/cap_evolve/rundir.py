@@ -756,7 +756,7 @@ class RunDir:
         return self.commit_test()
 
     # ---- candidates ---------------------------------------------------------
-    def snapshot(self, candidate_id: str, src_dir: Path, ignore=None) -> Path:
+    def snapshot(self, candidate_id: str, src_dir: Path, ignore=None, seal_eval_surface: bool = True) -> Path:
         """Persist ``src_dir`` as candidate ``candidate_id``.
 
         ``ignore`` is an optional iterable of top-level names to exclude (e.g. the
@@ -769,7 +769,7 @@ class RunDir:
             shutil.rmtree(dst)
         ig = shutil.ignore_patterns(*ignore) if ignore else None
         shutil.copytree(src_dir, dst, ignore=ig)
-        if candidate_id == "seed":
+        if candidate_id == "seed" and seal_eval_surface:
             self._seal_eval_surface_at_baseline()
         return dst
 
