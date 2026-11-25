@@ -839,6 +839,11 @@ def main(argv=None) -> int:
                        "--accept-without-gate REASON to override on the record",
             }, indent=2))
             return 2
+        if loose:
+            accepted_without_gate = args.accept_without_gate
+            run_dir.log_event("accept_without_gate", candidate=args.candidate_id,
+                              reason=accepted_without_gate, gate_verdict=rec.get("verdict"),
+                              looser_settings=loose)
         if rec:
             gate_verdict = rec.get("verdict")
         gate_reference = rec.get("reference") if rec else None

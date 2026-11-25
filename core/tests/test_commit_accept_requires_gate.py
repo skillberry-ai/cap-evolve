@@ -326,6 +326,21 @@ def test_looser_gate_k_se_than_spec_is_refused(tmp_path):
     assert r.best() == "seed"
 
 
+def test_looser_gate_with_accept_without_gate_records_the_reason(tmp_path):
+    r = _Real(tmp_path)
+    _write_spec(r, "gate_k_se: 1.0\n")
+    w = r.mk("candA", 12)
+    r.run("gate_check.py", "--candidate", "candA", "--k-se", "0")
+    p = r.commit("candA", w, "--accept-without-gate", "my reason")
+    assert p.returncode == 0, p.stdout + p.stderr
+    evs = _events(r.rd)
+    ov = [e for e in evs if e["kind"] == "accept_without_gate"]
+    assert ov and ov[-1]["reason"] == "my reason" and ov[-1]["looser_settings"]
+    acc = [e for e in evs if e["kind"] == "accept"][-1]
+    assert acc["accepted_without_gate"] == "my reason"
+    assert acc["gate_settings"]["k_se"] == 0.0
+
+
 def test_normal_gate_accept_commits_and_event_carries_settings(tmp_path):
     r = _Real(tmp_path)
     _write_spec(r, "gate_k_se: 1.0\n")
