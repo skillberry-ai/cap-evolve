@@ -203,7 +203,7 @@ class FakeBackend(conductor.Backend):
         self.w.events.append((tag, status, kw.get("stage")))
         graph.append_node(self.w.run_dir, node_id=tag, parents=parents, status=status, **{k: v for k, v in kw.items()})
 
-    def commit_accept(self, tag, evidence): self.w.decisions.append((tag, "accept"))
+    def commit_accept(self, tag, evidence, verdict=None, reference=None): self.w.decisions.append((tag, "accept"))
     def commit_reject(self, tag, reason, evidence): self.w.decisions.append((tag, "reject"))
 
     def discard(self, tag): self.w.cands.pop(tag, None)
@@ -379,7 +379,7 @@ class P2Backend(conductor_backend.P2Port, conductor.Backend):
         parents = kw.pop("parents", None)
         graph.append_node(self.run_dir, node_id=tag, parents=parents, status=status, **kw)
 
-    def commit_accept(self, tag, evidence):
+    def commit_accept(self, tag, evidence, verdict=None, reference=None):
         self.decisions.append((tag, "accept"))
         self.run_dir.snapshot(tag, self.dirs[tag])
         self.run_dir.set_best(tag)

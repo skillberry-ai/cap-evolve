@@ -412,3 +412,50 @@ def test_round_table_strict_mode_against_paired_spec_is_refused(tmp_path):
     p = r.commit("candA", w)
     assert p.returncode == 2, p.stdout + p.stderr
     assert r.best() == "seed"
+
+
+def _be(r, w, tmp_path, monkeypatch):
+    import types
+    if str(_S) not in sys.path:
+        sys.path.insert(0, str(_S))
+    import conductor_backend
+    from cap_evolve import harness
+    proj = tmp_path / "proj"
+    (proj / "adapters").mkdir(parents=True, exist_ok=True)
+    (proj / "adapters" / "adapter.py").write_text("class Adapter: pass\n", encoding="utf-8")
+
+    class Ctx:
+        root = str(r.rd.root)
+        run_dir = r.rd
+        project = str(proj)
+
+        def work(self, tag):
+            return str(w)
+
+    monkeypatch.setattr(harness, "split_result_from_rollouts",
+                        lambda *a, **k: types.SimpleNamespace(per_task={"t": 1.0}, reward=1.0))
+    be = types.SimpleNamespace(run_dir=r.rd, ctx=Ctx(), cfg=types.SimpleNamespace(p2=False),
+                               _rediagnose=lambda tag: None)
+    return conductor_backend, be
+
+
+def test_realbackend_commit_accept_on_never_gated_candidate_is_refused(tmp_path, monkeypatch):
+    import pytest
+    r = _Real(tmp_path)
+    w = r.mk("candA", 12)
+    cb, be = _be(r, w, tmp_path, monkeypatch)
+    with pytest.raises(RuntimeError, match="refused"):
+        cb.RealBackend.commit_accept(be, "candA", {})
+    assert not [e for e in _events(r.rd) if e["kind"] == "promote_gate" and e["verdict"] == "accept"]
+    assert r.best() == "seed"
+
+
+def test_realbackend_commit_accept_logs_the_measured_reference(tmp_path, monkeypatch):
+    r = _Real(tmp_path)
+    w = r.mk("candA", 12)
+    assert r.gate("candA") == "accept"
+    cb, be = _be(r, w, tmp_path, monkeypatch)
+    cb.RealBackend.commit_accept(be, "candA", {}, verdict="accept", reference="seed")
+    g = [e for e in _events(r.rd) if e["kind"] == "promote_gate"][0]
+    assert g["verdict"] == "accept" and g["reference"] == "seed"
+    assert r.best() == "candA"

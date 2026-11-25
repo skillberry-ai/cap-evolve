@@ -191,7 +191,7 @@ class Backend:
     # graph
     def register(self, job: dict, result: dict) -> dict: raise NotImplementedError
     def node_event(self, tag: str, status: str, **kw) -> None: raise NotImplementedError
-    def commit_accept(self, tag: str, evidence: dict) -> None: raise NotImplementedError
+    def commit_accept(self, tag: str, evidence: dict, verdict=None, reference=None) -> None: raise NotImplementedError
     def restore_champion(self, tag: str) -> None: pass             # a reverted promotion: the run's best is ``tag`` again
     def commit_reject(self, tag: str, reason: str, evidence: dict) -> None: raise NotImplementedError
     def discard(self, tag: str) -> None: pass
@@ -647,7 +647,7 @@ class Conductor:
                 v["verdict"] = "kill"
         ev = {"stage": f"focus@{n['trials']}", "gain": round(v["gain"], 4), "route": route, **n["focus"]}
         if v["verdict"] == "accept":
-            self.b.commit_accept(tag, ev)
+            self.b.commit_accept(tag, ev, verdict="accept", reference=self.champion)
             old = self.champion
             self._finish_node(tag, "champion", "promoted", ev)
             self.node(old)["status"] = "superseded"
@@ -708,7 +708,7 @@ class Conductor:
             n.update(status="stale", rung=len(self.cfg.rungs), reserved=0)
             self.b.node_event(tag, "gated", stage="stale", why="incumbent changed during confirmation")
             return
-        self.b.commit_accept(tag, {**ev, "k0": n["k0"]})
+        self.b.commit_accept(tag, {**ev, "k0": n["k0"]}, verdict="accept", reference=self.champion)
         old = self.champion
         self._finish_node(tag, "champion", "promoted", ev)
         self.node(old)["status"] = "superseded"
@@ -995,7 +995,8 @@ class Conductor:
             n = self.node(tag)
             if v["status"] == "accept" and tag == champion:
                 ev = {"stage": "confirm", "confirmation": "accept"}
-                self.b.commit_accept(tag, {**ev, "mean": v.get("mean"), "z": v.get("z")})
+                self.b.commit_accept(tag, {**ev, "mean": v.get("mean"), "z": v.get("z")},
+                                     verdict="accept", reference=self.champion)
                 old = self.champion
                 self._finish_node(tag, "champion", "promoted", ev)
                 self.node(old)["status"] = "superseded"
