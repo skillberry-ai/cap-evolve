@@ -96,6 +96,13 @@ def main(argv=None) -> int:
            if isinstance(best_val, (int, float)) and isinstance(test_reward, (int, float))
            else None)
 
+    override = final.get("test_rescore_override")
+    override = override if isinstance(override, dict) and override.get("used") else None
+    try:
+        override_count = int((override or {}).get("count") or 1)
+    except (TypeError, ValueError):
+        override_count = 1
+
     summary = {
         "run_dir": str(run_dir.root),
         "best_id": run_dir.best_id,
@@ -114,6 +121,8 @@ def main(argv=None) -> int:
         "iterations": run_dir.spent.iterations,
         "target_profile": target_profile,
     }
+    if override:
+        summary["test_rescore_override"] = override
 
     # pass^k for k > n_trials is UNDEFINED, so aggregate_scores omits it (see
     # loop.aggregate_scores) — never 0.0, which would read as "0% reliable" instead
@@ -136,6 +145,9 @@ def main(argv=None) -> int:
     elif no_holdout:
         md += ["> **No holdout** (train == val == test). The test number below is a *fit* "
                "metric, not an estimate of generalization.", ""]
+    if override:
+        md += ["> **WARNING: the sealed test split was re-scored.** The test number below is "
+               "not a single clean look at held-out data.", ""]
     md += [
         f"- Best candidate: `{run_dir.best_id}`",
         f"- Baseline val: {_pm(base_val, base_val_obj.get('stderr'))}",
@@ -174,6 +186,12 @@ def main(argv=None) -> int:
         # the optimizer model that proposed the edits.
         md.append(f"- Optimized for: {target_profile['model']}"
                   + (f" (tier {target_profile['tier']})" if target_profile.get("tier") else ""))
+    if override:
+        sealed_note = (
+            f"WARNING: the sealed test split was re-scored {override_count} time(s) with the "
+            "seal override, so the test number is not a single clean look at held-out data. "
+            "Treat it as optimistic."
+        )
     if finalized:
         md += ["", sealed_note]
     (run_dir.root / "report.md").write_text("\n".join(md) + "\n", encoding="utf-8")

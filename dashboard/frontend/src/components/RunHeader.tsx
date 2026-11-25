@@ -26,6 +26,7 @@ export function RunHeader({
 }) {
   const splits = summary.splits
   const sealed = summary.test_sealed
+  const override = summary.test_rescore_override
   const noHoldout = splits?.no_holdout
 
   return (
@@ -55,14 +56,16 @@ export function RunHeader({
         <span
           title={
             sealed
-              ? 'The test split was reserved and scored exactly once.'
+              ? override
+                ? `WARNING: the test split was re-scored ${override.count} time(s) (seal override), so it is not a single clean held-out score.`
+                : 'The test split was reserved and scored exactly once.'
               : 'The test split has not been scored — there is no headline number yet.'
           }
           className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-2
                      px-2.5 py-1 text-xs text-muted"
         >
           {sealed ? <Lock size={12} aria-hidden /> : <Unlock size={12} aria-hidden />}
-          {sealed ? 'test sealed' : 'test not sealed'}
+          {sealed ? (override ? `test re-scored ${override.count} time(s)` : 'test sealed') : 'test not sealed'}
         </span>
 
         <div className="tnum ml-auto flex items-center gap-3 text-xs text-muted">
@@ -112,7 +115,9 @@ export function RunHeader({
           {splits.test ?? '—'}
           {splits.seed != null && ` · seed ${splits.seed}`}
           <span className="ml-3 border-l border-border pl-3">
-            val decides selection; test is scored exactly once and never optimized against.
+            {override
+              ? `val decides selection; WARNING: test was re-scored ${override.count} time(s) (seal override), so it is not a single clean held-out score.`
+              : 'val decides selection; test is scored exactly once and never optimized against.'}
           </span>
         </p>
       )}

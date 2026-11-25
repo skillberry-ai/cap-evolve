@@ -219,6 +219,40 @@ def test_the_proposer_context_has_no_confirm_stratum_data(tmp_path):
     assert not any(f'"{t}"' in events for t in C)
 
 
+def test_confirm_stratum_numbers_stay_out_of_events_jsonl(tmp_path):
+    """#847: per-chunk C evaluations (control, confirm, sequential looks, final estimate) must not
+    put reward/stderr/n_subset/timing into events.jsonl (readable by the optimizer at
+    ../../events.jsonl); they go to the sealed private log and events.jsonl keeps only the bit."""
+    adapter, run_dir, ev, cands = _world(tmp_path, [0.4, 0.0])
+    rnd = ev.open_round(cands, ("seed", run_dir.candidate_dir("seed")))
+    rnd.run_rung(1)
+    rnd.run_rung(2)
+    out = rnd.confirm()
+    assert out
+    (tmp_path / "seq").mkdir()
+    _, _, ev2, cands2 = _world(tmp_path / "seq", [0.4])
+    v = ev2.open_round(cands2, ("seed", ev2.run_dir.candidate_dir("seed"))).sequential("c0")
+    ev.final_estimate(cands["c0"], run_dir.candidate_dir("seed"))
+
+    for rd in (run_dir, ev2.run_dir):
+        events = [json.loads(l) for l in rd.events_path.read_text().splitlines()]
+        leaked = [e for e in events if e.get("split") == "confirm" or "conf_" in str(e.get("tag", ""))
+                  or "__seq" in str(e.get("tag", "")) or "ctrl_" in str(e.get("tag", ""))
+                  or str(e.get("tag", "")).startswith("final__")]
+        assert leaked == [], leaked
+        if rd is run_dir:                                              # rungs (F) are still logged
+            assert any(e.get("split") == "feedback" and e["kind"] == "evaluate" for e in events)
+        sealed = [json.loads(l) for l in (rd.private_dir / "p2_confirm.jsonl").read_text().splitlines()]
+        conf = [s for s in sealed if s["kind"] == "event" and s.get("split") == "confirm"]
+        assert any(s["event"] == "evaluate" and "reward" in s and "stderr" in s for s in conf)
+        assert any(s["event"] == "eval_start" for s in conf)
+    bits = [e for e in (json.loads(l) for l in run_dir.events_path.read_text().splitlines())
+            if e["kind"] == "p2_confirm"]
+    assert bits and set(bits[-1]["bits"]) == set(out)
+    seq_bits = [json.loads(l) for l in ev2.run_dir.events_path.read_text().splitlines()]
+    assert any(e["kind"] == "p2_sequential" and e["bit"] == v.bit() for e in seq_bits)
+
+
 def test_final_estimate_compares_champion_and_seed_on_C(tmp_path):
     adapter, run_dir, ev, cands = _world(tmp_path, [0.4])
     res = ev.final_estimate(cands["c0"], run_dir.candidate_dir("seed"))

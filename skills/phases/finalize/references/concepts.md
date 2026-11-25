@@ -37,8 +37,7 @@ written, so a finalize that crashes *before* scoring is honestly retryable rathe
 than a destroyed headline number; and `begin_test_attempt` refuses a retry once
 test rollouts exist on disk, since a crash after scoring means the held-out set
 was already observed. Any second attempt raises `TestSealError`. The honesty is
-enforced by the harness, not left to the operator's discipline — the one bypass,
-`CAPEVOLVE_ALLOW_TEST_RESCORE=1`, is deliberately an explicit env override.
+enforced by the harness, not left to the operator's discipline.
 
 The seal counts *attempts*, not evaluations, because one honest finalize scores
 test twice by design: the best candidate (`FINAL`) and the unmodified seed

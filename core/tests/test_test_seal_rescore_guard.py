@@ -11,6 +11,9 @@ importantly, pin the behaviour it must NOT break -- one honest finalize scores t
 (the best as ``FINAL`` and the baseline as ``FINAL_seed``).
 """
 
+import json
+from pathlib import Path
+
 import pytest
 
 from cap_evolve.rundir import RunDir
@@ -48,7 +51,10 @@ def test_retry_after_test_was_scored_is_refused(tmp_path):
     msg = str(exc.value)
     assert "already SCORED" in msg
     assert "second look" in msg.lower()
-    assert "CAPEVOLVE_ALLOW_TEST_RESCORE" in msg, "the refusal must name its own override"
+    assert "sealed" in msg.lower()
+    # #799: an optimizer agent read the override's name in this message and switched the guard off.
+    assert "CAPEVOLVE_ALLOW_TEST_RESCORE" not in msg
+    assert "ALLOW_TEST" not in msg
 
 
 def test_override_is_explicit_and_opt_in(tmp_path, monkeypatch):
@@ -84,3 +90,152 @@ def test_committed_seal_still_refuses(tmp_path):
         rd.begin_test_attempt()
     with pytest.raises(TestSealError):
         rd.reserve_test()
+
+
+def test_no_skill_file_names_the_override():
+    """#799: agents read everything under skills/, so the override must not be named there."""
+    skills = Path(__file__).resolve().parents[2] / "skills"
+    assert skills.is_dir()
+    hits = []
+    for f in skills.rglob("*"):
+        if f.is_file():
+            try:
+                text = f.read_text(encoding="utf-8")
+            except (UnicodeDecodeError, OSError):
+                continue
+            if "CAPEVOLVE_ALLOW_TEST_RESCORE" in text:
+                hits.append(str(f.relative_to(skills)))
+    assert hits == []
+
+
+def _events(rd):
+    p = rd.root / "events.jsonl"
+    if not p.exists():
+        return []
+    return [json.loads(line) for line in p.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
+def test_override_use_is_recorded_in_events_and_final_json(tmp_path, monkeypatch):
+    rd = _run(tmp_path)
+    _write_test_rollout(rd)
+    monkeypatch.setenv("CAPEVOLVE_ALLOW_TEST_RESCORE", "1")
+    rd.begin_test_attempt()
+    ev = [e for e in _events(rd) if e["kind"] == "test_rescore_override"]
+    assert len(ev) == 1 and ev[0]["existing_test_rollouts"] == 1
+    (rd.root / "final.json").write_text(json.dumps({"test": {"reward": 0.5}}), encoding="utf-8")
+    rd.commit_test()
+    final = json.loads((rd.root / "final.json").read_text(encoding="utf-8"))
+    assert final["test"] == {"reward": 0.5}
+    assert final["test_rescore_override"]["used"] is True
+    assert final["test_rescore_override"]["count"] == 1
+
+
+def test_no_override_leaves_no_mark(tmp_path, monkeypatch):
+    monkeypatch.delenv("CAPEVOLVE_ALLOW_TEST_RESCORE", raising=False)
+    rd = _run(tmp_path)
+    rd.begin_test_attempt()
+    (rd.root / "final.json").write_text(json.dumps({"test": {"reward": 0.5}}), encoding="utf-8")
+    rd.commit_test()
+    final = json.loads((rd.root / "final.json").read_text(encoding="utf-8"))
+    assert "test_rescore_override" not in final
+    assert not [e for e in _events(rd) if e["kind"] == "test_rescore_override"]
+
+
+def test_act_finalize_keeps_the_override_mark_in_final_json(tmp_path, capsys, monkeypatch):
+    """`act finalize` rewrites final.json from the phase's printed payload, which lacks the mark
+    commit_test stamped on disk; the mark must survive that rewrite (#799)."""
+    import sys
+    sys.path.insert(0, str(Path(__file__).parent))
+    from test_digest_and_act_verbs import Sh, _act, _args, _run as _act_run
+
+    monkeypatch.setenv("CAPEVOLVE_ALLOW_TEST_RESCORE", "1")
+    rd, project, _, _ = _act_run(tmp_path)
+    d = rd.rollouts / "test"
+    d.mkdir(parents=True, exist_ok=True)
+    for t in rd.read_splits().ids("test"):  # an earlier attempt scored test, no intent left
+        (d / f"{t}__FINAL__t0.json").write_text(json.dumps({"input": None,
+            "rollout": {"task_id": t, "output": "", "error": None},
+            "score": {"task_id": t, "reward": 1.0, "feedback": "", "n": 1, "stderr": 0.0,
+                      "trial_rewards": [1.0], "raw": {}}}), encoding="utf-8")
+
+    def fake_finalize(cmd):  # the same steps harness.finalize takes
+        r = RunDir.open(rd.root)
+        r.begin_test_attempt()
+        payload = {"test": {"reward": 1.0}, "best_id": "cur"}
+        (r.root / "final.json").write_text(json.dumps(payload), encoding="utf-8")
+        r.commit_test()
+        return 0, json.dumps(payload), ""  # run.py prints the returned payload, without the mark
+
+    _act(monkeypatch, capsys, ["finalize", "--n-confirm", "0", *_args(rd, project)],
+         Sh(**{"run.py": fake_finalize}))
+    assert [e for e in _events(rd) if e["kind"] == "test_rescore_override"]
+    final = json.loads((rd.root / "final.json").read_text(encoding="utf-8"))
+    assert final["final"] == {"test": {"reward": 1.0}, "best_id": "cur"}
+    assert final["test_rescore_override"]["used"] is True
+    assert final["test_rescore_override"]["count"] == 1
+
+
+def test_act_finalize_completion_path_keeps_the_override_mark(tmp_path, capsys, monkeypatch):
+    """An override attempt re-scored test, then died before final.json; the next `act finalize`
+    completes from the existing rollouts and must still mark final.json (#799)."""
+    import sys
+    sys.path.insert(0, str(Path(__file__).parent))
+    from test_digest_and_act_verbs import Sh, _act, _args, _run as _act_run
+
+    monkeypatch.setenv("CAPEVOLVE_ALLOW_TEST_RESCORE", "1")
+    rd, project, _, _ = _act_run(tmp_path)
+    d = rd.rollouts / "test"
+    d.mkdir(parents=True, exist_ok=True)
+    for tag in ("FINAL", "FINAL_seed"):
+        for t in rd.read_splits().ids("test"):
+            (d / f"{t}__{tag}__t0.json").write_text(json.dumps({"input": None,
+                "rollout": {"task_id": t, "output": "", "error": None},
+                "score": {"task_id": t, "reward": 1.0, "feedback": "", "n": 1, "stderr": 0.0,
+                          "trial_rewards": [1.0], "raw": {}}}), encoding="utf-8")
+    RunDir.open(rd.root).begin_test_attempt()  # records the override use, then the process dies
+    (rd.root / "finalize.intent").write_text(json.dumps({"champion": "seed"}), encoding="utf-8")
+    monkeypatch.delenv("CAPEVOLVE_ALLOW_TEST_RESCORE")
+
+    _act(monkeypatch, capsys, ["finalize", "--n-confirm", "0", *_args(rd, project)], Sh())
+    final = json.loads((rd.root / "final.json").read_text(encoding="utf-8"))
+    assert final["completed_from_existing"] is True
+    assert final["test_rescore_override"]["used"] is True
+    assert final["test_rescore_override"]["count"] == 1
+
+
+def test_act_finalize_result_is_readable_by_report_and_dashboard(tmp_path, capsys, monkeypatch):
+    """final.json written by `act finalize` keeps the test score at the TOP level, so the report
+    does not say NOT FINALIZED and the dashboard sees the held-out reward (T-79)."""
+    import subprocess
+    import sys
+    sys.path.insert(0, str(Path(__file__).parent))
+    from test_digest_and_act_verbs import Sh, _act, _args, _run as _act_run
+    from cap_evolve import dashboard
+
+    monkeypatch.delenv("CAPEVOLVE_ALLOW_TEST_RESCORE", raising=False)
+    rd, project, _, _ = _act_run(tmp_path)
+    d = rd.rollouts / "test"
+    d.mkdir(parents=True, exist_ok=True)
+    for tag in ("FINAL", "FINAL_seed"):
+        for t in rd.read_splits().ids("test"):
+            (d / f"{t}__{tag}__t0.json").write_text(json.dumps({"input": None,
+                "rollout": {"task_id": t, "output": "", "error": None},
+                "score": {"task_id": t, "reward": 1.0, "feedback": "", "n": 1, "stderr": 0.0,
+                          "trial_rewards": [1.0], "raw": {}}}), encoding="utf-8")
+    (rd.root / "finalize.intent").write_text(json.dumps({"champion": "seed"}), encoding="utf-8")
+    _act(monkeypatch, capsys, ["finalize", "--n-confirm", "0", *_args(rd, project)], Sh())
+
+    final = json.loads((rd.root / "final.json").read_text(encoding="utf-8"))
+    assert final["test"]["reward"] == 1.0 and final["best_id"] == "seed"
+    assert final["champion"] and final["completed_from_existing"] is True
+    assert final["final"]["test"] == final["test"]
+
+    repo = Path(__file__).resolve().parents[2]
+    r = subprocess.run([sys.executable, str(repo / "skills/phases/report/scripts/run.py"),
+                        "--run-dir", str(rd.root), "--no-dashboard"], capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+    md = (rd.root / "report.md").read_text(encoding="utf-8")
+    assert "NOT FINALIZED" not in md
+    assert "1.0" in md or "1.000" in md
+    run = dashboard.reduce_run(RunDir.open(rd.root))
+    assert run["summary"]["test_reward"] is not None
