@@ -232,16 +232,15 @@ def _read_json(path: Path | None) -> dict:
 
 
 def _read_record(run_dir, root: Path, name: str) -> dict:
-    """A run record (``baseline.json`` / ``final.json``) with any sealed per-task results merged back
-    (``RunDir.read_record``: a train-feedback hill-climb run keeps the per-task val results sealed)."""
-    path = _safe_subpath(root, name)
-    reader = getattr(run_dir, "read_record", None)
-    if path is not None and path.exists() and callable(reader):
-        try:
-            return reader(name)
-        except (OSError, ValueError):
-            pass
-    return _read_json(path)
+    """A run record (``baseline.json`` / ``final.json``) with any sealed per-task results merged back (a train-feedback
+    hill-climb run keeps them in its sealed dir). Both files are read through ``_safe_subpath``: the run dir comes from the caller."""
+    from .rundir import merge_sealed_record
+    d = _read_json(_safe_subpath(root, name))
+    if not d.pop("sealed_per_task", False):
+        return d
+    sealed = getattr(run_dir, "sealed_dir", None)
+    private = _read_json(_safe_subpath(Path(sealed), name)) if sealed else {}
+    return merge_sealed_record(d, private) if private else d
 
 
 def _per_task_from_rollouts(run_dir, tag: str, split: str = "val"):

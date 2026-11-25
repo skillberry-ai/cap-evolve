@@ -99,6 +99,17 @@ def _file_lock(lock_path: Path):
 SEALED_RECORDS = ("baseline.json", "final.json")
 
 
+def merge_sealed_record(public: dict, private: dict) -> dict:
+    """``public`` (a run-tree record with ``sealed_per_task`` already removed) with the sealed per-task results of ``private``
+    merged back in place. Pure: callers that read the two files themselves (the dashboard, through its own path checks) use it."""
+    for k, v in private.items():
+        if isinstance(v, dict) and isinstance(public.get(k), dict):
+            merge_sealed_record(public[k], v)
+        else:
+            public[k] = v
+    return public
+
+
 def _known_record(name: str) -> str:
     """The record file name for ``name``: one of ``SEALED_RECORDS``, returned as the CONSTANT from that list (never the caller's
     string), so ``write_record`` / ``read_record`` can only touch a known file. A path, ``..`` or an unknown name raises."""
@@ -617,15 +628,7 @@ class RunDir:
         if not d.pop("sealed_per_task", False) or sd is None or not (sd / name).exists():
             return d
 
-        def merge(node, priv):
-            for k, v in priv.items():
-                if isinstance(v, dict) and isinstance(node.get(k), dict):
-                    merge(node[k], v)
-                else:
-                    node[k] = v
-            return node
-
-        return merge(d, json.loads((sd / name).read_text(encoding="utf-8")))
+        return merge_sealed_record(d, json.loads((sd / name).read_text(encoding="utf-8")))
 
     def read_baseline(self) -> dict:
         """``baseline.json`` with the seed's sealed per-task val results merged back (``read_record``)."""
