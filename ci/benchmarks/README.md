@@ -429,27 +429,70 @@ github.com still works, so publishing no longer goes through the artifact servic
 To publish a run its bench job never published — one you resumed by hand, or drove directly on
 the runner — follow [PUBLISHING.md](PUBLISHING.md); it runs these same scripts in the same order.
 
-### Raw run data: archived on the runner (interim, for Box)
+### Raw run data: uploaded to a CI raw-data area when the dispatch asks for it
 
 What gets published is a summary. The raw run data, meaning the run dir with every candidate, trace and
-rollout, plus the job's output dir, would otherwise be lost when the next job's checkout cleans the
-workspace. So each bench job archives it first (step `Back up the raw run data on the runner`,
-[`lib/backup_run.sh`](lib/backup_run.sh)), **on the runner, outside the workspace**, in the same layout
-as the Box folder `skillberry-runs-backup`:
+rollout, plus the job's output dir, is lost when the next job's checkout cleans the workspace. A
+dispatch that sets the input **`raw_data_location`** (an rclone path `<remote>:<path>`; empty by
+default, and PR-label runs never set it) makes each bench job keep it (step `Keep the raw run data for
+the full backup`, [`lib/backup_run.sh`](lib/backup_run.sh)): packed on the runner, outside the
+workspace, then uploaded to `<path>/<run_id>__<tier>-<bench>/` with `rclone copy --immutable` and
+checked with `rclone check`. Only when the check passes is the runner's copy removed; when the upload
+fails, the capture stays on the runner and the step warns why.
+
+- **`<remote>`** is defined by the repository secret **`RAW_DATA_RCLONE_CONFIG`**: the text of an rclone
+  config section (`rclone config show <remote>`). Give it write access to the raw-data area only. The
+  step writes it to a 0600 file in a private temp dir under `$RUNNER_TEMP` and removes it afterwards.
+- **Use credentials that do not change when used, written in full in the config text:** object-store
+  access keys (S3-style), an SFTP key, a password (for example WebDAV), a service account given
+  inline (Google Drive: `service_account_credentials`), or a client-credentials setup (Box:
+  `box_sub_type = enterprise`, `client_credentials = true`, and the app's `client_id` and
+  `client_secret`). An option that names a file (`box_config_file`, `service_account_file`) works
+  only when that file is on the runner. The rule holds for the remote and every remote it wraps
+  (`crypt`, `alias`, `union`, ...). **A token from a browser login does not work:**
+  rclone saves each refreshed token into the config file, which the step deletes, and some providers
+  (Box among them) accept each refresh token only once, so the secret's token would stop working, in
+  CI and on the machine it was copied from. The step refuses such a config, and warns when rclone
+  rewrites a config anyway.
+- **rclone** is installed by the step itself into `~/.local/bin`, pinned by version and sha256
+  ([`lib/install_rclone.sh`](lib/install_rclone.sh)).
+- The raw-data area holds **raw, unscanned data** (it can contain tokens from logs or `.env` files),
+  so keep it private to the people who run the backup. Its path is not written into the published
+  `ci_runs/` folder: `backup.json` there names only the leg's dir in it.
+- A run dispatched without `raw_data_location` keeps no raw data: once the next job of that tier and
+  bench cleans the workspace, only the published summary remains.
+
+CI never runs the backup: the full backup procedure, [`docs/FULL_BACKUP.md`](../../docs/FULL_BACKUP.md),
+is applied on demand by an agent a user asks, with read access to the raw-data area, which it reads as
+one of its sources. Each capture, in the raw-data area and on the runner before its upload:
 
 ```
-~/skillberry-runs-backup/user/<who triggered the run>/<repo>/<run_id>__<tier>-<bench>.tar.zst
+<run_id>__<tier>-<bench>/        (a re-run attempt N>1: <run_id>__<tier>-<bench>.a<N>/)
+  <run_id>__<tier>-<bench>.tar.zst   the output dir, <out_dir>_proj/.capevolve/ and <out_dir>_proj.sealed/
+  members.sha256                     sha256 of every file, taken before packing
+  symlinks.txt                       every symlink and its target
+  unreadable.txt                     every path the job could not read (left out, a gap for the backup)
+  backup.json                        run, attempt, bench, tier, who triggered it, runner, archive sha256
 ```
 
-`<repo>` is the benchmark's skillberry-runs repo (from the dashboard's `sections.json`). The run's
-`ci_runs/` folder gets a `backup.json` (archive path, size, sha256, runner) and its README names the
-archive, so the archive can be found from the run's page.
+A capture dir is written once and never overwritten. The run's `ci_runs/` folder gets a copy of
+`backup.json`, with `staged` (the leg's dir in the raw-data area) and `kept_on_runner`, and its README says where
+the capture is, so it can be found from the run's page.
+The step is best-effort: it never fails a run, falls back to `.tar.gz` if `zstd` is missing, and skips
+(with a warning) when the runner's disk would drop below 20 GB free.
 
-**Interim:** moving the archives to Box is manual for now, by someone with access to the runner (a plain
-copy of `~/skillberry-runs-backup/` into the Box folder, then deleting what was copied), until CI can
-upload to Box itself (rclone or an approved Box app, both unavailable since IBM's network change). The
-step is best-effort: it never fails a run, falls back to `.tar.gz` if `zstd` is missing, and skips (with
-a warning) when the runner's disk would drop below 20 GB free.
+**Moving it to the backup location** is done only by following `docs/FULL_BACKUP.md`, which lists this
+tree as a source (§5.3(b)). The operator unpacks each archive into staging, checks it against
+`backup.json` and `members.sha256`, scans it for secrets, organizes it into a run folder and uploads that.
+**Never copy the raw-data area or `~/capevolve-ci-capture/` into the backup location as is**: it is not in the location's
+layout, it was never scanned for secrets, and it has no `MANIFEST.json`. The backup never deletes a
+source. Once a full backup's `BACKUP_RESULTS_<TS>.md` records a run as uploaded and checked, the
+raw-data area's owner (or, for a capture left on a runner, the runner's admin) may remove it.
+
+Runs from 2026-11-18 until this change were archived as
+`~/skillberry-runs-backup/user/<who triggered the run>/<repo>/<run_id>__<tier>-<bench>.tar.zst`, with
+`backup.json` (archive sha256, no per-file hashes) only in the run's `ci_runs/` folder. They are
+captured the same way (FULL_BACKUP §5.3(b)).
 
 ### Live monitoring while a run is in progress
 

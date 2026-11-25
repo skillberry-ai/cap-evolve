@@ -26,13 +26,14 @@ published by hand uses the same layout, see ci/benchmarks/PUBLISHING.md):
   capability.diff           the optimized capability vs the seed
   optimized_capability/     the optimized capability itself (no __pycache__)
   recipe/                   capevolve.yaml, split_ids.json, the tier's overrides.env
-  backup.json               where the raw run data archive is (when backup_run.sh made one)
+  backup.json               where the raw run data is: the CI raw-data area, or the runner (when backup_run.sh kept it)
 
 SkillsBench skills are Anthropic-licensed, so for skillsbench only a diffstat is kept
 (capability.diffstat.txt), as run_suite.sh already does. Anything over MAX_BYTES is left out,
 and the README says so. Raw run data (traces, candidates, logs) is NOT here: the run's
-"Open UI" data covers browsing it, and the full run dir is archived separately (backup_run.sh;
-backup.json and the README say where).
+"Open UI" data covers browsing it. When the dispatch asked for it, the full run dir is kept, packed,
+in the CI raw-data area (or on the runner, when the upload failed) as a capture source for
+docs/FULL_BACKUP.md (backup_run.sh; backup.json and the README say where).
 """
 from __future__ import annotations
 
@@ -168,9 +169,13 @@ def readme(meta: dict, dest: Path, name: str, repo: str | None, has_ui: bool, sk
         L.append(f"- not included: {s}")
     if (dest / "backup.json").is_file():
         b = json.loads((dest / "backup.json").read_text(encoding="utf-8"))
+        where = (f"uploaded to the CI raw-data area the run was dispatched with, as `{b['staged']}`"
+                 if b.get("staged")
+                 else f"kept on runner `{b.get('runner', '?')}` in `{b.get('capture_dir', '?')}/`")
         L.append(f"- **Raw run data** (run dir with candidates, traces and rollouts, {b.get('bytes', 0) / 1e6:.0f} MB "
-                 f"compressed): `{b.get('archive')}` in the `skillberry-runs-backup` archive "
-                 f"({b.get('location', '')}).")
+                 f"compressed): {where} "
+                 "(sha256 of every file in `members.sha256`), as a capture source for the full backup "
+                 "([docs/FULL_BACKUP.md](https://github.com/skillberry-ai/cap-evolve/blob/main/docs/FULL_BACKUP.md)).")
     if not (dest / "recipe" / "capevolve.yaml").exists():
         L.append("- `recipe/` was not available for this run (published from its CI artifact); the tier's "
                  f"definition is `ci/benchmarks/{bench}/{tier}/` at the commit above.")
