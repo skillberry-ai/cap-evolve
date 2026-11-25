@@ -572,6 +572,9 @@ export interface RunSummaryDetail {
   config?: {
     project_dir: string
     spec_missing: boolean
+    /** The spec file exists but could not be read or parsed (e.g. a YAML syntax error):
+     *  the message names the file and line. `null` (or absent, older runs) when it read fine. */
+    spec_error?: string | null
     spec_groups: { group: string; items: { key: string; value: unknown }[] }[]
     project_md: string | null
     files: { path: string; size: number; preview: string | null; truncated: boolean; binary: boolean }[]

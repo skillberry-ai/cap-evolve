@@ -77,9 +77,19 @@ def selftest(project: Path) -> dict:
 
     # 1) template scaffolded + placeholders intact
     spec_path = project / "capevolve.yaml"
-    spec = specfile.read_yaml(spec_path.read_text(encoding="utf-8")) if spec_path.exists() else {}
+    spec: dict = {}
     if not spec_path.exists():
         problems.append(f"missing spec: {spec_path} (intake must scaffold capevolve.yaml)")
+    else:
+        # strict: a typo like `max_usd: "5` must fail here with the line, not be read
+        # quietly as the string '"5' while every check says ok.
+        try:
+            spec = specfile.read_yaml(spec_path.read_text(encoding="utf-8"),
+                                      source=str(spec_path), strict=True)
+        except specfile.SpecError as e:
+            problems.append(str(e))
+            return {"ok": False, "project": str(project),
+                    "problems": problems, "notes": notes}
 
     # The template checks only apply to an algorithm that actually READS the template.
     # ``cli.py`` passes ``--instructions-file`` for hill-climb only, and that flag exists

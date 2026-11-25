@@ -42,6 +42,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import math
 import os
 import signal
 import sys
@@ -273,12 +274,19 @@ def _cmd_tail(argv):
     return 0
 
 
-def _resolve_run_dir(run_dir: str | None, base: str):
+def _resolve_run_dir(run_dir: str | None, base: str, *, must_exist: bool = False):
     """(root, exit_code) — the run dir to attach to. Mirrors ``_cmd_tail``'s rules:
     explicit path wins, else the newest ``run_*`` under ``--base``; exit 1 when the
-    base has no runs, 2 when the named path can never become a run dir."""
+    base has no runs, 2 when the named path can never become a run dir.
+
+    ``must_exist`` is for commands that only read finished data (diff, replay):
+    a named path that is not an existing directory is an error right away, instead
+    of being accepted as a run that may start later (right for tail/watch)."""
     if run_dir:
         root = Path(run_dir)
+        if must_exist and not root.is_dir():
+            print(f"no such run dir: {root}", file=sys.stderr)
+            return None, 2
         if not root.exists() and not root.parent.is_dir():
             print(f"no such run dir: {root}", file=sys.stderr)
             return None, 2
@@ -356,7 +364,12 @@ def _cmd_replay(argv):
     if bool(args.demo) == bool(args.run_dir):
         p.error("pass exactly one of run_dir or --demo")
 
-    src = tui.DEMO_DIR if args.demo else Path(args.run_dir)
+    if args.demo:
+        src = tui.DEMO_DIR
+    else:
+        src, code = _resolve_run_dir(args.run_dir, ".capevolve", must_exist=True)
+        if src is None:
+            return code
     if not (src / "events.jsonl").exists():
         print(f"no events.jsonl under {src}", file=sys.stderr)
         return 2
@@ -467,7 +480,8 @@ def _clip(text: str | None, *, head: int, tail: int) -> str:
     return f"{text[:head]}\n\n... [{dropped} chars omitted] ...\n\n{text[-tail:]}"
 
 
-def _resolve_spec(spec: str | None, project: str) -> tuple[Path | None, dict | None]:
+def _resolve_spec(spec: str | None, project: str,
+                  command: str = "run") -> tuple[Path | None, dict | None]:
     """``(spec_path, error)`` — the spec that belongs to ``--project``.
 
     ``--spec`` used to default to the literal ``.capevolve/project/capevolve.yaml``
@@ -482,29 +496,107 @@ def _resolve_spec(spec: str | None, project: str) -> tuple[Path | None, dict | N
       paths, instead of being run;
     * the resolved path is echoed at startup and logged into the run dir
       (``run_config``), so a finished run is self-describing.
+
+    A relative ``--spec`` is resolved against ``--project`` (``--spec capevolve.yaml``
+    means ``<project>/capevolve.yaml``); an absolute one is used as given. For older
+    commands that spell the path from the cwd (``--spec .capevolve/project/capevolve.yaml``)
+    a cwd-relative path is still accepted, but only when the project-relative one does
+    not exist and the cwd-relative file is inside the project — so it can never pick a
+    different project's spec. ``command`` names the subcommand in the fix hints.
     """
     proj = Path(project).resolve()
-    path = (proj / "capevolve.yaml") if not spec else Path(spec).resolve()
+    if not spec:
+        path = proj / "capevolve.yaml"
+    elif Path(spec).is_absolute():
+        path = Path(spec).resolve()
+    else:
+        path = (proj / spec).resolve()
+        legacy = Path(spec).resolve()
+        if not path.exists() and legacy.exists():
+            if not _is_inside(legacy, proj):
+                # The file is there, relative to the cwd, but in another project: say
+                # so, instead of "no spec at <project path>" (which reads as missing).
+                return None, {
+                    "step": "spec",
+                    "error": (f"no spec at {path}; {legacy} exists but is outside --project "
+                              f"({proj}): refusing to optimize one project's capability "
+                              "against another's spec"),
+                    "spec": str(legacy), "project": str(proj),
+                    "fix": f"cap-evolve {command} --project {legacy.parent}   "
+                           "# or pass the project's own spec"}
+            path = legacy
     if not path.exists():
         return None, {"step": "spec", "error": f"no spec at {path}",
                       "project": str(proj),
                       "fix": (f"cap-evolve init --project {project}"
                               if not spec else
-                              f"cap-evolve run --project {project}   "
+                              f"cap-evolve {command} --project {project}   "
                               "# omit --spec to use the project's own capevolve.yaml")}
-    try:
-        inside = path.is_relative_to(proj)
-    except AttributeError:  # pragma: no cover — Python < 3.9
-        inside = str(path).startswith(str(proj))
-    if not inside:
+    if not path.is_file():
+        return None, {"step": "spec", "error": f"--spec is not a file: {path}",
+                      "spec": str(path), "project": str(proj),
+                      "fix": (f"point --spec at the capevolve.yaml file, e.g. "
+                              f"--spec {path / 'capevolve.yaml'}")}
+    if not _is_inside(path, proj):
         return None, {
             "step": "spec",
             "error": ("--spec is outside --project: refusing to optimize one project's "
                       "capability against another's spec"),
             "spec": str(path), "project": str(proj),
-            "fix": f"cap-evolve run --project {path.parent}   # or pass the project's own spec",
+            "fix": f"cap-evolve {command} --project {path.parent}   # or pass the project's own spec",
         }
     return path, None
+
+
+def _is_inside(path: Path, proj: Path) -> bool:
+    try:
+        return path.is_relative_to(proj)
+    except AttributeError:  # pragma: no cover — Python < 3.9
+        return str(path).startswith(str(proj))
+
+
+def _load_spec(spec_path: Path, project: str) -> tuple[dict | None, dict | None]:
+    """``(spec, error)`` — parse the resolved spec, or an error dict on invalid YAML
+    or a file that cannot be read or is not UTF-8 text.
+
+    A broken spec must stop the run with a clear message (file + line), not a
+    traceback and never a silent misread: the spec holds the spending limit.
+    """
+    from .specfile import SpecError, read_yaml
+    try:
+        return read_yaml(spec_path.read_text(encoding="utf-8"), source=str(spec_path), strict=True), None
+    except SpecError as e:
+        return None, {"step": "spec", "error": str(e), "spec": str(spec_path),
+                      "line": e.line,
+                      "fix": f"fix the YAML, then: cap-evolve doctor --project {project}"}
+    except UnicodeDecodeError as e:
+        return None, {"step": "spec",
+                      "error": f"{spec_path} is unreadable: not UTF-8 text ({e.reason})",
+                      "spec": str(spec_path),
+                      "fix": "save the spec as UTF-8 text (a capevolve.yaml file)"}
+    except OSError as e:
+        return None, {"step": "spec",
+                      "error": f"{spec_path} is unreadable: {e.strerror or e}",
+                      "spec": str(spec_path),
+                      "fix": "point --spec at a readable capevolve.yaml file "
+                              "(check the file's permissions)"}
+
+
+def _read_spec_or_report(spec: str | None, project: str,
+                         command: str) -> tuple[Path, dict] | None:
+    """``(spec_path, spec)`` — find and read the project's spec, or ``None``.
+
+    On ``None`` the error was already printed: the JSON error to stdout and the
+    ``{error}\\n  → {fix}`` line to stderr; the caller just exits 1.
+    """
+    spec_path, err = _resolve_spec(spec, project, command)
+    if err is None:
+        loaded, err = _load_spec(spec_path, project)
+    if err is not None:
+        print(json.dumps(err))
+        print(f"{err['error']}\n  → {err['fix']}", file=sys.stderr)
+        return None
+    return spec_path, loaded
 
 
 def _json_payload(text: str) -> dict:
@@ -547,15 +639,15 @@ def _json_payload(text: str) -> dict:
 def _cmd_run(argv):
     import argparse
     import subprocess
-    from .specfile import read_yaml
 
     p = argparse.ArgumentParser(prog="cap-evolve run",
         description=_summary("run"),
         epilog=_epilog("run"),
         formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--spec", default=None,
-                   help="run spec (default: <project>/capevolve.yaml — resolved relative "
-                        "to --project, never to the cwd)")
+                   help="run spec (default: <project>/capevolve.yaml — a relative path is "
+                        "resolved against --project, and a spec outside --project is "
+                        "refused)")
     p.add_argument("--project", default=".capevolve/project")
     p.add_argument("--skills-dir", default=None)
     p.add_argument("--plan-only", action="store_true", help="print the command plan, don't execute")
@@ -614,14 +706,14 @@ def _cmd_run(argv):
         print(json.dumps({"error": "skills dir not found; set CAPEVOLVE_SKILLS_DIR or --skills-dir"}))
         return 1
     skills = _resolve_skills(skills_dir)
-    spec_path, spec_err = _resolve_spec(args.spec, args.project)
-    if spec_err is not None:
-        print(json.dumps(spec_err))
-        print(f"{spec_err['error']}\n  → {spec_err['fix']}", file=sys.stderr)
+    found = _read_spec_or_report(args.spec, args.project, "run")
+    if found is None:
         return 1
-    spec = read_yaml(spec_path.read_text(encoding="utf-8"))
+    spec_path, spec = found
 
     # CLI budget flags override the spec (None = "not passed", leave spec value).
+    # from_flags: which keys a flag set, so a bad value names the flag, not the yaml.
+    from_flags: dict[str, str] = {}
     for flag, key in (("max_iterations", "max_iterations"), ("max_metric_calls", "max_metric_calls"),
                       ("max_usd", "max_usd"), ("max_optimizer_usd", "max_optimizer_usd"),
                       ("stall", "stall"), ("stop_at_reward", "stop_at_reward"),
@@ -629,8 +721,21 @@ def _cmd_run(argv):
         v = getattr(args, flag)
         if v is not None:
             spec[key] = v
+            from_flags[key] = "--" + flag.replace("_", "-")
+    # The steps run with cwd set to the project's grandparent (see `workdir` below), so
+    # a relative path must be made absolute HERE: the --reuse-baseline flag against the
+    # user's own cwd, a `reuse_baseline:` value from the yaml against that work dir
+    # (like the other spec paths, e.g. split_ids_file).
     if args.reuse_baseline is not None:
-        spec["reuse_baseline"] = args.reuse_baseline
+        spec["reuse_baseline"] = str(Path(str(args.reuse_baseline)).expanduser().resolve())
+    elif spec.get("reuse_baseline"):
+        _yaml_reuse = Path(str(spec["reuse_baseline"])).expanduser()
+        if not _yaml_reuse.is_absolute():
+            _yaml_reuse = Path(args.project).resolve().parent.parent / _yaml_reuse
+        spec["reuse_baseline"] = str(_yaml_reuse.resolve())
+
+    if _report_bad_numbers(spec, from_flags):
+        return 1
 
     if args.dry_run:
         print(json.dumps(_estimate_core(spec, Path(args.project)), indent=2))
@@ -824,6 +929,10 @@ def _cmd_run(argv):
     # to reopen — the explicit --run-ts, else the latest run_* under the base — and feed
     # its ts to baseline so RunDir.create(exist_ok=True) reopens it in place.
     from .rundir import RunDir as _RunDir
+    from .rundir import baseline_already_ran as _baseline_already_ran
+    from .rundir import existing_run_error as _existing_run_error
+    from .rundir import missing_resume_error as _missing_resume_error
+    from .rundir import reuse_baseline_error as _reuse_baseline_error
     resume_ts = args.run_ts
     if args.resume and not resume_ts:
         try:
@@ -832,6 +941,37 @@ def _cmd_run(argv):
         except FileNotFoundError:
             print(json.dumps({"step": "resume", "error": (
                 f"--resume: no run_* found under {proj_abs.parent}; pass --run-ts to name one")}))
+            return 1
+    elif args.resume:
+        # Without this, a mistyped --run-ts would quietly start a brand-new run (new
+        # split, paid baseline, full budget) instead of continuing the named one.
+        resume_err = _missing_resume_error(proj_abs.parent, resume_ts)
+        if resume_err:
+            print(json.dumps({"step": "resume", "error": resume_err}))
+            return 1
+    elif resume_ts:
+        # A fresh run on a --run-ts that already exists would crash in baseline's
+        # RunDir.create (FileExistsError traceback), and --follow would first attach
+        # to the old run's events. Stop here with a plain message instead.
+        exists_err = _existing_run_error(proj_abs.parent, resume_ts)
+        if exists_err:
+            print(json.dumps({"step": "baseline", "error": exists_err}))
+            if _stderr_is_usable():
+                print(exists_err, file=sys.stderr)
+            return 1
+
+    # --reuse-baseline must name a real prior run dir. Checked before the baseline step,
+    # so a bad path fails with a plain message and leaves no empty run_* dir behind (one
+    # that `run --resume` and the dashboard would pick up). Skipped when resuming a run
+    # whose baseline already ran: baseline then returns early and never reads it, so a
+    # cleaned-up prior run dir must not block the resume.
+    if spec.get("reuse_baseline") and not (
+            args.resume and _baseline_already_ran(proj_abs.parent, resume_ts)):
+        reuse_err = _reuse_baseline_error(Path(spec["reuse_baseline"]))
+        if reuse_err:
+            print(json.dumps({"step": "baseline", "error": reuse_err}))
+            if _stderr_is_usable():
+                print(reuse_err, file=sys.stderr)
             return 1
 
     # --follow: start tailing events.jsonl now, BEFORE baseline creates the run dir, so
@@ -1184,7 +1324,15 @@ def _cmd_dashboard(argv):
     if args.export:
         from . import dashboard
         from .rundir import RunDir
-        out = dashboard.write_dashboard(RunDir.open(Path(args.export)))
+        export_dir = Path(args.export)
+        try:
+            rd = RunDir.open(export_dir)
+        except FileNotFoundError:
+            print(f"no run state at {export_dir}", file=sys.stderr)
+            print("hint: pass a run_* dir (one with a state.json), e.g. from "
+                  "`cap-evolve tail`", file=sys.stderr)
+            return 2
+        out = dashboard.write_dashboard(rd)
         print(json.dumps({"dashboard_html": str(out)}))
         return 0
 
@@ -1366,27 +1514,63 @@ def _estimate_core(spec: dict, project: Path, price_in: float | None = None,
     return out
 
 
+def _report_bad_numbers(spec: dict, from_flags: dict[str, str] | None = None) -> bool:
+    """Print a clean error for non-numeric/negative spec budget or split keys.
+
+    ``from_flags`` maps a key to the command-line flag that set it (``max_usd`` ->
+    ``--max-usd``): then the message names the flag, not capevolve.yaml, since editing
+    the yaml would not fix it. Returns True when something was wrong (the caller then
+    exits 1).
+    """
+    from .specfile import numeric_spec_errors
+    errs = numeric_spec_errors(spec)
+    if not errs:
+        return False
+    for e in errs:
+        flag = (from_flags or {}).get(e["key"])
+        if flag:
+            e["error"] = flag + e["error"][len(e["key"]):]
+            e["flag"] = flag
+            example = e["fix"].rsplit(": ", 1)[-1]
+            e["fix"] = (f"pass {flag} {example}, or leave {flag} out to use "
+                        f"{e['key']} from capevolve.yaml")
+    print(json.dumps({"error": ("bad numbers in command-line flags"
+                                if all(e.get("flag") for e in errs) else "bad numbers in spec"),
+                      "problems": errs}))
+    for e in errs:
+        print(f"{e['error']}\n  → {e['fix']}", file=sys.stderr)
+    return True
+
+
 def _cmd_estimate(argv):
     """Pre-run cost estimate without spending anything."""
     import argparse
-    from .specfile import read_yaml
 
     p = argparse.ArgumentParser(prog="cap-evolve estimate",
         description=_summary("estimate"),
         epilog=_epilog("estimate"),
         formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--spec", default=None,
-                   help="run spec (default: <project>/capevolve.yaml)")
+                   help="run spec (default: <project>/capevolve.yaml — a relative path is "
+                        "resolved against --project)")
     p.add_argument("--project", default=".capevolve/project")
     p.add_argument("--price-in", type=float, default=None, help="optimizer/runner input $/MTok")
     p.add_argument("--price-out", type=float, default=None, help="optimizer/runner output $/MTok")
     args = p.parse_args(argv)
-    spec_path, spec_err = _resolve_spec(args.spec, args.project)
-    if spec_err is not None:
-        print(json.dumps(spec_err, indent=2))
-        print(f"{spec_err['error']}\n  → {spec_err['fix']}", file=sys.stderr)
+    if (args.price_in is None) != (args.price_out is None):
+        p.error("--price-in and --price-out must be given together "
+                "(both are needed to price a run)")
+    for flag, val in (("--price-in", args.price_in), ("--price-out", args.price_out)):
+        if val is not None and not math.isfinite(val):
+            p.error(f"{flag} must be a finite number (got {val})")
+        if val is not None and val < 0:
+            p.error(f"{flag} must not be negative (got {val})")
+    found = _read_spec_or_report(args.spec, args.project, "estimate")
+    if found is None:
         return 1
-    spec = read_yaml(spec_path.read_text(encoding="utf-8"))
+    spec_path, spec = found
+    if _report_bad_numbers(spec):
+        return 1
     out = _estimate_core(spec, Path(args.project), args.price_in, args.price_out)
     out["spec_path"] = str(spec_path)
     print(json.dumps(out, indent=2))
@@ -1491,9 +1675,11 @@ def _doctor_checks(project: Path) -> list[dict]:
         add("spec", "fail", f"no {spec_path}", f"cap-evolve init --project {project}")
         return rows
     try:
-        spec = read_yaml(spec_path.read_text(encoding="utf-8")) or {}
+        spec = read_yaml(spec_path.read_text(encoding="utf-8"), source=str(spec_path), strict=True) or {}
     except Exception as e:  # noqa: BLE001
-        add("spec", "fail", f"{spec_path} is unreadable: {e!r}",
+        from .specfile import SpecError
+        detail = str(e) if isinstance(e, SpecError) else f"{spec_path} is unreadable: {e!r}"
+        add("spec", "fail", detail,
             f"fix the YAML, then: cap-evolve doctor --project {project}")
         return rows
     add("spec", "ok", str(spec_path))
@@ -1600,6 +1786,11 @@ def _doctor_checks(project: Path) -> list[dict]:
                     f"none of {', '.join(keys)} is set — {row.get('auth_notes') or ''}".strip(),
                     f"export {keys[0]}=…   # or use the CLI's own login")
 
+    from .specfile import numeric_spec_errors
+    bad_numbers = numeric_spec_errors(spec)
+    for e in bad_numbers:
+        add("spec-numbers", "fail", e["error"], e["fix"])
+
     ids_file = str(spec.get("split_ids_file") or "")
     if ids_file:
         p = Path(ids_file)
@@ -1613,8 +1804,13 @@ def _doctor_checks(project: Path) -> list[dict]:
                 "or clear split_ids_file to use ratios")
     else:
         r = (spec.get("split_train"), spec.get("split_val"), spec.get("split_test"))
-        add("splits", "ok", f"ratios {r[0]}/{r[1]}/{r[2]} seed {spec.get('split_seed')}")
+        split_keys = {"split_train", "split_val", "split_test", "split_seed"}
+        if not any(e["key"] in split_keys for e in bad_numbers):
+            add("splits", "ok", f"ratios {r[0]}/{r[1]}/{r[2]} seed {spec.get('split_seed')}")
 
+    budget_keys = {"max_iterations", "max_metric_calls", "max_usd", "max_optimizer_usd", "stall"}
+    if any(e["key"] in budget_keys for e in bad_numbers):
+        return rows  # the FAIL rows above already name the bad budget key
     it = int(spec.get("max_iterations") or 0)
     if it <= 0 and not (spec.get("max_metric_calls") or spec.get("max_usd")):
         add("budget", "warn", "no cap set (max_iterations/max_metric_calls/max_usd all 0)",
@@ -1701,7 +1897,7 @@ def _cmd_init(argv) -> int:
     p.add_argument("--optimizer", default=None, help="optimizer name (mock for zero-API)")
     p.add_argument("--capability-path", default=None, help="dir holding the artifact to optimize")
     p.add_argument("--yes", "-y", action="store_true", help="accept defaults, ask nothing")
-    p.add_argument("--force", action="store_true", help="overwrite an existing spec")
+    p.add_argument("--force", action="store_true", help="overwrite an existing capevolve.yaml (other files are kept)")
     p.add_argument("--no-color", action="store_true")
     args = p.parse_args(argv)
 
@@ -1746,7 +1942,9 @@ def _cmd_init(argv) -> int:
     project.mkdir(parents=True, exist_ok=True)
     for item in sorted(template.iterdir()):
         dst = project / item.name
-        if dst.exists() and not args.force:
+        # --force resets only the spec; the adapter, PROJECT.md and the optimizer
+        # instructions are the user's work and are never overwritten.
+        if dst.exists() and not (args.force and item.name == "capevolve.yaml"):
             continue
         if item.is_dir():
             _shutil.copytree(item, dst, dirs_exist_ok=True)
@@ -1826,7 +2024,7 @@ def _cmd_diff(argv) -> int:
     p.add_argument("--no-color", action="store_true")
     args = p.parse_args(argv)
 
-    root, code = _resolve_run_dir(args.run_dir, args.base)
+    root, code = _resolve_run_dir(args.run_dir, args.base, must_exist=True)
     if root is None:
         return code
     if not args.best and not args.candidate:

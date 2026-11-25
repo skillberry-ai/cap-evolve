@@ -12,10 +12,13 @@ contracts that must not bend for any of them.
 
 import io
 import json
+import os
 import re
 import sys
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
+
+import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 CORE = REPO / "core"
@@ -171,6 +174,120 @@ def test_missing_spec_names_the_command_that_creates_it(tmp_path):
     assert err["fix"].startswith("cap-evolve init")
 
 
+def test_run_and_estimate_report_a_missing_spec_the_same_way(tmp_path):
+    """Both commands share one find-and-read-the-spec helper: same error, same output."""
+    proj = str(tmp_path / "nothing")
+    rc_run, out_run, err_run = _run("run", "--project", proj, "--dashboard", "off")
+    rc_est, out_est, err_est = _run("estimate", "--project", proj)
+    assert rc_run == rc_est == 1
+    assert json.loads(out_run) == json.loads(out_est)
+    assert json.loads(out_run)["step"] == "spec"
+    assert "no spec at" in err_run and err_run == err_est
+    assert "→ cap-evolve init" in err_run
+
+
+def _assert_clean_spec_error(rc, out, err, words):
+    assert rc == 1
+    payload = json.loads(out)
+    assert payload["step"] == "spec" and words in payload["error"]
+    assert "→ " in err and "Traceback" not in out + err
+
+
+def test_spec_that_is_a_folder_fails_cleanly_for_run_and_estimate(tmp_path):
+    proj = _project(tmp_path, "a", "deterministic")
+    (proj / "sub").mkdir()
+    for argv in (("run", "--dashboard", "off"), ("estimate",)):
+        rc, out, err = _run(*argv, "--project", str(proj), "--spec", "sub")
+        _assert_clean_spec_error(rc, out, err, "not a file")
+        assert "capevolve.yaml" in err
+
+
+def test_spec_that_is_not_utf8_fails_cleanly(tmp_path):
+    proj = _project(tmp_path, "a", "deterministic")
+    (proj / "capevolve.yaml").write_bytes(b"algorithm_skill: \xff\xfe bad\n")
+    rc, out, err = _run("estimate", "--project", str(proj))
+    _assert_clean_spec_error(rc, out, err, "not UTF-8")
+    assert "→ save the spec as UTF-8" in err
+
+
+def test_load_spec_reports_an_unreadable_path(tmp_path):
+    from cap_evolve import cli
+    spec, err = cli._load_spec(tmp_path, str(tmp_path))
+    assert spec is None and err["step"] == "spec" and str(tmp_path) in err["error"]
+    assert "is unreadable" in err["error"]
+
+
+@pytest.mark.skipif(not hasattr(os, "geteuid") or os.geteuid() == 0,
+                    reason="root can read a chmod 000 file")
+def test_spec_without_read_permission_fails_cleanly(tmp_path):
+    proj = _project(tmp_path, "a", "deterministic")
+    spec = proj / "capevolve.yaml"
+    spec.chmod(0)
+    try:
+        for argv in (("run", "--dashboard", "off"), ("estimate",)):
+            rc, out, err = _run(*argv, "--project", str(proj))
+            _assert_clean_spec_error(rc, out, err, "is unreadable")
+            assert str(spec) in err and "→ point --spec at a readable" in err
+    finally:
+        spec.chmod(0o644)
+
+
+def test_relative_spec_resolves_under_project_for_run_and_estimate(tmp_path, monkeypatch):
+    """``--spec capevolve.yaml`` means ``<project>/capevolve.yaml``, not ``<cwd>/...``."""
+    from cap_evolve import cli
+    proj = _project(tmp_path, "work", "agent")
+    monkeypatch.chdir(tmp_path)                 # no capevolve.yaml here
+    rel_proj = str(proj.relative_to(tmp_path))
+
+    path, err = cli._resolve_spec("capevolve.yaml", rel_proj)
+    assert err is None and path == (proj / "capevolve.yaml").resolve()
+
+    rc, out, _e = _run("run", "--project", rel_proj, "--spec", "capevolve.yaml",
+                       "--dashboard", "off", "--plan-only")
+    assert rc == 0
+    assert json.loads(out)["spec_path"] == str((proj / "capevolve.yaml").resolve())
+
+    rc, out, err_text = _run("estimate", "--project", rel_proj, "--spec", "capevolve.yaml")
+    assert "no spec at" not in out + err_text and "outside" not in out + err_text
+
+
+def test_absolute_and_cwd_relative_spec_still_work(tmp_path, monkeypatch):
+    from cap_evolve import cli
+    proj = _project(tmp_path, "work", "agent")
+    monkeypatch.chdir(tmp_path)
+    rel_proj = str(proj.relative_to(tmp_path))
+    want = (proj / "capevolve.yaml").resolve()
+    path, err = cli._resolve_spec(str(proj / "capevolve.yaml"), rel_proj)
+    assert err is None and path == want
+    # the older documented spelling, relative to the cwd, still lands in the project
+    path, err = cli._resolve_spec(f"{rel_proj}/capevolve.yaml", rel_proj)
+    assert err is None and path == want
+
+
+def test_cwd_relative_spec_in_another_project_says_outside_project(tmp_path, monkeypatch):
+    from cap_evolve import cli
+    mine = _project(tmp_path, "mine", "agent")
+    other = _project(tmp_path, "other", "agent")
+    monkeypatch.chdir(tmp_path)
+    rel_other = str((other / "capevolve.yaml").relative_to(tmp_path))
+    (mine / "capevolve.yaml").rename(mine / "kept.yaml")  # so <mine>/<rel_other> is missing
+    path, err = cli._resolve_spec(rel_other, str(mine))
+    assert path is None
+    assert "outside --project" in err["error"] and str(other / "capevolve.yaml") in err["error"]
+    assert f"--project {other}" in err["fix"]
+
+
+def test_estimate_fix_hints_name_estimate(tmp_path):
+    a = _project(tmp_path, "a", "deterministic")
+    b = _project(tmp_path, "b", "agent")
+    rc, _out, err_text = _run("estimate", "--project", str(a), "--spec", "missing.yaml")
+    assert rc == 1 and "no spec at" in err_text
+    assert "→ cap-evolve estimate --project" in err_text
+    rc, _out, err_text = _run("estimate", "--project", str(a), "--spec", str(b / "capevolve.yaml"))
+    assert rc == 1 and "outside" in err_text
+    assert "→ cap-evolve estimate --project" in err_text
+
+
 # ---- doctor ----------------------------------------------------------------
 
 def test_doctor_reports_a_missing_spec_with_its_fix(tmp_path):
@@ -240,6 +357,21 @@ def test_init_refuses_to_clobber_an_existing_spec(tmp_path):
     assert "already exists" in err and "--force" in err
 
 
+def test_init_force_resets_only_the_spec(tmp_path):
+    proj = tmp_path / ".capevolve" / "project"
+    assert _run("init", "--project", str(proj), "--yes")[0] == 0
+    spec, adapter, pmd = (proj / "capevolve.yaml", proj / "adapters" / "adapter.py",
+                          proj / "PROJECT.md")
+    fresh_spec = spec.read_text(encoding="utf-8")
+    spec.write_text(fresh_spec + "\nmy_edit: 1\n", encoding="utf-8")
+    adapter.write_text("# my adapter\n", encoding="utf-8")
+    pmd.write_text("# my project\n", encoding="utf-8")
+    assert _run("init", "--project", str(proj), "--yes", "--force")[0] == 0
+    assert spec.read_text(encoding="utf-8") == fresh_spec      # reset to template
+    assert adapter.read_text(encoding="utf-8") == "# my adapter\n"   # kept
+    assert pmd.read_text(encoding="utf-8") == "# my project\n"       # kept
+
+
 def test_set_spec_key_preserves_comments_and_appends_missing_keys():
     from cap_evolve.cli import _set_spec_key
     src = "algorithm_skill: hill-climb   # pick one\nother: 1\n"
@@ -302,6 +434,41 @@ def test_diff_on_a_run_without_snapshots_explains_itself(tmp_path):
     assert rc == 2
     assert "no snapshot for" in err
     assert "cap-evolve watch" in err        # what to do instead
+
+
+def test_diff_best_on_a_missing_run_dir_says_no_such_run_dir(tmp_path):
+    missing = tmp_path / "nope"
+    rc, out, err = _run("diff", "--best", "--run-dir", str(missing))
+    assert rc != 0 and out == ""
+    assert f"no such run dir: {missing}" in err
+    assert "no best candidate" not in err
+
+
+def test_diff_candidate_on_a_missing_run_dir_says_no_such_run_dir(tmp_path):
+    missing = tmp_path / "typo_run"
+    rc, out, err = _run("diff", "cand_0003", "--run-dir", str(missing))
+    assert rc != 0 and out == ""
+    assert f"no such run dir: {missing}" in err
+    assert "no snapshot for" not in err
+    assert "cap-evolve watch" not in err    # no hint to wait on a run that isn't there
+
+
+def test_replay_on_a_missing_run_dir_says_no_such_run_dir(tmp_path):
+    missing = tmp_path / "typo_run"
+    rc, out, err = _run("replay", str(missing), "--no-color")
+    assert rc != 0 and out == ""
+    assert f"no such run dir: {missing}" in err
+
+
+def test_tail_and_watch_still_wait_for_a_not_yet_created_run_dir(tmp_path):
+    # tail/watch may attach before `cap-evolve run` creates the dir: they wait
+    # (here until a short idle timeout) instead of failing with "no such run dir".
+    pending = tmp_path / "run_later"
+    for cmd in ("tail", "watch"):
+        rc, _out, err = _run(cmd, str(pending), "--idle-timeout", "0.2", "--no-color")
+        assert rc == 3, (cmd, err)
+        assert "no such run dir" not in err
+        assert "waiting for" in err
 
 
 def test_diff_stat_and_files_views(tmp_path):
@@ -413,3 +580,93 @@ def test_check_flags_a_real_project_as_passing(tmp_path):
     rc, out, _ = _run("check", "--project", str(proj))
     assert json.loads(out)["ok"] is True, out
     assert rc == 0
+
+
+def test_estimate_prices_must_come_together_be_finite_and_non_negative(tmp_path):
+    import pytest
+    proj = _project(tmp_path, "p", "deterministic")
+    for bad, msg in ((["--price-in", "3"], "must be given together"),
+                     (["--price-out", "3"], "must be given together"),
+                     (["--price-in", "-5", "--price-out", "-5"], "must not be negative"),
+                     (["--price-in", "3", "--price-out", "-1"], "must not be negative"),
+                     (["--price-in", "nan", "--price-out", "3"], "must be a finite number"),
+                     (["--price-in", "3", "--price-out", "inf"], "must be a finite number")):
+        from cap_evolve import cli
+        err = io.StringIO()
+        with pytest.raises(SystemExit) as exc, redirect_stderr(err), \
+                redirect_stdout(io.StringIO()):
+            cli.main(["estimate", "--project", str(proj), *bad])
+        assert exc.value.code != 0
+        assert msg in err.getvalue()
+    # both valid prices still give a cost
+    rc, out, _err = _run("estimate", "--project", str(proj), "--price-in", "3",
+                         "--price-out", "15")
+    assert rc == 0
+    cost = json.loads(out)["cost_usd"]
+    assert cost is not None and cost["expected"] >= 0
+
+
+def test_non_numeric_spec_numbers_fail_cleanly_in_doctor_estimate_and_dry_run(tmp_path):
+    """``max_iterations: ten`` used to crash estimate/run --dry-run/doctor with a
+    ValueError traceback, and ``max_usd: five`` passed doctor as "ok"."""
+    from cap_evolve.cli import _doctor_checks
+    for line, key in (("max_iterations: ten", "max_iterations"),
+                      ("max_usd: five", "max_usd"),
+                      ("split_train: abc", "split_train"),
+                      ("num_trials: -2", "num_trials")):
+        proj = _project(tmp_path, key, "deterministic")
+        spec = proj / "capevolve.yaml"
+        text = spec.read_text(encoding="utf-8").replace("max_iterations: 3\n", "")
+        spec.write_text(text + line + "\n", encoding="utf-8")
+
+        rows = [r for r in _doctor_checks(proj) if r["status"] == "fail" and key in r["detail"]]
+        assert rows, f"doctor did not FAIL on {line!r}"
+        assert key in rows[0]["fix"]
+        assert not any(r["status"] == "ok" and r["name"] == "budget" and key == "max_usd"
+                       for r in _doctor_checks(proj))
+
+        rc, out, err = _run("estimate", "--project", str(proj))
+        assert rc == 1, out
+        assert key in err and "Traceback" not in err
+        assert json.loads(out)["problems"][0]["key"] == key
+
+        rc, out, err = _run("run", "--project", str(proj), "--dry-run")
+        assert rc == 1, out
+        assert key in err and "Traceback" not in err
+
+
+def test_a_bad_number_from_a_flag_names_the_flag_not_the_yaml(tmp_path):
+    proj = _project(tmp_path, "flagnum", "deterministic")
+    rc, out, err = _run("run", "--project", str(proj), "--dry-run", "--max-usd", "-1")
+    assert rc == 1, out
+    payload = json.loads(out)
+    prob = payload["problems"][0]
+    assert payload["error"] == "bad numbers in command-line flags"
+    assert prob["key"] == "max_usd" and prob["flag"] == "--max-usd"
+    assert prob["error"].startswith("--max-usd must be a number, 0 or more")
+    assert "pass --max-usd" in prob["fix"] and "set max_usd" not in prob["fix"]
+    assert "--max-usd must be a number" in err and "Traceback" not in err
+    # the same bad value from the yaml still points at the yaml
+    spec = proj / "capevolve.yaml"
+    spec.write_text(spec.read_text(encoding="utf-8") + "max_usd: -1\n", encoding="utf-8")
+    rc, out, err = _run("run", "--project", str(proj), "--dry-run")
+    assert rc == 1
+    assert "set max_usd" in json.loads(out)["problems"][0]["fix"]
+
+
+def test_good_spec_numbers_still_pass(tmp_path):
+    from cap_evolve.cli import _doctor_checks
+    from cap_evolve.specfile import numeric_spec_errors
+    proj = _project(tmp_path, "p", "deterministic")
+    spec = proj / "capevolve.yaml"
+    spec.write_text(spec.read_text(encoding="utf-8")
+                    + "max_usd: 5.0\nnum_trials: 2\nsplit_train: 0.5\nsplit_seed: 0\n",
+                    encoding="utf-8")
+    assert not [r for r in _doctor_checks(proj) if r["name"] == "spec-numbers"]
+    budget = [r for r in _doctor_checks(proj) if r["name"] == "budget"]
+    assert budget and budget[0]["status"] == "ok"
+    rc, out, _err = _run("estimate", "--project", str(proj))
+    assert rc == 0 and "spec_summary" in json.loads(out)
+    assert numeric_spec_errors({"max_iterations": None, "workers": 4}) == []
+    assert numeric_spec_errors({"max_iterations": True})[0]["key"] == "max_iterations"
+    assert numeric_spec_errors({"max_iterations": 2.5})[0]["key"] == "max_iterations"

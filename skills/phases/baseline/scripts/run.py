@@ -16,6 +16,8 @@ import _bootstrap  # noqa: F401
 
 from cap_evolve import Budget, RunDir, harness
 from cap_evolve.check import load_adapter, run_check
+from cap_evolve.rundir import (baseline_already_ran, existing_run_error, missing_resume_error,
+                               reuse_baseline_error)
 
 
 def _refuse_degenerate_split(splits, run_dir) -> bool:
@@ -77,6 +79,17 @@ def main(argv=None) -> int:
                    help="path to capevolve.yaml spec (for observer config)")
     args = p.parse_args(argv)
 
+    # A broken capevolve.yaml (e.g. `max_usd: "5`) must stop here with the file and line,
+    # before a run dir exists — not be read quietly as wrong values further down.
+    spec_file = Path(args.spec) if args.spec else Path(args.project, "capevolve.yaml")
+    if spec_file.is_file():
+        from cap_evolve.specfile import SpecError, read_spec_file
+        try:
+            read_spec_file(spec_file)  # a syntax error, not UTF-8, or unreadable
+        except SpecError as e:
+            print(json.dumps({"step": "baseline", "error": str(e)}), file=sys.stderr)
+            return 1
+
     # The hard gate, on THIS path too. `cap-evolve run` checks the adapter before it
     # calls us (cli.py:721-726), but /cap-evolve:baseline is reachable directly and the
     # needs/provides DAG validates declared order, not runtime state — so without this
@@ -88,6 +101,33 @@ def main(argv=None) -> int:
         print(json.dumps({"step": "baseline", "error": "check failed",
                           "report": rep.to_dict()}, indent=2), file=sys.stderr)
         return 1
+
+    # --resume with a named run that does not exist must not quietly start a fresh run
+    # (new split, paid baseline). Same check `cap-evolve run --resume` makes; repeated
+    # here because this script can be called on its own.
+    if args.resume and args.run_ts:
+        resume_err = missing_resume_error(Path(args.base), args.run_ts)
+        if resume_err:
+            print(json.dumps({"step": "resume", "error": resume_err}), file=sys.stderr)
+            return 1
+
+    # A fresh run on a --run-ts that already exists: stop with a plain message rather
+    # than letting RunDir.create raise FileExistsError.
+    if not args.resume:
+        exists_err = existing_run_error(Path(args.base), args.run_ts)
+        if exists_err:
+            print(json.dumps({"step": "baseline", "error": exists_err}), file=sys.stderr)
+            return 1
+
+    # --reuse-baseline must name a real prior run dir; check it before RunDir.create so a
+    # bad path leaves no empty run_* behind (one `--resume` and the dashboard would pick up).
+    # Skipped when resuming a run whose baseline already ran: that path returns early
+    # below and never reads the prior run dir, which may be cleaned up by now.
+    if args.reuse_baseline and not (args.resume and baseline_already_ran(Path(args.base), args.run_ts)):
+        reuse_err = reuse_baseline_error(Path(args.reuse_baseline))
+        if reuse_err:
+            print(json.dumps({"step": "baseline", "error": reuse_err}), file=sys.stderr)
+            return 1
 
     Path(args.base).mkdir(parents=True, exist_ok=True)
     budget = Budget(max_iterations=args.max_iterations, stall=args.stall,
@@ -120,7 +160,7 @@ def main(argv=None) -> int:
             from capevolve_telemetry import load_observers, load_observers_from_state
             spec_path = Path(args.spec) if args.spec else Path(args.project, "capevolve.yaml")
             spec_text = spec_path.read_text(encoding="utf-8")
-            full_spec = read_yaml(spec_text)
+            full_spec = read_yaml(spec_text, source=str(spec_path), strict=True)
             obs_config = full_spec.get("observers")
             caps = full_spec.get("capabilities")
             run_name = str(full_spec.get("run_name", "")).strip()

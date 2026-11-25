@@ -1433,8 +1433,9 @@ def replay(src, *, stream=None, color: bool | None = None, speed: float = 1.0,
     if color is None:
         color = eventstream.use_color(stream)
     src = Path(src)
-    events = [json.loads(ln) for ln in
-              (src / "events.jsonl").read_text(encoding="utf-8").splitlines() if ln.strip()]
+    # Same rules as ``tail``: a half-written last line (killed run) is left out, bad
+    # records are skipped, and a ``log_corruption`` event reports how many were lost.
+    events, _ = eventstream.read_new_events(src / "events.jsonl", 0)
     if banner:
         print(_c(banner, _C.YELLOW, color), file=stream, flush=True)
     tty = _is_tty(stream)

@@ -1,4 +1,4 @@
-import { FileCode, FolderTree, Target } from 'lucide-react'
+import { AlertTriangle, FileCode, FolderTree, Target } from 'lucide-react'
 import type { RunSummaryDetail } from '../lib/types'
 import { getGateMode, getObjectives } from '../lib/objectives'
 import { Card } from './ui/Card'
@@ -48,6 +48,15 @@ export function ConfigPanel({ summary }: { summary: RunSummaryDetail }) {
       {cfg.spec_missing && (
         <Card className="border-border-strong p-3 text-sm text-muted">
           {cfg.project_dir} has no capevolve.yaml — showing the other project artifacts that are there.
+        </Card>
+      )}
+
+      {cfg.spec_error && (
+        <Card role="alert" className="border-rejected/50 p-3 text-sm">
+          <p className="flex items-center gap-1.5 font-medium text-rejected">
+            <AlertTriangle size={15} /> The spec could not be read, so no spec values are shown.
+          </p>
+          <p className="mt-1 break-words font-mono text-[11px] text-muted">{cfg.spec_error}</p>
         </Card>
       )}
 

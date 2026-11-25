@@ -100,18 +100,25 @@ def main(argv=None) -> int:
         gate_kwargs["gate_max_broke"] = int(args.gate_max_broke)
     gate_kwargs.update(harness.paper_switch_kwargs(args))
 
-    result = gepa.gepa_loop(
-        adapter, run_dir=run_dir, optimizer=optimizer, seed_val=seed_val,
-        max_metric_calls=args.max_metric_calls, max_iterations=args.max_iterations,
-        minibatch_size=args.minibatch_size, n_trials=args.n_trials,
-        component_selector=args.component_selector,
-        selection_strategy=args.selection_strategy,
-        max_merges=args.max_merges, merge_cadence=args.merge_cadence,
-        gate_kwargs=gate_kwargs,
-        no_regression=args.no_regression, seed=args.seed, store=store,
-        resume=args.resume, ctx=harness.OptimizerContext.from_args(args, run_dir=run_dir),
-        protected_patterns=harness.parse_protected_paths(args.protected_paths),
-    )
+    try:
+        result = gepa.gepa_loop(
+            adapter, run_dir=run_dir, optimizer=optimizer, seed_val=seed_val,
+            max_metric_calls=args.max_metric_calls, max_iterations=args.max_iterations,
+            minibatch_size=args.minibatch_size, n_trials=args.n_trials,
+            component_selector=args.component_selector,
+            selection_strategy=args.selection_strategy,
+            max_merges=args.max_merges, merge_cadence=args.merge_cadence,
+            gate_kwargs=gate_kwargs,
+            no_regression=args.no_regression, seed=args.seed, store=store,
+            resume=args.resume, ctx=harness.OptimizerContext.from_args(args, run_dir=run_dir),
+            protected_patterns=harness.parse_protected_paths(args.protected_paths),
+        )
+    except gepa.GepaStateError as e:
+        # A corrupt gepa_state.json on --resume: the message names the file and the
+        # way out, so print just that (no traceback) and exit 1.
+        run_dir.close_observers()
+        print(str(e), file=sys.stderr)
+        return 1
     run_dir.close_observers()
 
     print(json.dumps(result, indent=2))
