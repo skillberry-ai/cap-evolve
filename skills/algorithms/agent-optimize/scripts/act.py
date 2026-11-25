@@ -438,8 +438,8 @@ def record_eval_surface(ctx) -> None:
         late = (ctx.run_dir.candidates / "seed").exists()   # baseline already scored: the seal is late
         ctx.run_dir.log_event("eval_surface_recorded", project=str(Path(ctx.project).resolve()), late=late)
         if late:
-            ctx.warn("eval surface sealed only now, after the baseline was scored (the run did not record it "
-                     "at the baseline); edits made before this call are not detected")
+            print("act WARNING: eval surface sealed only now, after the baseline was scored (the run did not "
+                  "record it at the baseline); edits made before this call are not detected", file=sys.stderr)
 
 
 def guard_eval_surface(ctx, verb: str) -> None:
