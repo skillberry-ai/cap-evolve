@@ -118,7 +118,7 @@ def load_trials(run_dir, tags, split: str = "val", min_trial: int = 0) -> list[T
     index ``k >= min_trial``: the FRESH trials of a top-up, excluding the evidence that selected the
     candidate."""
     tags = [tags] if isinstance(tags, str) else list(tags)
-    vdir = run_dir.rollouts / split
+    vdir = run_dir.rollout_dir(split) if hasattr(run_dir, "rollout_dir") else run_dir.rollouts / split
     out: list[TrialRec] = []
     if not vdir.exists():
         return out

@@ -99,7 +99,10 @@ def from_ledger(run_dir, cand_hash: str, parent_hash: str, task_ids=None, split:
     cc, pc = (eval_index.counts(run_dir, h, split) for h in (cand_hash, parent_hash))
     if task_ids is None:  # frozen split: tasks without rows keep full prior uncertainty
         try:
-            task_ids = json.loads(Path(run_dir.splits_path).read_text(encoding="utf-8"))[split]
+            raw = json.loads(Path(run_dir.splits_path).read_text(encoding="utf-8"))
+            task_ids = raw[split]
+            if not task_ids and raw.get("sealed") and not raw.get("pooled") and hasattr(run_dir, "read_splits"):
+                task_ids = run_dir.read_splits().ids(split)    # a sealed legacy split's ids, merged back
         except (OSError, ValueError, KeyError, TypeError):
             task_ids = sorted(set(cc) | set(pc))
     ids = [str(t) for t in task_ids]

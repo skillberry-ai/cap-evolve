@@ -3,43 +3,46 @@
 All three schedules share the same loop body in `harness.hill_climb_loop`; they differ
 only in how the per-iteration *focus set* is chosen. The focus set drives
 `_focus_instructions`, which builds the optimizer prompt from the parent's failing
-**val** tasks (actionable failures separated from infrastructure errors via the
-structured `raw.errored` flag, not feedback substring matching).
+tasks on the **feedback split** (actionable failures separated from infrastructure
+errors via the structured `raw.errored` flag, not feedback substring matching).
 
-The focus set is always drawn from **val ids** (`harness.py:2183`). That is not a
-preference: `_focus_instructions` filters the parent's val per-task rows
-(`harness.py:2011-2013`), and the splits are disjoint slices of one shuffled id list
-(`splits.py:117-119`), so a focus set of train ids would intersect those rows in
-nothing and the prompt would render `0 failing of 0 tasks` with no failure index at
-all. Train tasks are never individually scored by this loop, so there is no per-task
-signal about them to focus on.
+The feedback split is `hc_feedback_split` (see `SKILL.md`): **train** by default when
+train and val differ, **val** when they are the same set or the spec says `val`. The
+focus set is always drawn from that split's ids. That is not a preference:
+`_focus_instructions` filters the parent's per-task rows on that split, and the splits
+are disjoint slices of one shuffled id list (`splits.py:117-119`), so a focus set from
+the other split would intersect those rows in nothing and the prompt would render
+`0 failing of 0 tasks` with no failure index at all. Under train feedback the seed is
+scored on train at baseline and each accepted champion once after its accept, so the
+per-task train signal is always the current parent's; val is only ever the gate.
 
 ## all (default)
 
-- Focus set = every val task (no filtering).
+- Focus set = every feedback-split task (no filtering).
 - The prompt asks the optimizer to find the single edit that lifts the most tasks.
 - Best when the capability has broad gaps rather than a few isolated ones.
 
 ## cyclic
 
-- Iteration `i` focuses on `val[i % len(val)]` — one task at a time, round-robin.
+- Iteration `i` focuses on `ids[i % len(ids)]` of the feedback split — one task at a time, round-robin.
 - Useful when failures are heterogeneous: forcing attention onto each task in turn
   prevents the optimizer from over-fitting to whichever failure is loudest.
 
 ## hardest-first
 
-- Val ids are sorted by the parent's per-task reward ascending (hardest first) once,
-  at loop entry, from the `current_val` the loop already holds — no extra evaluation.
+- The feedback split's ids are sorted by the parent's per-task reward ascending
+  (hardest first) once, at loop entry, from the result the loop already holds — no
+  extra evaluation.
 - Iteration `i` focuses on the `i`-th hardest task, then cycles.
-- Useful when a small number of very hard tasks dominate the val gap and you want
+- Useful when a small number of very hard tasks dominate the gap and you want
   budget spent there first.
 - The order is fixed at entry, so it reflects the parent at that moment, not the
   running best. Restart the loop (or `--resume`) to re-rank.
 
 ## Non-regression under a narrow focus
 
-The *protect these passing tasks* block is built from the whole val split, not the
-focus set (`harness.py:2016-2020`). An edit aimed at one task must still not break a
+The *protect these passing tasks* block is built from the whole feedback split, not
+the focus set (`harness.py:2016-2020`). An edit aimed at one task must still not break a
 passing task outside the focus, so narrowing attention must never narrow the
 constraint.
 

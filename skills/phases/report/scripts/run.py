@@ -55,9 +55,9 @@ def main(argv=None) -> int:
         print(dashboard.render_ansi(reduced, color=not args.no_color, top_n=args.top_n))
         return 0
 
-    baseline = json.loads((run_dir.root / "baseline.json").read_text()) if (run_dir.root / "baseline.json").exists() else {}
+    baseline = run_dir.read_baseline() if (run_dir.root / "baseline.json").exists() else {}
     final_path = run_dir.root / "final.json"
-    final = json.loads(final_path.read_text()) if final_path.exists() else {}
+    final = run_dir.read_record("final.json") if final_path.exists() else {}
     finalized = bool(final.get("test"))
 
     base_val_obj = baseline.get("val") or {}

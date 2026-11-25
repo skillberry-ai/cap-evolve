@@ -123,6 +123,9 @@ gate_k_se: 0.2
 # missing_retries: 2            #   attempts to re-run a missing cell
 # fault_attribution: true      # tag exceptions raised by the candidate's own code (innermost non-stdlib frame under its dir) as error_kind=candidate
 # ledger_noise_guard: true      # LEDGER.md: no causal broke/fixed below ledger_min_trials (3) trials per task
+# hc_feedback_split: val        # hill-climb (legacy loop): the split the PROPOSER learns from. Default auto = train when
+#                               #   train and val differ (val rollouts sealed; each accepted champion run once on train,
+#                               #   |train| x num_trials rollouts), else val. val = the old loop. The gate is always val.
 # merge_verify: true            # agent-optimize: `act.py verify-merge` (parent + both branches + merge on the same fresh block,
 #                               #   interaction estimate, bounded delta-debugging on a loss); `promote` of a merge needs a pass
 # screen_accounting: true       # agent-optimize screen.py: affected + sentinels + random exploration with recorded inclusion

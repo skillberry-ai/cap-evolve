@@ -10,6 +10,11 @@ Layout under ``.capevolve/run_<ts>/``::
     rollouts/<split>/<task>__<cand>__t<k>.json
     events.jsonl        # append-only audit log
 
+A sealed run (pooled mode's confirm stratum, or a split passed to ``seal_split``) keeps those rollouts in
+``sealed_dir`` instead, outside the run tree; ``rollout_dir`` resolves the location. After ``seal_split`` the
+split's id list (``splits.json``, merged back by ``read_splits``) and the per-task results filed under it in
+``baseline.json`` / ``final.json`` (merged back by ``read_record`` / ``read_baseline``) are sealed too.
+
 This is the only module that owns the run's state, so test-sealing and budget
 accounting can't be bypassed by a skill. Pure stdlib.
 """
@@ -88,6 +93,30 @@ def _file_lock(lock_path: Path):
             os.close(fd)
         with contextlib.suppress(FileNotFoundError):
             os.unlink(lock_path)
+
+
+#: Run records whose per-task results of a sealed split are kept in the sealed dir (``RunDir.write_record``).
+SEALED_RECORDS = ("baseline.json", "final.json")
+
+
+def merge_sealed_record(public: dict, private: dict) -> dict:
+    """``public`` (a run-tree record with ``sealed_per_task`` already removed) with the sealed per-task results of ``private``
+    merged back in place. Pure: callers that read the two files themselves (the dashboard, through its own path checks) use it."""
+    for k, v in private.items():
+        if isinstance(v, dict) and isinstance(public.get(k), dict):
+            merge_sealed_record(public[k], v)
+        else:
+            public[k] = v
+    return public
+
+
+def _known_record(name: str) -> str:
+    """The record file name for ``name``: one of ``SEALED_RECORDS``, returned as the CONSTANT from that list (never the caller's
+    string), so ``write_record`` / ``read_record`` can only touch a known file. A path, ``..`` or an unknown name raises."""
+    for known in SEALED_RECORDS:
+        if name == known:
+            return known
+    raise ValueError(f"unknown run record {name!r}; known: {list(SEALED_RECORDS)}")
 
 
 class BudgetExhausted(RuntimeError):
@@ -381,19 +410,35 @@ class RunDir:
             st["unfunded"] = str(why)[:300]
             self._write_state(st)
 
+    def _sealed_quarantine(self) -> Path | None:
+        """Where the quarantine lives once a split is sealed (``seal_split``): its ids are that split's, so
+        they stay out of state.json. ``None``: in state.json, as always."""
+        sd = self.sealed_dir
+        return sd / "quarantine.json" if sd is not None and self.sealed_splits else None
+
     def quarantined_tasks(self) -> list:
         """Task ids removed from the evaluable set for this run (still missing after the retries)."""
+        sq = self._sealed_quarantine()
+        if sq is not None and sq.exists():
+            return sorted(json.loads(sq.read_text(encoding="utf-8")) or {})
         return sorted((self._read_state().get("quarantined") or {}))
 
     def quarantine(self, task_ids, reason: str = "") -> list:
         """Add ``task_ids`` to the quarantine (locked RMW); returns the ones newly added."""
+        sq = self._sealed_quarantine()
         with _file_lock(self._state_lock):
             st = self._read_state()
-            q = st.get("quarantined") or {}
+            q = dict(st.get("quarantined") or {})
+            if sq is not None and sq.exists():
+                q.update(json.loads(sq.read_text(encoding="utf-8")) or {})
             new = [str(t) for t in task_ids if str(t) not in q]
             for t in new:
                 q[t] = {"reason": reason, "ts": time.time()}
-            if new:
+            if new and sq is not None:
+                _atomic_write(sq, json.dumps(q, indent=2))
+                if st.pop("quarantined", None) is not None:
+                    self._write_state(st)
+            elif new:
                 st["quarantined"] = q
                 self._write_state(st)
             return new
@@ -539,8 +584,67 @@ class RunDir:
         return emitted
 
     # ---- splits (with test seal) -------------------------------------------
+    # ---- run records whose per-task results of a sealed split stay sealed ------------------------
+    def write_record(self, name: str, payload: dict) -> None:
+        """Write the run record ``name`` (``SEALED_RECORDS``: ``baseline.json``, ``final.json``).
+
+        Under ``seal_split`` the ``per_task`` list of every SplitResult filed under a sealed split's key
+        (``{"val": {..., "per_task": [...]}}``, at any depth) goes to ``<sealed_dir>/<name>``; the run-tree
+        file keeps the aggregates (reward, stderr, pass@k, n_scored, n_tasks) and ``sealed_per_task: true``.
+        ``read_record`` merges the two back. Without a sealed split the file is written whole, as always."""
+        name = _known_record(name)
+        keys, sd = set(self.sealed_splits), self.sealed_dir
+        if not keys or sd is None:
+            _atomic_write(self.root / name, json.dumps(payload, indent=2))
+            return
+        private: dict = {}
+
+        def strip(node, priv):
+            out = {}
+            for k, v in node.items():
+                if k in keys and isinstance(v, dict) and "per_task" in v:
+                    out[k] = {kk: vv for kk, vv in v.items() if kk != "per_task"}
+                    priv[k] = {"per_task": v["per_task"]}
+                elif isinstance(v, dict):
+                    sub: dict = {}
+                    out[k] = strip(v, sub)
+                    if sub:
+                        priv[k] = sub
+                else:
+                    out[k] = v
+            return out
+
+        public = strip(dict(payload), private)
+        public["sealed_per_task"] = True
+        _atomic_write(sd / name, json.dumps(private, indent=2))
+        _atomic_write(self.root / name, json.dumps(public, indent=2))
+
+    def read_record(self, name: str) -> dict:
+        """The run record ``name`` with its sealed per-task results merged back (see ``write_record``).
+        A record written before the split was sealed (the old layout) is returned as it is on disk."""
+        name = _known_record(name)
+        d = json.loads((self.root / name).read_text(encoding="utf-8"))
+        sd = self.sealed_dir
+        if not d.pop("sealed_per_task", False) or sd is None or not (sd / name).exists():
+            return d
+
+        return merge_sealed_record(d, json.loads((sd / name).read_text(encoding="utf-8")))
+
+    def read_baseline(self) -> dict:
+        """``baseline.json`` with the seed's sealed per-task val results merged back (``read_record``)."""
+        return self.read_record("baseline.json")
+
     def write_splits(self, splits: Splits) -> None:
         sealed = self.sealed_dir
+        hidden = [k for k in self.sealed_splits if k in ("train", "val")] if sealed is not None else []
+        if hidden and not splits.pooled:
+            # A sealed legacy split (``seal_split``): its id list lives in the sealed dir with the full
+            # partition; the run dir keeps everything else (the train ids the proposer reads, test, the seed).
+            full = splits.to_dict()
+            _atomic_write(sealed / "splits_full.json", json.dumps(full, indent=2))
+            public = {**full, **{k: [] for k in hidden}, "sealed": True}
+            _atomic_write(self.splits_path, json.dumps(public, indent=2))
+            return
         if splits.pooled and sealed is not None:
             # The full partition (train/val/confirm ids) lives in the sealed dir; the run dir keeps
             # only what a proposer may know: F, test, the seed. C = pool minus F is NOT recoverable
@@ -597,10 +701,65 @@ class RunDir:
             self._write_state(st)
         return target
 
+    @property
+    def sealed_splits(self) -> tuple:
+        """Legacy splits whose rollouts live in the sealed dir (``seal_split``); ``()`` for most runs."""
+        try:
+            return tuple(self._read_state().get("sealed_splits") or ())
+        except (OSError, ValueError):
+            return ()
+
+    def seal_split(self, split: str) -> int:
+        """Move ``split``'s rollouts out of the run tree into the sealed dir, and keep every later one there.
+
+        For a split the proposer must not read but the framework still scores (hill-climb's val under
+        ``hc_feedback_split: train``). Idempotent, and safe to call again after a crash between the state
+        write and the move: whatever is still under ``rollouts/<split>`` is moved (an existing sealed copy
+        wins). Returns the number of files moved."""
+        if split in ("test", "confirm"):
+            raise ValueError(f"split {split!r} is sealed by its own mechanism")
+        sd = self.seal()
+        if split not in self.sealed_splits:
+            with _file_lock(self._state_lock):
+                st = self._read_state()
+                st["sealed_splits"] = sorted(set(st.get("sealed_splits") or ()) | {split})
+                q = st.pop("quarantined", None)          # its ids go with the split (see quarantine)
+                if q:
+                    _atomic_write(sd / "quarantine.json", json.dumps(q, indent=2))
+                self._write_state(st)
+        # The id list and every per-task result of the split leave the run tree too. A file still in the old
+        # layout (written before the split was sealed, e.g. by a run started on an earlier version) is
+        # migrated once; one already in the sealed layout is left alone.
+        if self.splits_path.exists() and not json.loads(self.splits_path.read_text(encoding="utf-8")).get("sealed"):
+            self.write_splits(self.read_splits())
+        for name in SEALED_RECORDS:
+            path = self.root / name
+            if path.exists() and not json.loads(path.read_text(encoding="utf-8")).get("sealed_per_task"):
+                self.write_record(name, self.read_record(name))
+        src, dst = self.rollouts / split, sd / "rollouts" / split
+        if not src.is_dir():
+            return 0
+        dst.mkdir(parents=True, exist_ok=True)
+        n = 0
+        for f in sorted(src.iterdir()):
+            target = dst / f.name
+            if target.exists():
+                f.unlink() if f.is_file() else shutil.rmtree(f)
+            else:
+                shutil.move(str(f), str(target))
+                n += 1
+        with contextlib.suppress(OSError):
+            src.rmdir()
+        return n
+
     def rollout_dir(self, split: str) -> Path:
-        """``rollouts/<split>``; the confirm stratum's rollouts live in the sealed dir."""
-        sd = self.sealed_dir if split == "confirm" else None
-        return (sd / "rollouts" / "confirm") if sd is not None else self.rollouts / split
+        """``rollouts/<split>``; the confirm stratum's rollouts, and those of any ``seal_split`` split, live
+        in the sealed dir."""
+        if split == "confirm" or (split != "test" and split in self.sealed_splits):
+            sd = self.sealed_dir
+            if sd is not None:
+                return sd / "rollouts" / split
+        return self.rollouts / split
 
     @property
     def private_dir(self) -> Path:

@@ -16,6 +16,12 @@ mode, ``gate_check``) read the same config.
   ledger_noise_guard    false  below ``ledger_min_trials`` trials per task, no causal broke/fixed lists
   ledger_min_trials     3
   fault_attribution     false  tag exceptions raised by the candidate's own code (error_kind=candidate)
+  hc_feedback_split     "auto" which split the legacy hill-climb PROPOSER learns from: "train" | "val" |
+                        "auto" (train when the frozen train and val ids differ as sets, else val). The
+                        gate always decides on val; under "train" val ids and per-task val results
+                        are kept out of the run tree and the proposer's inputs (sealed dir, outside the
+                        run tree; its path is in state.json). Not used by pooled/P2/HC-2
+                        (they have F/C); there an explicit "train" is a logged no-op.
 """
 
 from __future__ import annotations
@@ -25,6 +31,7 @@ from dataclasses import dataclass
 
 COVERAGE_POLICIES = ("veto", "tipping")
 SPLIT_MODES = ("legacy", "pooled")
+HC_FEEDBACK_SPLITS = ("auto", "train", "val")
 ENV_PREFIX = "CAPEVOLVE_"
 
 
@@ -52,6 +59,7 @@ class GateConfig:
     ledger_noise_guard: bool = False
     ledger_min_trials: int = 3
     fault_attribution: bool = False
+    hc_feedback_split: str = "auto"
 
     @classmethod
     def from_mapping(cls, spec: dict | None, environ=None) -> "GateConfig":
@@ -72,7 +80,8 @@ class GateConfig:
             confirm_fraction=float(spec.get("confirm_fraction", d.confirm_fraction)),
             ledger_noise_guard=_truthy(spec.get("ledger_noise_guard", d.ledger_noise_guard)),
             ledger_min_trials=int(spec.get("ledger_min_trials", d.ledger_min_trials)),
-            fault_attribution=_truthy(spec.get("fault_attribution", d.fault_attribution)))
+            fault_attribution=_truthy(spec.get("fault_attribution", d.fault_attribution)),
+            hc_feedback_split=str(spec.get("hc_feedback_split") or d.hc_feedback_split).strip().lower())
         if out.coverage_policy not in COVERAGE_POLICIES:
             raise ValueError(f"coverage_policy must be one of {COVERAGE_POLICIES}, got {out.coverage_policy!r}")
         if out.split_mode not in SPLIT_MODES:
@@ -81,9 +90,27 @@ class GateConfig:
             raise ValueError("confirm_fraction must be in (0, 1)")
         if not 0.0 <= out.min_joint_coverage <= 1.0:
             raise ValueError("min_joint_coverage must be in [0, 1]")
+        if out.hc_feedback_split not in HC_FEEDBACK_SPLITS:
+            raise ValueError(f"hc_feedback_split must be one of {HC_FEEDBACK_SPLITS}, "
+                             f"got {out.hc_feedback_split!r}")
         return out
 
     @classmethod
     def for_run(cls, run_dir) -> "GateConfig":
         from .specfile import spec_for_run
         return cls.from_mapping(spec_for_run(run_dir) if run_dir is not None else {})
+
+
+def hc_feedback_split_setting(spec: dict | None, environ=None) -> tuple[str, str]:
+    """The REQUESTED ``hc_feedback_split`` (validated) and where it came from: ``env`` | ``spec`` | ``default``.
+
+    Requested, not effective: ``harness.resolve_hc_feedback_split`` turns ``auto`` into ``train``/``val`` from
+    the run's frozen splits, once per run."""
+    env = (os.environ if environ is None else environ).get(ENV_PREFIX + "HC_FEEDBACK_SPLIT")
+    if env not in (None, ""):
+        source = "env"
+    elif (spec or {}).get("hc_feedback_split") not in (None, ""):
+        source = "spec"
+    else:
+        source = "default"
+    return GateConfig.from_mapping(spec, environ).hc_feedback_split, source

@@ -1,6 +1,6 @@
 ---
 name: hill-climb
-description: Runs a global hill-climb optimization loop where the parent is always the current best candidate and the val significance gate decides acceptance. Use as the algorithm for most runs — the first run on a new project, binary pass/fail scorers, and small task sets. Pick how each iteration's reflection is focused with --focus all (every failing val task), cyclic (one task at a time), or hardest-first (lowest-scoring first). Switch to gepa when rollouts are expensive and per-task feedback is rich, or skillopt when you want an annealed edit budget.
+description: Runs a global hill-climb optimization loop where the parent is always the current best candidate and the val significance gate decides acceptance, while the proposer learns from train. Use as the algorithm for most runs — the first run on a new project, binary pass/fail scorers, and small task sets. Pick how each iteration's reflection is focused with --focus all (every failing task), cyclic (one task at a time), or hardest-first (lowest-scoring first). Switch to gepa when rollouts are expensive and per-task feedback is rich, or skillopt when you want an annealed edit budget.
 component: algorithm
 argument-hint: "--run-dir DIR --project DIR --optimizer CMD [--focus all|cyclic|hardest-first]"
 allowed-tools: Read, Write, Bash
@@ -30,7 +30,8 @@ differences and point back here. One iteration is `harness.run_step`
    `run_dir.candidate_dir(run_dir.best_id)`). Copy it to `work/<cand_id>/`; the
    optimizer edits that copy in place, so the parent is never mutated
    (`harness.py:1454-1458`).
-2. **Build the prompt.** The parent's val per-task rows are split into
+2. **Build the prompt.** The parent's per-task rows on the feedback split (train by
+   default, see below) are split into
    always-failing / flaky / infra-errored / solid (`harness.py:1775-1795`), rendered
    as the failure index plus an explicit *protect these passing ids* block
    (`harness.py:1803-1879`), and substituted into the project's optimizer-instructions
@@ -41,11 +42,22 @@ differences and point back here. One iteration is `harness.run_step`
 4. **Optimize.** The optimizer command mutates the workdir. A crash is caught, logged,
    and left as an unchanged copy of the parent, so the gate simply rejects it — a
    wasted iteration, not a dead run (`harness.py:1486-1500`).
-5. **Evaluate on val only** (`harness.py:1516`), at `--n-trials` trials per task.
+5. **Evaluate on val only** (`harness.py:1516`): the EDITED candidate is scored on every
+   val task, at `--n-trials` trials per task. The parent is not re-measured: its side of
+   the comparison is its STORED val result (the seed's from baseline, a champion's from
+   the evaluation that accepted it; rule P's confirmation is the exception, it re-measures
+   both arms on fresh seeds).
 6. **Gate.** With per-task data on both sides the paired test is chosen automatically:
-   accept iff mean per-task Δ > `k`·SE of those paired deltas (`harness.py:1524-1532`).
-   `--no-regression` adds a second, harder condition on top.
-7. **Commit.** *Every* candidate is snapshotted — accepted and rejected — so any
+   accept iff mean per-task Δ (edited candidate − stored parent result, per val task) >
+   `k`·SE of those paired deltas (`harness.py:1524-1532`). `--no-regression` adds a
+   second, harder condition on top.
+7. **Champion on train (train feedback only).** Under train feedback, an accepted
+   candidate is run once on the full train split at `--n-trials` (budget-reserved; an
+   unfunded eval stops the loop) so the next prompt shows its own train failures. A
+   rejected candidate is never run on train. If this eval raises, it is retried once
+   before the next prompt; if that fails too, the prompt's failures and `trajectories/`
+   both stay the previous champion's, and the prompt says so.
+8. **Commit.** *Every* candidate is snapshotted — accepted and rejected — so any
    iteration can be diffed (`harness.py:1557`); the version store commits it
    (`harness.py:1609-1612`). Only an accepted candidate calls `set_best` and becomes
    the next parent (`harness.py:1558-1559`); a rejected one is filed in the rejected
@@ -65,18 +77,58 @@ sealed test does not move, and the run reports a gain that was never there. The 
 is the noise scale itself, so a win has to be larger than the measurement error that
 produced it. `phases/gate` owns the full statement of the decision and its modes.
 
+## Which split the proposer learns from (`hc_feedback_split`)
+
+Spec key `hc_feedback_split` (env `CAPEVOLVE_HC_FEEDBACK_SPLIT` wins over the spec):
+`train`, `val`, or `auto` (the default). It is resolved once per run from the frozen
+splits, frozen in `state.json`, and logged as an `hc_feedback_split` event.
+
+- **`auto`** is `train` when the train and val ids differ as sets, and `val` when they
+  are the same set (then nothing changes).
+- **`train`**: the trajectories, the failure index, the passing block, the focus order,
+  LEDGER's broke/fixed columns and `prior_iterations/<id>/trajectories/` all come from
+  TRAIN. The gate is unchanged: every candidate is measured on val against the parent's
+  val. **The guarantee:** val task ids and per-task val results are not in the run tree and
+  not in anything handed to the proposer (prompt, trajectories, LEDGER/JOURNAL/RUNMAP,
+  `prior_iterations/`, `rejected.jsonl`/`history.jsonl`, events, `graph.jsonl`); it gets the
+  val verdict and aggregates (reward, Δ). They live in the sealed dir instead: the val
+  rollouts and ledger rows, the val id list (`splits_full.json`; the run tree's `splits.json`
+  keeps train and test), the seed's and the finalists' per-task val results (`baseline.json`
+  and `final.json` keep the aggregates), per-step broke/fixed lists with the gate's raw
+  reason (`steps.jsonl`) and quarantine ids. Gate reasons and evaluation errors reach the logs
+  with ids replaced; a purely numeric id is replaced only where it is quoted. The sealed dir
+  is OUTSIDE the run tree but its path is recorded in `state.json`, so an unsandboxed proposer
+  that deliberately follows it can still read it, as in pooled mode; enforcing read isolation
+  (a sandbox that mounts only the work dir, or a read-deny hook) is separate hardening, not
+  part of this. The report phase, which runs after the search, writes `report.md` /
+  `dashboard.html` into the run dir for the operator; those may show per-task val results. The
+  seed's train result comes from baseline. Each ACCEPTED candidate is run once on train (the run's
+  `--n-trials`), so LEDGER compares the champion's train results with its parent's; a
+  rejected candidate is never run on train. Cost: |train| × n_trials extra rollouts per
+  accept, charged to `max_metric_calls` and always reserved first; a champion train eval
+  that cannot be funded is logged (`champion_train_unfunded`) and stops the loop. A task id
+  that is in BOTH train and val (an overlapping split, `n_overlap` in the event) is a train
+  task too, so its train results are shown; the guarantee covers the val-only ids. The value
+  is frozen: a later spec/env change is logged (`frozen: true`) but does not switch it. A
+  run started before this key existed (iterations already spent, nothing frozen) stays
+  `val`, even under an explicit `train`: its proposer has already read val.
+- **`val`** is the loop as it was before: the proposer reads val, the gate decides on val.
+
+Not used under rule P2 / `split_mode: pooled` / HC-2, which have their own F/C split: an
+explicit `train` there is a logged no-op (`ignored: true`, logged once per run).
+
 ## Focus schedules
 
 | `--focus` | what each iteration emphasizes | when to use |
 |---|---|---|
-| `all` (default) | every failing val task — find the one edit that lifts the most | broad capability gaps; the usual choice |
-| `cyclic` | one val task at a time, round-robin | many distinct, unrelated failure modes |
-| `hardest-first` | val tasks ordered by the parent's per-task reward ascending, then cycling | a few very hard tasks dominate the gap |
+| `all` (default) | every failing feedback-split task — find the one edit that lifts the most | broad capability gaps; the usual choice |
+| `cyclic` | one task at a time, round-robin | many distinct, unrelated failure modes |
+| `hardest-first` | tasks ordered by the parent's per-task reward ascending, then cycling | a few very hard tasks dominate the gap |
 
-All three index the **val** per-task results, because those are the only per-task
-data the loop holds. Non-regression protection covers the whole val split under
-every schedule, not just the focused task. `hardest-first` costs no extra evaluation:
-it orders off the per-task rewards already in hand.
+All three index the per-task results of the split the proposer reads (train by default,
+val under `hc_feedback_split: val`). Non-regression protection covers that whole split
+under every schedule, not just the focused task. `hardest-first` costs no extra
+evaluation: it orders off the per-task rewards already in hand.
 
 Back-compat: `--focus all-at-once` is accepted and treated as `all` (`run.py:35`).
 
@@ -131,7 +183,8 @@ loop is asking for anyway.
 ## Agent mode
 
 When `orchestration_mode: agent`, drive the loop yourself with the same mechanism as
-above: parent = current best, one edit per iteration, evaluate on **val**, gate,
+above (`hc_feedback_split` applies to the deterministic loop only): parent = current
+best, one edit per iteration, evaluate on **val**, gate,
 accept → snapshot / reject → revert, seal once with the finalize phase script
 (`skills/phases/finalize/scripts/run.py`), then report. `orchestrate` owns the
 agent-mode rules; the hill-climb-specific obligation

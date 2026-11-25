@@ -14,7 +14,7 @@ they pick** and **which tasks they focus** — not in anything below.
 run_step(adapter, *, run_dir, parent_dir, optimizer, instructions, current_val,
          n_trials=1, gate_kwargs=None, candidate_id=None, parent_id=None,
          no_regression=False, rejected=None, history=None, store=None,
-         capabilities=None, eval_split="val", optimizer_name=None,
+         capabilities=None, eval_split=None, optimizer_name=None,
          capability_sources=None, project_dir=None, protected_patterns=None) -> dict
 ```
 
@@ -27,6 +27,15 @@ The returned dict carries `candidate_id`, `accepted`, `decision`, `candidate_val
 `parent_val`, `regressions`, the optimizer's seconds/usd/tokens, `optimizer_error`,
 and `workdir` (`harness.py:1614-1626`).
 
+`eval_split` (default `harness.feedback_split(run_dir)`) is the split whose parent
+rollouts become `trajectories/`. It is `train` once hill-climb resolved
+`hc_feedback_split: train` for the run; then an ACCEPTED step also measures the new
+champion on train once (budget-reserved) and returns it as `champion_train`, plus
+`budget_unfunded: True` when that eval could not be funded. The gate is val either way.
+In that mode `record_iteration` keeps val task ids out of the `step` event and `graph.jsonl`
+(`n_broke`/`n_fixed` stay, reasons name counts) and appends the full broke/fixed lists and the
+raw reason to `<sealed_dir>/steps.jsonl`; the returned dict's `decision` keeps the gate's record.
+
 ## Cross-iteration files, and who owns each
 
 Written into the workdir before the optimizer runs, with a prompt pointer to all of them
@@ -34,7 +43,7 @@ Written into the workdir before the optimizer runs, with a prompt pointer to all
 
 | file | owner | lifetime |
 |---|---|---|
-| `LEDGER.md` | framework, read-only to the optimizer | regenerated each iteration; every prior outcome plus the exact tasks it broke/fixed |
+| `LEDGER.md` | framework, read-only to the optimizer | regenerated each iteration; every prior outcome plus the exact tasks it broke/fixed (on the feedback split: train champions only under train feedback) |
 | `JOURNAL.md` | the optimizer, append-only | run-level handover; earlier entries must not be edited |
 | `PROCESS.md` | the optimizer, required | fresh each iteration; **snapshotted with the candidate** and surfaced per-iteration by the dashboard |
 | `RUNMAP.md` + `prior_iterations/<id>/` | framework | manifest plus every prior iteration's `PROCESS.md` and capability diff |

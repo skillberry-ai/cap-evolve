@@ -41,7 +41,7 @@ def _load_records(run_dir: RunDir, tag: str, split: str = "val") -> list[dict]:
     diagnosis unreachable for every caller.
     """
     out = []
-    vdir = run_dir.rollouts / split
+    vdir = run_dir.rollout_dir(split)   # a sealed split's rollouts live outside the run tree
     if not vdir.exists():
         return out
     # ``tag`` may be a comma-separated list: pooled evidence (e.g. every seed-equivalent run).

@@ -9,6 +9,31 @@ All notable changes to cap-evolve are documented here. The format follows
 
 ## [Unreleased]
 ### Changed
+- **Behaviour change for hill-climb runs whose split has distinct `train` and `val` ids:** the proposer now
+  learns from TRAIN and the gate still decides on VAL. Before, plain hill-climb (no `hc2` / P2 / `split_mode:
+  pooled`) used val for both: the proposer's trajectories, failure lists, focus order, LEDGER broke/fixed lists
+  and `prior_iterations/` were val, and train was only scored for the seed at baseline and at finalize. New
+  spec key `hc_feedback_split` (`train` | `val` | `auto`, default `auto`; env `CAPEVOLVE_HC_FEEDBACK_SPLIT`
+  wins), resolved once per run from the frozen splits and logged as an `hc_feedback_split` event: `auto` is
+  `train` when train and val differ as sets, `val` when they are the same set; a run started before the key
+  existed (iterations spent, nothing frozen) stays `val`. Under `train` the proposer is given the val verdict and
+  aggregates: val task ids and per-task val results are not in the run tree and not in anything handed to the
+  proposer (prompt, work-dir files, `rejected.jsonl`/`history.jsonl`, events, `graph.jsonl`; reasons name counts,
+  a bare numeric id in free text is left as is). They go to the sealed dir outside the run tree (as for pooled
+  mode: by default `<project>.sealed/<run>`, a sibling of the project dir; `CAPEVOLVE_SEALED_DIR` overrides): val
+  rollouts and evidence-ledger rows, the val id list (`splits.json` keeps train/test; `read_splits` merges it
+  back), the per-task val results of `baseline.json` and `final.json` (they keep the aggregates;
+  `RunDir.read_baseline`/`read_record` merge them back, and an old-layout record is migrated once), per-step
+  broke/fixed lists with the raw gate reason (`steps.jsonl`), quarantine ids. The sealed dir's path is in
+  `state.json`, so an unsandboxed proposer that deliberately follows it can still read it (as in pooled mode);
+  read isolation (a work-dir-only sandbox or a read-deny hook) is separate hardening. The report phase's
+  `report.md`/`dashboard.html`, written after the search for the operator, may show per-task val results. Each accepted champion is run once on train
+  (tagged with its candidate id) so LEDGER compares its train results with its parent's; a rejected candidate is
+  never run on train. Cost: |train| x num_trials extra rollouts per accepted candidate, charged to
+  `max_metric_calls` and always reserved first (`champion_train_unfunded` stops the loop instead of
+  overspending); finalize then reuses the champion's train rollouts. `hc_feedback_split: val` restores the old
+  behaviour. Not used under P2 / pooled / HC-2 (they have F/C), where an explicit `train` is a logged no-op.
+  Under P2 the cyclic/hardest-first focus order now also comes from the proposer's split (F) instead of val.
 - The vendored SpreadsheetBench harness moved from `third_party/spreadsheetbench` to
   `benchmarks/spreadsheetbench/harness`, next to the adapter that uses it. CI sets
   `SPREADSHEETBENCH_HARNESS_DIR` to the new path; a local run that set it to the old path must update it.

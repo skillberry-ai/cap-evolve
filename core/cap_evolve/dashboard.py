@@ -231,6 +231,18 @@ def _read_json(path: Path | None) -> dict:
     return {}
 
 
+def _read_record(run_dir, root: Path, name: str) -> dict:
+    """A run record (``baseline.json`` / ``final.json``) with any sealed per-task results merged back (a train-feedback
+    hill-climb run keeps them in its sealed dir). Both files are read through ``_safe_subpath``: the run dir comes from the caller."""
+    from .rundir import merge_sealed_record
+    d = _read_json(_safe_subpath(root, name))
+    if not d.pop("sealed_per_task", False):
+        return d
+    sealed = getattr(run_dir, "sealed_dir", None)
+    private = _read_json(_safe_subpath(Path(sealed), name)) if sealed else {}
+    return merge_sealed_record(d, private) if private else d
+
+
 def _per_task_from_rollouts(run_dir, tag: str, split: str = "val"):
     """(per_task_reward, feedback, per_task_cost_usd) for ``tag`` rebuilt from persisted rollouts.
 
@@ -1453,8 +1465,8 @@ def reduce_run(run_dir) -> dict:
         if e.get("kind") == "opt_cost_attribution":
             for _cid, _usd in (e.get("by_candidate") or {}).items():
                 opt_usd_attributed[_cid] = opt_usd_attributed.get(_cid, 0.0) + float(_usd)
-    baseline = _read_json(_safe_subpath(root, "baseline.json"))
-    final = _read_json(_safe_subpath(root, "final.json"))
+    baseline = _read_record(run_dir, root, "baseline.json")
+    final = _read_record(run_dir, root, "final.json")
 
     per_task_file = _val_per_task_file(root)
 
