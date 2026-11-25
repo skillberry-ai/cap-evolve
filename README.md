@@ -300,6 +300,7 @@ from zero: [tau2](docs/REPRODUCE_tau2.md) · [SkillsBench](docs/REPRODUCE_skills
 | [Comparison](docs/COMPARISON.md) | You want positioning vs other tools and external results |
 | [Extending cap-evolve](docs/EXTENDING.md) | You are adding a capability, optimizer, or algorithm |
 | [Troubleshooting](docs/TROUBLESHOOTING.md) | Installation or a run failed |
+| [Onboarding course](docs/education/README.md) | You are new to the team: 8 slide decks (~2h 40m) from the idea down to the code, with English and Hebrew speaker notes |
 | [Roadmap](docs/ROADMAP.md) | You want planned work |
 | [How-to guides](docs/how-to/cap-evolve-with-exgentic-tau2.md) | You want a specific harness + benchmark recipe |
 | [Docker/Podman on CCC](docs/how-to/ccc/CCC_PODMAN_SETUP.md) | You are running on a cluster with no root, no `sudo`, no subuid range (IBM CCC), or submitting cap-evolve through LSF |

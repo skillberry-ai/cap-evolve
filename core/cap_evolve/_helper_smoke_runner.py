@@ -5,6 +5,10 @@ installs an audit hook BEFORE importing the helper: sockets, process spawning an
 gold/evaluator paths are refused, and any write outside the declared outputs is refused. Every
 refusal is also recorded, so a helper that swallows the PermissionError still fails the smoke.
 The single result line goes to the real stdout as JSON; the helper's own stdout is captured.
+
+With ``loader: kernel`` it does not import the script from its file: it execs ``bootstrap`` (the
+candidate's ``helpers.kernel_bootstrap`` source, the exact text the target's kernel runs), under the
+same hook, and a ``call`` row calls ``sys.modules[module]``.
 """
 import hashlib
 import importlib.util
@@ -120,6 +124,18 @@ def collect():
     return out
 
 
+def load_module():
+    """The module under test: from the kernel bootstrap (kernel loader), or from its file."""
+    if spec.get("loader") == "kernel":
+        exec(compile(spec["bootstrap"], "<capevolve-kernel-bootstrap>", "exec"),
+             {"__name__": "__main__"})          # the kernel runs it in its __main__ namespace
+        return sys.modules.get(spec["module"]) if spec.get("module") else None
+    s = importlib.util.spec_from_file_location("helper_under_smoke", spec["script"])
+    m = importlib.util.module_from_spec(s)
+    s.loader.exec_module(m)
+    return m
+
+
 before = collect()
 res = {"ok": True, "exception": None, "stdout": "", "value": None, "violations": violations}
 sys.addaudithook(hook)
@@ -129,9 +145,7 @@ sys.stdout = captured
 try:
     script = spec["script"]
     if spec["mode"] == "import":
-        s = importlib.util.spec_from_file_location("helper_under_smoke", script)
-        mod = importlib.util.module_from_spec(s)
-        s.loader.exec_module(mod)
+        load_module()
     elif spec["mode"] == "cli":
         sys.argv = [script] + [str(a) for a in spec.get("argv") or []]
         if spec.get("stdin") is not None:
@@ -142,9 +156,9 @@ try:
             if e.code not in (None, 0):
                 raise RuntimeError(f"exit status {e.code}")
     else:  # call
-        s = importlib.util.spec_from_file_location("helper_under_smoke", script)
-        mod = importlib.util.module_from_spec(s)
-        s.loader.exec_module(mod)
+        mod = load_module()
+        if mod is None:
+            raise ImportError(f"{spec.get('module')} is not defined by the skills bootstrap")
         fn = mod
         for part in spec["call"].split("."):
             fn = getattr(fn, part)

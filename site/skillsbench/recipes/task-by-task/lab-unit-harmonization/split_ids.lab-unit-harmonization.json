@@ -1,5 +1,0 @@
-{
-  "train": ["lab-unit-harmonization"],
-  "val": ["lab-unit-harmonization"],
-  "test": ["lab-unit-harmonization"]
-}

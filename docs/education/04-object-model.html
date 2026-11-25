@@ -1,0 +1,758 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chapter 4 · Object model and data</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Fira+Sans:wght@400;600;700;800&family=Rubik:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/deck.css">
+<style>
+  svg.diagram .label { font-size: 14px; }
+  svg.diagram .sub { font-size: 14px; fill: var(--muted); }
+  svg.diagram .tiny { font-size: 14px; fill: var(--body); font-family: var(--mono); }
+  .slide pre.tight { font-size: 15px; line-height: 1.45; padding: 12px 16px; }
+  .slide .tree.tight { font-size: 15px; line-height: 1.45; }
+  .slide table.compact td, .slide table.compact th { padding: 6px 10px; }
+  .slide table.compact { font-size: 17px; }
+  .slide .term .def { font-size: 16px; }
+</style>
+</head>
+<body data-chapter="Chapter 4 · Object model and data" data-minutes="20">
+<div id="stage"><div id="canvas">
+
+<!-- ═══ 1. Title ═══ -->
+<section class="slide title">
+  <div class="kicker">cap-evolve onboarding · Chapter 4 of 8</div>
+  <h1>The object model: types, contracts and files on disk</h1>
+  <p class="lead">After this chapter you can name every core object, say who writes it, and find it in a run directory.</p>
+  <div class="meta"><span class="pill blue">20 minutes</span><span class="pill amber">Level: deep software engineering</span><span class="pill">core/cap_evolve/</span></div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[0:00–0:40]</span> Welcome to chapter four. In chapters two and three you learned the words and the folders. Now we open the boxes. This chapter is about data: the dataclasses that every part of cap-evolve shares, the adapter contract that a project implements, and the files a run writes to disk.</p>
+    <p>The main idea for today is simple. cap-evolve is a set of small processes that talk through plain JSON files and JSON on stdout. If you know these objects and files, you can debug almost any run by reading the run directory. Everything I show comes from the real code in core/cap_evolve, and from real fixtures in core/tests/fixtures.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[0:00–0:40]</span> ברוכים הבאים לפרק ארבע. בפרקים שתיים ושלוש למדנו את המונחים ואת מבנה התיקיות. עכשיו אנחנו פותחים את הקופסאות. הפרק הזה עוסק בנתונים: ה-dataclasses שכל חלקי cap-evolve משתפים, ה-adapter contract שכל פרויקט מממש, והקבצים שריצה כותבת לדיסק.</p>
+    <p>הרעיון המרכזי פשוט. cap-evolve הוא אוסף של תהליכים קטנים שמדברים דרך קבצי JSON ודרך JSON על stdout. אם מכירים את האובייקטים והקבצים האלה, אפשר לדבג כמעט כל ריצה רק מקריאת ה-run directory. כל מה שאראה לקוח מהקוד האמיתי ב-core/cap_evolve ומה-fixtures ב-core/tests/fixtures.</p>
+  </aside>
+</section>
+
+<!-- ═══ 2. Agenda ═══ -->
+<section class="slide">
+  <h2>What you will learn</h2>
+  <div class="grid-3">
+    <div class="card blue"><h3>1 · Shared types</h3><ul><li><code>Task</code>, <code>Rollout</code>, <code>Score</code>, <code>Candidate</code></li><li>reward clamping</li><li>the one ignore list</li></ul></div>
+    <div class="card amber"><h3>2 · Adapter contract</h3><ul><li>3 required methods</li><li>defaulted hooks, fast paths</li><li><code>ctx</code>, seeds, honesty rules</li></ul></div>
+    <div class="card green"><h3>3 · The run directory</h3><ul><li>every file and folder</li><li>written once, mutable, sealed</li><li><code>RunDir</code>, <code>Budget</code>, <code>Spent</code></li></ul></div>
+    <div class="card violet"><h3>4 · Events and views</h3><ul><li><code>events.jsonl</code> kinds</li><li><code>reduce_run</code> → TUI and dashboard</li><li>schema v2</li></ul></div>
+    <div class="card"><h3>5 · Graph, cache, memory</h3><ul><li><code>graph.jsonl</code>, <code>CandidateGraph</code></li><li>content hash, eval cache</li><li>memory files</li></ul></div>
+    <div class="card"><h3>6 · Wires and config</h3><ul><li>JSON over stdout</li><li><code>optimizer_config</code></li><li>cost and pricing</li></ul></div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[0:40–1:20]</span> Here is the plan in six blocks. First, the four shared dataclasses in types.py. Second, the adapter contract: what a project must write, and what it may write. Third, the run directory on disk, and which files are written once and which are sealed. Fourth, the event log and how one function, reduce_run, turns it into the state that both the terminal UI and the web dashboard show.</p>
+    <p>Fifth, the candidate graph, the content hash cache, and memory. Sixth, the wires: how a skill script talks to the core through JSON on stdout, and the small config objects for the optimizer. Chapter five then uses all of these objects to walk through one run step by step.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[0:40–1:20]</span> זו התוכנית, בשישה חלקים. ראשית, ארבעת ה-dataclasses המשותפים ב-types.py. שנית, ה-adapter contract: מה פרויקט חייב לממש ומה הוא רשאי לממש. שלישית, ה-run directory על הדיסק, ואילו קבצים נכתבים פעם אחת ואילו נחתמים. רביעית, יומן האירועים, ואיך פונקציה אחת, reduce_run, הופכת אותו למצב שגם ה-TUI וגם ה-dashboard מציגים.</p>
+    <p>חמישית, ה-candidate graph, ה-cache שמבוסס על content hash, והזיכרון. שישית, החיווט: איך סקריפט של skill מדבר עם ה-core דרך JSON על stdout, ואובייקטי ה-config הקטנים של ה-optimizer. בפרק חמש נשתמש בכל האובייקטים האלה כדי לעבור על ריצה שלב אחר שלב.</p>
+  </aside>
+</section>
+
+<!-- ═══ 3. Four types ═══ -->
+<section class="slide">
+  <h2>Four dataclasses everyone speaks</h2>
+  <svg class="diagram" viewBox="0 0 1136 150">
+    <defs><marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8b98a9"/></marker></defs>
+    <rect class="box blue" x="10" y="40" width="200" height="70" rx="12"/><text class="title mono" x="110" y="82" text-anchor="middle" font-size="20">Task</text>
+    <rect class="box violet" x="310" y="40" width="220" height="70" rx="12"/><text class="title mono" x="420" y="82" text-anchor="middle" font-size="20">Candidate</text>
+    <rect class="box amber" x="630" y="40" width="200" height="70" rx="12"/><text class="title mono" x="730" y="82" text-anchor="middle" font-size="20">Rollout</text>
+    <rect class="box green" x="926" y="40" width="200" height="70" rx="12"/><text class="title mono" x="1026" y="82" text-anchor="middle" font-size="20">Score</text>
+    <path class="line" d="M210,75 L310,75" marker-end="url(#a3)"/>
+    <path class="line" d="M530,75 L630,75" marker-end="url(#a3)"/><text class="label mono" x="580" y="30" text-anchor="middle">run_target()</text>
+    <path class="line" d="M830,75 L926,75" marker-end="url(#a3)"/><text class="label mono" x="878" y="30" text-anchor="middle">score()</text>
+    <text class="label" x="260" y="30" text-anchor="middle">+ live</text>
+  </svg>
+  <div class="grid-4 mt">
+    <div class="term"><span class="name">Task</span><div class="def"><code>id</code>, <code>input</code>, <code>target</code> (gold), <code>metadata</code>. One unit of eval work.</div></div>
+    <div class="term violet"><span class="name">Candidate</span><div class="def"><code>id</code>, <code>component</code>, <code>text_parts</code> (gepa view), <code>dir</code> (file-tree view).</div></div>
+    <div class="term amber"><span class="name">Rollout</span><div class="def"><code>task_id</code>, <code>output</code>, <code>trace</code>, <code>tool_calls</code>, <code>cost_usd</code>, <code>tokens</code>, <code>error</code>, <code>metadata</code>.</div></div>
+    <div class="term green"><span class="name">Score</span><div class="def"><code>reward</code> 0..1, <code>feedback</code>, <code>n</code>, <code>stderr</code>, <code>trial_rewards</code>, <code>raw</code>, <code>metrics</code>.</div></div>
+  </div>
+  <p class="small muted mt">Source: core/cap_evolve/types.py — pure stdlib, each class has <code>to_dict</code> / <code>from_dict</code></p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[1:20–2:30]</span> types.py holds exactly four dataclasses. The module docstring calls it the shared vocabulary for the whole pipeline. A Task is one unit of evaluation work. Its target field holds the gold answer, and it never leaves the scorer. A Candidate is one version of the capability. It has two views: text_parts is a dictionary of named text components, which gepa uses, and dir is a path to a file tree, which the other algorithms use. Both may be set.</p>
+    <p>A Rollout is the result of running the target agent on one task with a candidate live. It carries output, trace, tool calls, cost, tokens, and an error string for infrastructure failures. A Score is the judged result: a reward between zero and one, plus natural-language feedback. The feedback is the learning signal for the optimizer. The docstring calls it gepa's Actionable Side Information. Note that Score also stores n, stderr and trial_rewards, so one Score can describe several trials of the same task.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[1:20–2:30]</span> בקובץ types.py יש בדיוק ארבעה dataclasses. ה-docstring קורא לו אוצר המילים המשותף של כל ה-pipeline. Task הוא יחידת עבודה אחת של הערכה. השדה target מחזיק את התשובה הנכונה, והוא אף פעם לא יוצא מה-scorer. Candidate הוא גרסה אחת של ה-capability. יש לו שתי תצוגות: text_parts הוא מילון של רכיבי טקסט עם שמות, ש-gepa משתמש בו, ו-dir הוא נתיב לעץ קבצים, שבו משתמשים האלגוריתמים האחרים. אפשר למלא את שניהם.</p>
+    <p>Rollout הוא התוצאה של הרצת ה-target agent על task אחד כשה-candidate פעיל. הוא מחזיק output, trace, קריאות לכלים, עלות, tokens, ושדה error לכשלי תשתית. Score הוא התוצאה השפוטה: reward בין אפס לאחת, ועוד feedback בשפה טבעית. ה-feedback הוא אות הלמידה של ה-optimizer, מה שה-docstring מכנה Actionable Side Information של gepa. שימו לב ש-Score שומר גם n, stderr ו-trial_rewards, כך ש-Score אחד יכול לתאר כמה trials של אותו task.</p>
+  </aside>
+</section>
+
+<!-- ═══ 4. Real Rollout and Score ═══ -->
+<section class="slide">
+  <h2>A real rollout file: tau2 airline task 10</h2>
+  <div class="row">
+    <div class="col" style="flex:1.75">
+<pre class="tight">{<span class="s">"input"</span>: <span class="s">"10"</span>,
+ <span class="s">"rollout"</span>: {<span class="s">"task_id"</span>: <span class="s">"10"</span>, <span class="s">"output"</span>: [ <span class="c">…26 chat messages…</span> ],
+   <span class="s">"tool_calls"</span>: [], <span class="s">"cost_usd"</span>: <span class="n">0.0</span>, <span class="s">"tokens"</span>: <span class="n">80243</span>, <span class="s">"error"</span>: <span class="k">null</span>,
+   <span class="s">"metadata"</span>: {<span class="s">"domain"</span>: <span class="s">"airline"</span>, <span class="s">"tau2_reward"</span>: <span class="n">0.0</span>,
+                <span class="s">"cost_source"</span>: <span class="s">"tau2"</span>, <span class="c">…</span>}},
+ <span class="s">"score"</span>: {<span class="s">"task_id"</span>: <span class="s">"10"</span>, <span class="hl"><span class="s">"reward"</span>: <span class="n">0.0</span></span>, <span class="s">"n"</span>: <span class="n">1</span>, <span class="s">"stderr"</span>: <span class="n">0.0</span>,
+   <span class="s">"feedback"</span>: <span class="s">"Database state does NOT match the expected final</span>
+<span class="s">     state, but NO gold action mismatched … The 2 write(s) you</span>
+<span class="s">     performed: update_reservation_flights(cabin='business', …);</span>
+<span class="s">     update_reservation_flights(…) … happened twice."</span>,
+   <span class="s">"trial_rewards"</span>: [], <span class="s">"raw"</span>: {}, <span class="s">"metrics"</span>: []}}</pre>
+    </div>
+    <div class="col">
+      <div class="card amber"><h3>File name</h3><p><code>rollouts/val/</code><br><code>10__seed__t8.json</code></p><p class="small muted">= <code>&lt;task&gt;__&lt;tag&gt;__t&lt;k&gt;</code></p></div>
+      <div class="card green mt"><h3>Shape</h3><p><code>{input, rollout, score}</code> — written by <code>_persist_trial</code> in <code>harness.py</code></p></div>
+      <div class="callout amber mt" style="font-size:17px">Feedback says <b>why</b>. It never gives the gold answer.</div>
+    </div>
+  </div>
+  <p class="small muted">Source: core/tests/fixtures/run3_task10_seed_t8_duplicate_payment.json (shortened)</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[2:30–3:30]</span> This is a real file from a real tau2 airline run, kept as a test fixture. I shortened it. Each trial of each task on each candidate gets its own file. The name is task id, double underscore, candidate tag, double underscore, t and the trial index. So this is task 10, the seed candidate, trial 8.</p>
+    <p>The file has three keys: the task input, the rollout as Rollout.to_dict, and the score as Score.to_dict. The harness function _persist_trial writes it. Look at the feedback. The scorer says the database state is wrong, and it says what kind of mistake happened: a duplicated write. It lists the agent's own calls. It does not say what the correct final database is. That is the rule: explain why, never leak the gold. Also note the metadata: the adapter puts benchmark-specific detail there, like the raw tau2 reward and the cost source.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[2:30–3:30]</span> זה קובץ אמיתי מריצה אמיתית של tau2 airline, שנשמר כ-test fixture. קיצרתי אותו. לכל trial של כל task על כל candidate יש קובץ משלו. השם הוא מזהה ה-task, קו תחתון כפול, ה-tag של ה-candidate, קו תחתון כפול, ואז t ומספר ה-trial. כלומר כאן זה task 10, ה-seed, trial 8.</p>
+    <p>בקובץ שלושה מפתחות: ה-input של ה-task, ה-rollout כפי ש-Rollout.to_dict מחזיר, וה-score כפי ש-Score.to_dict מחזיר. הפונקציה _persist_trial ב-harness כותבת אותו. תסתכלו על ה-feedback. ה-scorer אומר שמצב בסיס הנתונים שגוי, ומסביר איזה סוג טעות קרה: כתיבה כפולה. הוא מפרט את הקריאות של הסוכן עצמו. הוא לא אומר מה המצב הנכון. זה הכלל: להסביר למה, ולעולם לא לחשוף את ה-gold. שימו לב גם ל-metadata: שם ה-adapter שם פרטים ייחודיים ל-benchmark, כמו ה-reward הגולמי של tau2 ומקור העלות.</p>
+  </aside>
+</section>
+
+<!-- ═══ 5. Score invariants ═══ -->
+<section class="slide">
+  <h2>Score protects the statistics</h2>
+  <div class="row">
+    <div class="col">
+<pre class="tight"><span class="k">def</span> <span class="f">_clamp01</span>(x: float) -&gt; float:
+    <span class="c">"""a buggy scorer can't poison stats"""</span>
+    <span class="k">if</span> x != x:      <span class="c"># NaN</span>
+        <span class="k">return</span> <span class="n">0.0</span>
+    <span class="k">return</span> <span class="n">0.0</span> <span class="k">if</span> x &lt; <span class="n">0</span> <span class="k">else</span> <span class="n">1.0</span> <span class="k">if</span> x &gt; <span class="n">1</span> <span class="k">else</span> x
+
+<span class="k">class</span> <span class="f">Score</span>:
+    <span class="k">def</span> <span class="f">__post_init__</span>(self):
+        self.reward = _clamp01(self.reward)
+        self.trial_rewards = [_clamp01(r) <span class="k">for</span> r <span class="k">in</span> ...]
+        self._validate_metrics()</pre>
+    </div>
+    <div class="col">
+      <h3>The <code>metrics</code> catalog</h3>
+<pre class="tight">[{<span class="s">"name"</span>: <span class="s">"reward"</span>,  <span class="s">"value"</span>: <span class="n">1.0</span>,
+  <span class="s">"primary"</span>: <span class="k">true</span>,  <span class="s">"direction"</span>: <span class="s">"higher"</span>},
+ {<span class="s">"name"</span>: <span class="s">"cost_usd"</span>, <span class="s">"value"</span>: <span class="n">0.013</span>,
+  <span class="s">"primary"</span>: <span class="k">false</span>, <span class="s">"direction"</span>: <span class="s">"lower"</span>}]</pre>
+      <ul class="small">
+        <li>exactly <b>one</b> primary</li>
+        <li>primary <code>value</code> must equal <code>reward</code></li>
+        <li>others are shown only — never move the gate</li>
+        <li>bad catalog → <code>ValueError</code> at construction</li>
+      </ul>
+    </div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[3:30–4:20]</span> Score does real work in its constructor. __post_init__ clamps the reward and every trial reward into the range zero to one. A NaN becomes zero. The comment says why: a buggy scorer must not poison the statistics. A reward of 1.7 or minus 3 would break the standard error and the gate in chapter six.</p>
+    <p>On the right is the optional metrics catalog. A scorer can report secondary numbers, for example db_match and cost_usd in the tau2 adapter. The rules are checked at construction time: names are unique, exactly one entry is primary, and the primary value must equal reward. The gate reads only the primary. The others are for the dashboard. The validation is strict on purpose. A broken catalog used to crash much later, inside harness._aggregate_metrics, far from the real bug.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[3:30–4:20]</span> ה-Score עושה עבודה אמיתית כבר ב-constructor. הפונקציה __post_init__ מצמצמת את ה-reward ואת כל ה-trial rewards לטווח אפס עד אחת. NaN הופך לאפס. ההערה בקוד מסבירה למה: scorer עם באג לא יכול להרעיל את הסטטיסטיקה. reward של 1.7 או של מינוס 3 היה שובר את ה-standard error ואת ה-gate שנראה בפרק שש.</p>
+    <p>מימין רואים את ה-metrics catalog האופציונלי. scorer יכול לדווח מספרים משניים, למשל db_match ו-cost_usd ב-adapter של tau2. הכללים נבדקים כבר ביצירה: שמות ייחודיים, בדיוק רשומה אחת היא primary, וערך ה-primary חייב להיות שווה ל-reward. ה-gate קורא רק את ה-primary. השאר נועדו ל-dashboard. הבדיקה קפדנית בכוונה: catalog שבור היה קורס פעם הרבה יותר מאוחר, בתוך harness._aggregate_metrics, רחוק מהבאג האמיתי.</p>
+  </aside>
+</section>
+
+<!-- ═══ 6. NON_CAPABILITY ═══ -->
+<section class="slide">
+  <h2>One ignore list, three readers</h2>
+  <svg class="diagram" viewBox="0 0 1136 330">
+    <defs><marker id="a6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8b98a9"/></marker></defs>
+    <rect class="box amber" x="10" y="20" width="470" height="290" rx="12"/>
+    <text class="title mono" x="30" y="52" font-size="18">types.NON_CAPABILITY_FILES</text>
+    <text class="tiny" x="30" y="84">MEMORY.md STATE.md INSTRUCTIONS.md</text>
+    <text class="tiny" x="30" y="106">REJECTED.md FOCUS.md REFLECTION.md</text>
+    <text class="tiny" x="30" y="128">LEDGER.md JOURNAL.md PROCESS.md RUNMAP.md</text>
+    <text class="tiny" x="30" y="150">INSIGHTS.md META_INSIGHTS.md DIAGNOSIS.json</text>
+    <text class="tiny" x="30" y="172">FRAMEWORK_IMPROVEMENTS.md evaluation_plan.json</text>
+    <text class="tiny" x="30" y="194">CLAUDE.md AGENTS.md GEMINI.md</text>
+    <text class="title mono" x="30" y="236" font-size="18">types.NON_CAPABILITY_DIRS</text>
+    <text class="tiny" x="30" y="266">.git __pycache__ prior_iterations trajectories</text>
+    <text class="tiny" x="30" y="288">guidance .claude .agents .gemini .opencode .bob .cursor</text>
+    <rect class="box blue" x="640" y="20" width="486" height="80" rx="12"/>
+    <text class="title mono" x="660" y="54" font-size="17">cache.hash_candidate_dir</text><text class="sub" x="660" y="80">not hashed → same bytes, same hash</text>
+    <rect class="box violet" x="640" y="125" width="486" height="80" rx="12"/>
+    <text class="title mono" x="660" y="159" font-size="17">gepa.py components</text><text class="sub" x="660" y="185">not an editable component</text>
+    <rect class="box green" x="640" y="230" width="486" height="80" rx="12"/>
+    <text class="title mono" x="660" y="264" font-size="17">diffview.py (cap-evolve diff)</text><text class="sub" x="660" y="290">not shown as a capability edit</text>
+    <path class="line" d="M480,165 L640,60" marker-end="url(#a6)"/>
+    <path class="line" d="M480,165 L640,165" marker-end="url(#a6)"/>
+    <path class="line" d="M480,165 L640,270" marker-end="url(#a6)"/>
+  </svg>
+  <p class="small">Why one list: three copies drifted. diffview missed <code>FOCUS.md</code> and <code>REFLECTION.md</code>, so a gepa diff buried 2 real lines under 33 lines of bookkeeping.</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[4:20–5:10]</span> A candidate directory holds more than the capability. The optimizer writes scratch notes there, the harness injects read-only context like trajectories and guidance, and agent hosts add their own instruction files like CLAUDE.md. None of that is the capability.</p>
+    <p>types.py defines two frozen sets: NON_CAPABILITY_FILES and NON_CAPABILITY_DIRS. Three readers use them. The content hash in cache.py skips them, so a byte-identical copy of the seed gets the same hash. gepa does not treat them as components to optimize. And diffview does not show them as edits. The comment in the code tells the history. There were three copies of this list, and they drifted. A real gepa diff showed two real changed lines under thirty-three lines of gepa's own bookkeeping. If you add a new scratch file, add it here, in one place.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[4:20–5:10]</span> תיקיית candidate מכילה יותר מה-capability עצמו. ה-optimizer כותב שם הערות עבודה, ה-harness מזריק הקשר לקריאה בלבד כמו trajectories ו-guidance, ו-hosts של סוכנים מוסיפים קבצי הוראות משלהם כמו CLAUDE.md. שום דבר מזה אינו ה-capability.</p>
+    <p>ב-types.py מוגדרים שני frozen sets: ‏NON_CAPABILITY_FILES ו-NON_CAPABILITY_DIRS. שלושה קוראים משתמשים בהם. ה-content hash ב-cache.py מדלג עליהם, ולכן עותק זהה בבתים של ה-seed מקבל אותו hash. ‏gepa לא מתייחס אליהם כרכיבים לאופטימיזציה. ו-diffview לא מציג אותם כשינויים. ההערה בקוד מספרת את ההיסטוריה: היו שלושה עותקים של הרשימה, והם התפצלו. diff אמיתי של gepa הראה שתי שורות שינוי אמיתיות מתחת לשלושים ושלוש שורות של רישומים פנימיים. אם מוסיפים קובץ עבודה חדש, מוסיפים אותו כאן, במקום אחד.</p>
+  </aside>
+</section>
+
+<!-- ═══ 7. Adapter contract ═══ -->
+<section class="slide">
+  <h2>The adapter contract: <code>CapabilityAdapter</code></h2>
+  <table class="compact">
+    <tr><th>Group</th><th>Method</th><th>Default / when</th></tr>
+    <tr><td><span class="pill red">required</span></td><td><code>tasks(split) -&gt; list[Task]</code></td><td>same tasks every call</td></tr>
+    <tr><td><span class="pill red">required</span></td><td><code>run_target(task, ctx, *, seed=0) -&gt; Rollout</code></td><td>run the agent; do not score</td></tr>
+    <tr><td><span class="pill red">required</span></td><td><code>score(task, rollout) -&gt; Score</code></td><td>deterministic, 0..1 + feedback</td></tr>
+    <tr><td><span class="pill blue">defaulted</span></td><td><code>materialize(dir, edits)</code> · <code>live(dir)</code> · <code>apply(dir, edits)</code></td><td>write files · yield <code>dir</code> · back-compat</td></tr>
+    <tr><td><span class="pill blue">defaulted</span></td><td><code>trajectories(split, ctx)</code> · <code>runner_model()</code></td><td><code>None</code> · <code>None</code></td></tr>
+    <tr><td><span class="pill amber">fast path</span></td><td><code>run_batch(tasks, ctx, *, seed)</code></td><td>replaces <code>run_target</code> loop (tau2)</td></tr>
+    <tr><td><span class="pill amber">fast path</span></td><td><code>run_trials(tasks, ctx, *, n_trials, base_seed)</code></td><td>all trials in one call</td></tr>
+    <tr><td><span class="pill amber">fast path</span></td><td><code>score_batch(tasks, rollouts) -&gt; {id: Score}</code></td><td>one scoring call per trial (swebench)</td></tr>
+  </table>
+  <p class="small muted mt">Fast paths are not on the base class: <code>harness.py</code> uses <code>hasattr(adapter, "run_batch")</code> etc. Source: core/cap_evolve/adapter.py, docs/ADAPTER_CONTRACT.md</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[5:10–6:10]</span> The project implements one class, a subclass of CapabilityAdapter, in .capevolve/project/adapters/adapter.py. Three methods are abstract: tasks, run_target and score. Get data, run, score. Stubs raise NotImplementedError with the marker IMPLEMENT ME, and the function stub_methods probes for that marker so cap-evolve check can say exactly what is missing.</p>
+    <p>Five hooks have working defaults. materialize, live and apply make a candidate live. trajectories can return a folder of native traces. runner_model returns the consuming model id so check can warn about a mismatch with the spec. Three more are fast paths. They are not on the base class at all. The harness feature-detects them with hasattr. run_batch lets tau2 drive its own batch runner. run_trials runs all trials in one call. score_batch lets swebench grade a whole trial in one Docker harness call. Any task the batch omits falls back to a plain score call, so nothing is silently dropped.</p>
+    <p>One note: the brief for this course mentions capability_sources as a hook. In the code it is a spec key in capevolve.yaml, read by the harness, not an adapter method.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[5:10–6:10]</span> הפרויקט מממש מחלקה אחת, תת-מחלקה של CapabilityAdapter, בקובץ ‎.capevolve/project/adapters/adapter.py. שלוש מתודות הן abstract: ‏tasks, ‏run_target ו-score. להביא נתונים, להריץ, לתת ציון. stub זורק NotImplementedError עם הסימון IMPLEMENT ME, והפונקציה stub_methods מחפשת את הסימון הזה כדי ש-cap-evolve check יגיד בדיוק מה חסר.</p>
+    <p>לחמישה hooks יש ברירת מחדל שעובדת. materialize, ‏live ו-apply הופכים candidate לפעיל. trajectories יכול להחזיר תיקייה של traces מקוריים. runner_model מחזיר את מזהה המודל בפועל, כדי ש-check יזהיר על אי-התאמה מול ה-spec. עוד שלושה הם fast paths. הם בכלל לא מוגדרים במחלקת הבסיס. ה-harness מזהה אותם עם hasattr. ‏run_batch מאפשר ל-tau2 להפעיל את ה-batch runner שלו. run_trials מריץ את כל ה-trials בקריאה אחת. score_batch מאפשר ל-swebench לדרג trial שלם בקריאה אחת ל-Docker. task שה-batch השמיט נופל חזרה לקריאת score רגילה, כך ששום דבר לא נעלם בשקט.</p>
+    <p>הערה אחת: התדריך של הקורס מזכיר את capability_sources כ-hook. בקוד זה מפתח ב-capevolve.yaml שה-harness קורא, לא מתודה של ה-adapter.</p>
+  </aside>
+</section>
+
+<!-- ═══ 8. ctx and live ═══ -->
+<section class="slide">
+  <h2>How a candidate becomes live: <code>ctx</code></h2>
+  <svg class="diagram" viewBox="0 0 1136 400">
+    <defs><marker id="a8" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8b98a9"/></marker></defs>
+    <rect class="box blue" x="0" y="10" width="270" height="60" rx="10"/><text class="title mono" x="135" y="47" text-anchor="middle" font-size="15">harness.evaluate_candidate</text>
+    <rect class="box amber" x="440" y="10" width="250" height="60" rx="10"/><text class="title mono" x="565" y="47" text-anchor="middle" font-size="16">adapter</text>
+    <rect class="box green" x="870" y="10" width="256" height="60" rx="10"/><text class="title mono" x="998" y="47" text-anchor="middle" font-size="16">rollouts/&lt;split&gt;/</text>
+    <path class="line dash" d="M135,70 L135,390"/><path class="line dash" d="M565,70 L565,390"/><path class="line dash" d="M998,70 L998,390"/>
+    <path class="line" d="M135,105 L565,105" marker-end="url(#a8)"/><text class="label mono" x="350" y="97" text-anchor="middle">with live(candidate_dir) as ctx</text>
+    <path class="line" d="M565,135 L135,135" marker-end="url(#a8)"/><text class="label mono" x="350" y="128" text-anchor="middle">yield ctx  (default: the dir Path)</text>
+    <rect class="box" x="150" y="155" width="400" height="34" rx="6"/><text class="tiny" x="350" y="178" text-anchor="middle">for k in range(n_trials): seed = base_seed + k</text>
+    <path class="line" d="M135,215 L565,215" marker-end="url(#a8)"/><text class="label mono" x="350" y="207" text-anchor="middle">run_target(task, ctx, seed=seed)</text>
+    <path class="line" d="M565,245 L135,245" marker-end="url(#a8)"/><text class="label mono" x="350" y="238" text-anchor="middle">Rollout</text>
+    <path class="line" d="M135,285 L565,285" marker-end="url(#a8)"/><text class="label mono" x="350" y="277" text-anchor="middle">score(task, rollout)</text>
+    <path class="line" d="M565,315 L135,315" marker-end="url(#a8)"/><text class="label mono" x="350" y="308" text-anchor="middle">Score</text>
+    <path class="line" d="M135,360 L998,360" marker-end="url(#a8)"/><text class="label mono" x="790" y="352" text-anchor="middle">&lt;task&gt;__&lt;tag&gt;__t&lt;k&gt;.json</text>
+    <text class="sub" x="620" y="220">all under redirect_stdout(sys.stderr)</text>
+    <text class="sub" x="620" y="244">score() runs single-threaded</text>
+  </svg>
+  <div class="grid-3">
+    <div class="term"><span class="name">materialize</span><div class="def">pure: writes edits into the dir only</div></div>
+    <div class="term amber"><span class="name">live</span><div class="def">context manager; may yield a sandbox or worktree</div></div>
+    <div class="term green"><span class="name">seed</span><div class="def">must reach a stochastic runner, or SE = 0</div></div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[6:10–7:20]</span> What is ctx? It is whatever the adapter's live context manager yields. By default, live calls the old apply hook and yields the candidate directory path. An adapter can yield something richer: a sandbox handle or a worktree path. That is the reason for the split between materialize and live. The old apply was a global side effect, like monkeypatching a benchmark's policy. With one global slot you cannot evaluate two candidates at once, and the safety check would mutate the host. materialize is pure. live is scoped to one evaluation and tears down on exit.</p>
+    <p>Inside live, the harness loops over trials. The seed for trial k is base_seed plus k. If the runner is an LLM agent, the adapter must forward that seed. If it does not, all trials are identical, the standard error is zero, and any positive delta passes the gate. Then scoring runs serially, and the result goes to one rollout file per task and trial. The whole body runs with stdout redirected to stderr. We will see why on the stdout slide.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[6:10–7:20]</span> מה זה ctx? זה מה שה-context manager בשם live של ה-adapter מחזיר ב-yield. כברירת מחדל, live קורא ל-hook הישן apply ומחזיר את נתיב תיקיית ה-candidate. adapter יכול להחזיר משהו עשיר יותר: handle של sandbox או נתיב של worktree. זו הסיבה להפרדה בין materialize ל-live. ה-apply הישן היה side effect גלובלי, למשל monkeypatch למדיניות של benchmark. עם מקום גלובלי אחד אי אפשר להעריך שני candidates במקביל, ובדיקת הבטיחות הייתה משנה את ה-host. ‏materialize הוא טהור. live תחום להערכה אחת ומנקה אחריו ביציאה.</p>
+    <p>בתוך live, ה-harness עובר בלולאה על ה-trials. ה-seed של trial מספר k הוא base_seed ועוד k. אם ה-runner הוא סוכן LLM, ה-adapter חייב להעביר את ה-seed הלאה. אם לא, כל ה-trials זהים, ה-standard error הוא אפס, וכל delta חיובי עובר את ה-gate. אחר כך ה-scoring רץ באופן סדרתי, והתוצאה נכתבת לקובץ rollout אחד לכל task ו-trial. כל הגוף הזה רץ כש-stdout מופנה ל-stderr. נראה למה בשקף על stdout.</p>
+  </aside>
+</section>
+
+<!-- ═══ 9. Adapter rules ═══ -->
+<section class="slide">
+  <h2>Four honesty rules for an adapter</h2>
+  <div class="grid-2">
+    <div class="card blue"><div class="icon">🔁</div><h3>Deterministic <code>tasks</code> and <code>score</code></h3><p><code>check.py</code> calls <code>tasks('val')</code> twice and <code>score()</code> twice on a probe <code>Rollout(output="__probe_output__")</code>. Any difference fails check.</p></div>
+    <div class="card red"><div class="icon">🙈</div><h3>Never leak gold</h3><p><code>feedback</code> goes to the optimizer. It describes why in general terms. The gold <code>target</code> stays in the scorer.</p></div>
+    <div class="card amber"><div class="icon">⚡</div><h3>Infra failure is not a zero</h3><p>Set <code>Rollout.error</code>, or <code>Score.raw["errored"]</code> when grading crashed. The harness drops that trial from the mean.</p></div>
+    <div class="card green"><div class="icon">🧩</div><h3>Do not re-implement core</h3><p>Splits, trials, pass^k, gate, memory and the run dir belong to <code>cap_evolve</code>. The adapter only gets data, runs, and scores.</p></div>
+  </div>
+  <p class="small muted mt">Source: core/cap_evolve/check.py, harness.py <code>_persist_trial</code>, docs/ADAPTER_CONTRACT.md</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[7:20–8:10]</span> Four rules keep the numbers honest. One: determinism. cap-evolve check loads the adapter, calls tasks of val twice and compares, then scores the same probe rollout twice and compares the rewards. A non-deterministic scorer fails before any budget is spent. The contract doc says this is enforced by the gate; in the code it is the check command, which the docs also call the gate.</p>
+    <p>Two: never leak the gold answer in feedback, because the optimizer reads feedback and would learn the answers. Three: an infrastructure failure is missing data, not a zero. A real example from the code comments: a Docker Hub rate-limit storm once became a val score of zero and taught the optimizer to fix content that was not broken. So set Rollout.error, or set errored in Score.raw when grading itself crashed. Four: do not rebuild splits or gating inside the adapter. Chapter six explains why those rules exist.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[7:20–8:10]</span> ארבעה כללים שומרים על המספרים כנים. אחד: דטרמיניזם. cap-evolve check טוען את ה-adapter, קורא ל-tasks של val פעמיים ומשווה, ואז מדרג את אותו probe rollout פעמיים ומשווה את ה-rewards. scorer לא דטרמיניסטי נכשל עוד לפני שמוציאים תקציב. מסמך ה-contract אומר שה-gate אוכף את זה; בקוד זו פקודת check, שהמסמכים קוראים לה גם gate.</p>
+    <p>שתיים: לא לחשוף את התשובה הנכונה ב-feedback, כי ה-optimizer קורא את ה-feedback ויכול ללמוד את התשובות. שלוש: כשל תשתית הוא מידע חסר, לא אפס. דוגמה אמיתית מההערות בקוד: סערה של rate limit ב-Docker Hub הפכה פעם לציון val של אפס, ולימדה את ה-optimizer לתקן תוכן שלא היה שבור. לכן מגדירים Rollout.error, או errored בתוך Score.raw כשה-grading עצמו קרס. ארבע: לא לבנות מחדש splits או gating בתוך ה-adapter. פרק שש מסביר למה הכללים האלה קיימים.</p>
+  </aside>
+</section>
+
+<!-- ═══ 10. Relationship diagram ═══ -->
+<section class="slide">
+  <h2>How the objects relate</h2>
+  <svg class="diagram" viewBox="0 0 1136 560">
+    <defs><marker id="a10" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8b98a9"/></marker></defs>
+    <!-- row 1 -->
+    <rect class="box" x="0" y="0" width="250" height="66" rx="10"/><text class="title mono" x="125" y="28" text-anchor="middle" font-size="15">spec dict</text><text class="sub" x="125" y="50" text-anchor="middle">specfile.read_yaml(capevolve.yaml)</text>
+    <rect class="box" x="330" y="0" width="250" height="66" rx="10"/><text class="title mono" x="455" y="28" text-anchor="middle" font-size="15">cli.py  cap-evolve run</text><text class="sub" x="455" y="50" text-anchor="middle">runs phase skills</text>
+    <rect class="box violet" x="660" y="0" width="230" height="66" rx="10"/><text class="title mono" x="775" y="28" text-anchor="middle" font-size="15">OptimizerContext</text><text class="sub" x="775" y="50" text-anchor="middle">inject() into work/&lt;cid&gt;</text>
+    <rect class="box" x="926" y="0" width="210" height="66" rx="10"/><text class="title mono" x="1031" y="28" text-anchor="middle" font-size="15">optimizer_config</text><text class="sub" x="1031" y="50" text-anchor="middle">resolve(spec)</text>
+    <!-- row 2 -->
+    <rect class="box blue" x="330" y="130" width="250" height="80" rx="10"/><text class="title mono" x="455" y="160" text-anchor="middle" font-size="15">harness (module)</text><text class="sub" x="455" y="182" text-anchor="middle">evaluate_candidate</text><text class="sub" x="455" y="200" text-anchor="middle">record_iteration</text>
+    <rect class="box amber" x="760" y="130" width="376" height="80" rx="10"/><text class="title mono" x="948" y="160" text-anchor="middle" font-size="15">CapabilityAdapter (project)</text><text class="sub" x="948" y="184" text-anchor="middle">tasks · live · run_target · score</text>
+    <rect class="box violet" x="0" y="130" width="250" height="80" rx="10"/><text class="title mono" x="125" y="160" text-anchor="middle" font-size="15">Candidate</text><text class="sub" x="125" y="184" text-anchor="middle">candidates/&lt;id&gt;/  (dir)</text>
+    <!-- row 3 -->
+    <rect class="box" x="330" y="280" width="250" height="60" rx="10"/><text class="title mono" x="455" y="306" text-anchor="middle" font-size="15">SplitResult</text><text class="sub" x="455" y="326" text-anchor="middle">loop.py · reward, stderr, pass_k</text>
+    <rect class="box green" x="760" y="280" width="376" height="60" rx="10"/><text class="title mono" x="948" y="316" text-anchor="middle" font-size="15">Task → Rollout → Score</text>
+    <rect class="box" x="0" y="280" width="250" height="60" rx="10"/><text class="title mono" x="125" y="306" text-anchor="middle" font-size="15">VersionStore</text><text class="sub" x="125" y="326" text-anchor="middle">store.py · git | copy | command</text>
+    <!-- row 4 -->
+    <rect class="box green" x="250" y="410" width="410" height="140" rx="12"/>
+    <text class="title mono" x="455" y="438" text-anchor="middle" font-size="16">RunDir  (rundir.py)</text>
+    <text class="tiny" x="270" y="466">state.json   Budget · Spent · best_id</text>
+    <text class="tiny" x="270" y="490">splits.json  Splits (test seal)</text>
+    <text class="tiny" x="270" y="514">events.jsonl log_event()</text>
+    <text class="tiny" x="270" y="538">rollouts/ · candidates/ · graph.jsonl</text>
+    <rect class="box blue" x="760" y="410" width="376" height="60" rx="10"/><text class="title mono" x="948" y="436" text-anchor="middle" font-size="15">dashboard.reduce_run</text><text class="sub" x="948" y="456" text-anchor="middle">→ tui.py · dashboard backend</text>
+    <rect class="box violet" x="760" y="490" width="376" height="60" rx="10"/><text class="title mono" x="948" y="516" text-anchor="middle" font-size="15">CandidateGraph · lineage</text><text class="sub" x="948" y="536" text-anchor="middle">query view over graph.jsonl</text>
+    <!-- arrows -->
+    <path class="line" d="M250,33 L330,33" marker-end="url(#a10)"/>
+    <path class="line" d="M455,66 L455,130" marker-end="url(#a10)"/><text class="label" x="465" y="104">subprocess, JSON stdout</text>
+    <path class="line" d="M775,66 L560,130" marker-end="url(#a10)"/>
+    <path class="line" d="M1031,66 L1031,130" marker-end="url(#a10)"/>
+    <path class="line" d="M580,165 L760,165" marker-end="url(#a10)"/><text class="label mono" x="670" y="156" text-anchor="middle">live(), run_target()</text>
+    <path class="line" d="M250,170 L330,170" marker-end="url(#a10)"/><text class="label" x="290" y="160" text-anchor="middle">dir</text>
+    <path class="line" d="M948,210 L948,280" marker-end="url(#a10)"/><text class="label" x="958" y="250">returns</text>
+    <path class="line" d="M455,210 L455,280" marker-end="url(#a10)"/><text class="label" x="465" y="250">aggregates Scores</text>
+    <path class="line" d="M380,210 L380,240 L125,240 L125,280" marker-end="url(#a10)"/><text class="label mono" x="200" y="232">commit()</text>
+    <path class="line" d="M455,340 L455,410" marker-end="url(#a10)"/><text class="label mono" x="465" y="380">log_event · update_spent · snapshot</text>
+    <path class="line" d="M125,340 L125,480 L250,480" marker-end="url(#a10)"/><text class="label" x="135" y="420">git over run dir</text>
+    <path class="line" d="M660,440 L760,440" marker-end="url(#a10)"/>
+    <path class="line" d="M660,520 L760,520" marker-end="url(#a10)"/>
+  </svg>
+  <aside class="notes" lang="en">
+    <p><span class="time">[8:10–9:30]</span> This is the whole object model on one page, with real names. Note first what is not a class. The spec is a plain dict that specfile.read_yaml returns from capevolve.yaml. The harness is a module of functions, not a Harness class. The event stream is the eventstream module, a reader of events.jsonl.</p>
+    <p>Read it top down. cli.py reads the spec and runs phase skills as subprocesses. They call the harness. The harness gets a Candidate as a directory under candidates, and drives the project's CapabilityAdapter: live, run_target, score. The adapter returns Rollouts and Scores. The harness aggregates Scores into a SplitResult, which lives in loop.py, and writes everything through RunDir: events, spend, snapshots. VersionStore commits the run directory to git. On the right, two readers: reduce_run projects the run for the TUI and the dashboard, and CandidateGraph answers lineage questions. OptimizerContext and optimizer_config feed the optimizer side; chapter five shows them in action.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[8:10–9:30]</span> זה כל מודל האובייקטים בעמוד אחד, עם שמות אמיתיים. קודם כל, שימו לב מה איננו מחלקה. ה-spec הוא dict רגיל ש-specfile.read_yaml מחזיר מ-capevolve.yaml. ה-harness הוא מודול של פונקציות, אין מחלקה בשם Harness. ה-event stream הוא המודול eventstream, שקורא את events.jsonl.</p>
+    <p>נקרא מלמעלה למטה. cli.py קורא את ה-spec ומריץ את ה-phase skills כ-subprocesses. הם קוראים ל-harness. ה-harness מקבל Candidate כתיקייה תחת candidates, ומפעיל את ה-CapabilityAdapter של הפרויקט: live, run_target, score. ה-adapter מחזיר Rollouts ו-Scores. ה-harness מצרף את ה-Scores ל-SplitResult, שמוגדר ב-loop.py, וכותב הכול דרך RunDir: אירועים, הוצאות, snapshots. ‏VersionStore עושה commit של ה-run directory ל-git. בצד ימין שני קוראים: reduce_run מקרין את הריצה ל-TUI ול-dashboard, ו-CandidateGraph עונה על שאלות של lineage. ‏OptimizerContext ו-optimizer_config מזינים את צד ה-optimizer; בפרק חמש נראה אותם בפעולה.</p>
+  </aside>
+</section>
+
+<!-- ═══ 11. Run dir layout ═══ -->
+<section class="slide">
+  <h2>The run directory on disk</h2>
+  <div class="row">
+    <div class="col" style="flex:1.6">
+<div class="tree tight"><span class="d">.capevolve/run_&lt;ts&gt;/</span>
+├── <span class="h">state.json</span>      <span class="c"># best_id, budget, spent, reserved</span>
+├── <span class="h">splits.json</span>     <span class="c"># frozen partition + test_used seal</span>
+├── <span class="h">events.jsonl</span>    <span class="c"># append-only audit log (the truth)</span>
+├── graph.jsonl     <span class="c"># candidate DAG view</span>
+├── baseline.json   <span class="c"># seed scores, written at setup</span>
+├── final.json      <span class="c"># test + bookends, written by finalize</span>
+├── <span class="d">candidates/&lt;id&gt;/</span>   <span class="c"># capability snapshot</span>
+├── <span class="d">rollouts/&lt;split&gt;/</span>   <span class="c"># &lt;task&gt;__&lt;tag&gt;__t&lt;k&gt;.json</span>
+├── <span class="d">work/</span>           <span class="c"># optimizer workdirs, gate tables</span>
+├── <span class="d">screens/</span>        <span class="c"># &lt;tag&gt;__screenN.json</span>
+├── rejected.jsonl  history.jsonl  eval_index.jsonl
+├── eval_cache.json <span class="c"># gepa only</span>
+├── JOURNAL.md  <span class="d">wiki/</span>  <span class="c"># memory</span>
+└── <span class="d">locks/  private/  .git/</span></div>
+    </div>
+    <div class="col">
+      <div class="card amber"><h3>Sealed dir</h3><p>pooled mode keeps C-derived data <b>outside</b> the run dir:</p><p><code>&lt;project&gt;.sealed/&lt;run&gt;/</code></p><p class="small muted">splits_full.json, rollouts/confirm, private/</p></div>
+      <div class="card mt"><h3>Git store</h3><p><code>.gitignore</code>: <code>rollouts/</code>, <code>work/</code></p></div>
+    </div>
+  </div>
+  <p class="small muted">Source: core/cap_evolve/rundir.py, store.py, graph.py, gepa.py, eval_index.py</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[9:30–10:30]</span> Every run lives in one folder, .capevolve slash run underscore timestamp. The three files in amber are owned by RunDir. state.json holds the champion id, the budget, the spend, and live reservations. splits.json holds the frozen task partition and the seal flag for the test split. events.jsonl is the append-only audit log.</p>
+    <p>Then the artifacts. baseline.json has the seed's scores. final.json has the sealed test result and the train and val bookends. candidates holds one snapshot per candidate. rollouts holds one file per task, tag and trial. work holds the optimizer's per-iteration working copies and the round gate tables, and screens holds screening tiers. rejected, history and eval_index are jsonl logs. eval_cache.json exists only for gepa. JOURNAL.md and wiki are memory. In pooled split mode, anything derived from the hidden confirm stratum goes to a sealed folder next to the project, because the optimizer can read the whole run tree.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[9:30–10:30]</span> כל ריצה חיה בתיקייה אחת, ‎.capevolve/run_ ואחריו חותמת זמן. שלושת הקבצים בכתום שייכים ל-RunDir. ‏state.json מחזיק את מזהה ה-champion, את התקציב, את ההוצאות ואת ההזמנות הפעילות. splits.json מחזיק את חלוקת ה-tasks הקפואה ואת דגל החתימה של ה-test split. events.jsonl הוא יומן הביקורת שרק מוסיפים אליו.</p>
+    <p>אחר כך התוצרים. baseline.json מכיל את הציונים של ה-seed. final.json מכיל את תוצאת ה-test החתומה ואת ה-bookends של train ו-val. ב-candidates יש snapshot לכל candidate. ב-rollouts יש קובץ לכל task, tag ו-trial. ב-work נמצאים עותקי העבודה של ה-optimizer לכל איטרציה וטבלאות ה-gate של הסבבים, וב-screens שכבות ה-screening. rejected, ‏history ו-eval_index הם יומני jsonl. eval_cache.json קיים רק ב-gepa. JOURNAL.md ו-wiki הם זיכרון. במצב pooled, כל מה שנגזר מה-confirm stratum הנסתר עובר לתיקייה חתומה ליד הפרויקט, כי ה-optimizer יכול לקרוא את כל עץ הריצה.</p>
+  </aside>
+</section>
+
+<!-- ═══ 12. Write once / mutable / sealed ═══ -->
+<section class="slide">
+  <h2>Written once, updated, appended, sealed</h2>
+  <table class="compact">
+    <tr><th>File</th><th>Write rule</th><th>Guard in code</th></tr>
+    <tr><td><code>splits.json</code></td><td><span class="pill">once</span> partition frozen at setup</td><td><code>write_splits</code>, <code>_atomic_write</code></td></tr>
+    <tr><td><code>splits.json</code> <code>test_used</code></td><td><span class="pill red">seal</span> flips once, after test is scored</td><td><code>reserve_test</code> → <code>commit_test</code></td></tr>
+    <tr><td><code>rollouts/test/</code></td><td><span class="pill red">seal</span> a 2nd finalize is refused</td><td><code>begin_test_attempt</code> → <code>TestSealError</code></td></tr>
+    <tr><td><code>state.json</code> facts</td><td><span class="pill">once</span> first writer wins</td><td><code>freeze_state(**fields)</code></td></tr>
+    <tr><td><code>state.json</code> spend</td><td><span class="pill blue">updated</span> locked read-modify-write</td><td><code>_file_lock</code> + tmp + <code>os.replace</code></td></tr>
+    <tr><td><code>events.jsonl</code>, <code>*.jsonl</code></td><td><span class="pill green">appended</span> never rewritten</td><td><code>log_event</code>: one line per call</td></tr>
+    <tr><td><code>candidates/&lt;id&gt;/</code></td><td><span class="pill blue">replaced</span> per id</td><td><code>snapshot(id, src, ignore)</code></td></tr>
+  </table>
+  <p class="callout mt" style="font-size:18px"><code>state.json</code> is a derived cache. <code>events.jsonl</code> is the source of truth. The reducer never trusts state.json for anything it can recompute.</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[10:30–11:30]</span> Each file has a write rule, and the rule is in code, not only in docs. The split is written once. The test seal is two steps: reserve_test checks the seal is unused but does not flip it, and commit_test flips it only after the test result is written. So a finalize that crashes before scoring can be retried. begin_test_attempt adds one more guard: if test rollouts already exist, a second attempt is refused, because the test set was already observed. A real run hit this: a finalize killed by a timeout had scored test, and the retry scored it again. The override is the env var CAPEVOLVE_ALLOW_TEST_RESCORE, and it is disclosed.</p>
+    <p>freeze_state writes facts like the baseline trial count once; an existing value always wins. Spend updates take an advisory file lock and write atomically with a temp file and os.replace, so a reader never sees a half-written file. Event logs are append-only.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[10:30–11:30]</span> לכל קובץ יש כלל כתיבה, והכלל נמצא בקוד, לא רק במסמכים. ה-split נכתב פעם אחת. חתימת ה-test היא בשני שלבים: reserve_test בודק שהחתימה לא נוצלה אבל לא הופך אותה, ו-commit_test הופך אותה רק אחרי שתוצאת ה-test נכתבה. כך finalize שקרס לפני ה-scoring אפשר להריץ שוב. begin_test_attempt מוסיף עוד הגנה: אם כבר קיימים test rollouts, ניסיון שני נדחה, כי ה-test כבר נצפה. זה קרה בריצה אמיתית: finalize שנהרג ב-timeout כבר דירג את ה-test, וה-retry דירג שוב. העקיפה היא משתנה הסביבה CAPEVOLVE_ALLOW_TEST_RESCORE, והיא נרשמת בגלוי.</p>
+    <p>‏freeze_state כותב עובדות, כמו מספר ה-trials של ה-baseline, פעם אחת; ערך קיים תמיד מנצח. עדכוני הוצאות לוקחים file lock מייעץ וכותבים בצורה אטומית עם קובץ זמני ו-os.replace, כך שקורא אף פעם לא רואה קובץ חצי כתוב. יומני האירועים רק מתווספים.</p>
+  </aside>
+</section>
+
+<!-- ═══ 13. Budget / Spent ═══ -->
+<section class="slide">
+  <h2><code>state.json</code>: <code>Budget</code>, <code>Spent</code>, reservations</h2>
+  <div class="row">
+    <div class="col">
+<pre class="tight">{<span class="s">"best_id"</span>: <span class="s">"cand_0003"</span>,
+ <span class="s">"budget"</span>: {<span class="s">"max_iterations"</span>: <span class="n">20</span>,
+   <span class="s">"max_metric_calls"</span>: <span class="n">0</span>, <span class="s">"max_usd"</span>: <span class="n">0.0</span>, <span class="s">"stall"</span>: <span class="n">0</span>,
+   <span class="s">"max_optimizer_usd"</span>: <span class="n">0.0</span>, <span class="s">"stop_at_reward"</span>: <span class="n">0.0</span>},
+ <span class="s">"spent"</span>: {<span class="s">"iterations"</span>: <span class="n">3</span>, <span class="s">"metric_calls"</span>: <span class="n">48</span>,
+   <span class="s">"usd"</span>: <span class="n">0.07</span>, <span class="s">"optimizer_usd"</span>: <span class="n">0.71</span>,
+   <span class="s">"intake_usd"</span>: <span class="n">0.0</span>, <span class="s">"best_val"</span>: <span class="n">0.6667</span>,
+   <span class="c">… tokens, seconds …</span>},
+ <span class="s">"reserved"</span>: {<span class="s">"r17…_4211_0_12"</span>:
+   {<span class="s">"n"</span>: <span class="n">12</span>, <span class="s">"pid"</span>: <span class="n">4211</span>}}}</pre>
+      <p class="small muted">Illustrative values. <code>0</code> = unlimited / off.</p>
+    </div>
+    <div class="col">
+      <div class="flow vertical">
+        <div class="step blue"><b>reserve_metric_calls(n)</b><span>raises <code>BudgetExhausted</code> before any rollout</span></div><div class="arrow">↓</div>
+        <div class="step green"><b>update_spent(release=token)</b><span>claim → spend in one lock hold</span></div><div class="arrow">↓</div>
+        <div class="step amber"><b>budget_exhausted()</b><span>returns <code>(True, reason)</code> → loop stops</span></div>
+      </div>
+      <p class="small mt"><code>total_usd</code> = runner + optimizer + intake. A crashed holder's reservation is freed (pid check).</p>
+    </div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[11:30–12:20]</span> state.json has three dataclasses behind it, all in rundir.py. Budget holds the caps from the spec: max iterations, max metric calls, max dollars, the stall limit, a separate optimizer dollar cap, and stop_at_reward. Zero means off. Spent holds counters for three roles: the runner, the optimizer and the intake interview. total_usd adds the three, and that is what max_usd is checked against.</p>
+    <p>Reservations exist because evaluations can run in parallel. Before a rollout starts, the caller reserves n metric calls. If spent plus reserved plus n would pass the cap, BudgetExhausted is raised before anything is paid. After the evaluation, update_spent converts the claim to spend in the same lock hold, so there is no window where it counts twice. If the process that reserved crashes, its pid is dead and the claim is ignored. budget_exhausted returns a reason string that ends the loop.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[11:30–12:20]</span> מאחורי state.json עומדים שלושה dataclasses, כולם ב-rundir.py. ‏Budget מחזיק את התקרות מה-spec: מקסימום איטרציות, מקסימום metric calls, מקסימום דולרים, גבול ה-stall, תקרת דולרים נפרדת ל-optimizer, ו-stop_at_reward. אפס פירושו כבוי. Spent מחזיק מונים לשלושה תפקידים: ה-runner, ה-optimizer וראיון ה-intake. total_usd מחבר את שלושתם, ומולו בודקים את max_usd.</p>
+    <p>ההזמנות קיימות כי הערכות יכולות לרוץ במקביל. לפני שמתחיל rollout, הקורא מזמין n metric calls. אם spent ועוד reserved ועוד n יעברו את התקרה, נזרק BudgetExhausted לפני ששילמנו על משהו. אחרי ההערכה, update_spent ממיר את ההזמנה להוצאה באותה החזקה של ה-lock, כך שאין חלון שבו היא נספרת פעמיים. אם התהליך שהזמין קרס, ה-pid שלו מת וההזמנה נזנחת. budget_exhausted מחזיר מחרוזת סיבה שעוצרת את הלולאה.</p>
+  </aside>
+</section>
+
+<!-- ═══ 14. events.jsonl ═══ -->
+<section class="slide">
+  <h2><code>events.jsonl</code>: one JSON object per line</h2>
+<pre class="tight"><span class="c"># real: core/tests/fixtures/run_schema_v2/events.jsonl (tau2 airline)</span>
+{<span class="s">"t"</span>: <span class="n">1791461006.06</span>, <span class="s">"kind"</span>: <span class="s">"eval_start"</span>, <span class="s">"split"</span>: <span class="s">"val"</span>, <span class="s">"tag"</span>: <span class="s">"seed"</span>,
+ <span class="s">"n_tasks"</span>: <span class="n">30</span>, <span class="s">"n_trials"</span>: <span class="n">3</span>, <span class="s">"workers"</span>: <span class="n">1</span>, <span class="s">"rollouts"</span>: <span class="n">90</span>}
+{<span class="s">"t"</span>: <span class="n">1791461936.72</span>, <span class="s">"kind"</span>: <span class="s">"evaluate"</span>, <span class="s">"split"</span>: <span class="s">"val"</span>, <span class="s">"tag"</span>: <span class="s">"seed"</span>,
+ <span class="s">"reward"</span>: <span class="n">0.5889</span>, <span class="s">"stderr"</span>: <span class="n">0.0806</span>, <span class="s">"cost_usd"</span>: <span class="n">0.842</span>, <span class="s">"tokens"</span>: <span class="n">5712915</span>, <span class="s">"seconds"</span>: <span class="n">930.66</span>}
+<span class="c"># illustrative: core/cap_evolve/demo_session/events.jsonl (synthetic)</span>
+{<span class="s">"t"</span>: <span class="n">1772445874.0</span>, <span class="hl"><span class="s">"kind"</span>: <span class="s">"step"</span></span>, <span class="s">"candidate"</span>: <span class="s">"cand_0001"</span>, <span class="s">"accept"</span>: <span class="k">true</span>,
+ <span class="s">"reason"</span>: <span class="s">"paired Δ̄=+0.1667 &gt; 0.2·SE=0.0272 (SE=0.1361, n=6)"</span>, <span class="s">"val"</span>: <span class="n">0.5</span>,
+ <span class="s">"parent"</span>: <span class="s">"seed"</span>, <span class="s">"parent_val"</span>: <span class="n">0.3333</span>, <span class="s">"opt_cost_usd"</span>: <span class="n">0.225</span>, <span class="s">"opt_tokens"</span>: <span class="n">21900</span>}</pre>
+  <div class="grid-4">
+    <div class="card blue"><h3>Setup</h3><p class="small"><code>run_config</code> <code>splits</code> <code>target_profile</code> <code>baseline</code></p></div>
+    <div class="card green"><h3>Measure</h3><p class="small"><code>eval_start</code> <code>evaluate</code> <code>screen</code> <code>minibatch</code></p></div>
+    <div class="card amber"><h3>Decide</h3><p class="small"><code>step</code> <code>step_indecisive</code> <code>accept</code>/<code>reject</code> <code>decision</code></p></div>
+    <div class="card red"><h3>Warn / end</h3><p class="small"><code>optimizer_error</code> <code>budget_warning</code> <code>finalize</code></p></div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[12:20–13:20]</span> RunDir.log_event appends one line: a timestamp t, a kind, and free keyword fields. There are about eighty distinct kinds in the code. The first two lines are real, from a tau2 airline run kept as a fixture. eval_start says an evaluation is in flight: thirty tasks, three trials, ninety rollouts. It exists because evaluations can be silent for hours, and the dashboard used to mark healthy live runs as failed. An eval_start with no evaluate after it means an evaluation never returned.</p>
+    <p>The third line is from the synthetic demo session, so the numbers are illustrative. step is the one canonical iteration record. Every algorithm writes it through harness.record_iteration. It carries the candidate, the parent, the verdict, the gate's reason string, the val reward, and the optimizer's own spend. LEDGER.md, the dashboard graph and the TUI all read step events.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[12:20–13:20]</span> הפונקציה RunDir.log_event מוסיפה שורה אחת: חותמת זמן t, ‏kind, ושדות חופשיים. בקוד יש בערך שמונים kinds שונים. שתי השורות הראשונות אמיתיות, מריצת tau2 airline שנשמרה כ-fixture. ‏eval_start אומר שהערכה בתהליך: שלושים tasks, שלושה trials, תשעים rollouts. הוא קיים כי הערכות יכולות לשתוק שעות, וה-dashboard נהג לסמן ריצות חיות ובריאות ככושלות. eval_start בלי evaluate אחריו פירושו הערכה שלא חזרה.</p>
+    <p>השורה השלישית לקוחה מה-demo session הסינתטי, כך שהמספרים להמחשה בלבד. ‏step הוא רשומת האיטרציה הקנונית היחידה. כל אלגוריתם כותב אותו דרך harness.record_iteration. הוא מכיל את ה-candidate, את ה-parent, את ההחלטה, את מחרוזת הסיבה של ה-gate, את ה-val reward, ואת ההוצאה של ה-optimizer עצמו. LEDGER.md, הגרף ב-dashboard וה-TUI כולם קוראים את אירועי ה-step.</p>
+  </aside>
+</section>
+
+<!-- ═══ 15. reduce_run ═══ -->
+<section class="slide">
+  <h2><code>reduce_run</code>: one projection, two UIs</h2>
+  <svg class="diagram" viewBox="0 0 1136 400">
+    <defs><marker id="a15" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8b98a9"/></marker></defs>
+    <rect class="box green" x="0" y="10" width="230" height="44" rx="8"/><text class="tiny" x="115" y="38" text-anchor="middle">events.jsonl</text>
+    <rect class="box" x="0" y="66" width="230" height="44" rx="8"/><text class="tiny" x="115" y="94" text-anchor="middle">baseline.json · final.json</text>
+    <rect class="box" x="0" y="122" width="230" height="44" rx="8"/><text class="tiny" x="115" y="150" text-anchor="middle">rollouts/val/*.json</text>
+    <rect class="box" x="0" y="178" width="230" height="44" rx="8"/><text class="tiny" x="115" y="206" text-anchor="middle">graph.jsonl · work/ · git</text>
+    <rect class="box" x="0" y="234" width="230" height="44" rx="8"/><text class="tiny" x="115" y="262" text-anchor="middle">state.json (spent only)</text>
+    <rect class="box blue" x="340" y="60" width="290" height="170" rx="12"/>
+    <text class="title mono" x="485" y="100" text-anchor="middle" font-size="17">dashboard.reduce_run</text>
+    <text class="sub" x="485" y="130" text-anchor="middle">fold events in order</text>
+    <text class="sub" x="485" y="154" text-anchor="middle">join evaluate ↔ step by tag</text>
+    <text class="sub" x="485" y="178" text-anchor="middle">dashboard_views.enrich</text>
+    <text class="sub" x="485" y="202" text-anchor="middle">redact()</text>
+    <rect class="box amber" x="720" y="60" width="200" height="170" rx="12"/>
+    <text class="title mono" x="820" y="100" text-anchor="middle" font-size="16">{graph, summary}</text>
+    <text class="tiny" x="740" y="134">nodes[]: id,</text><text class="tiny" x="740" y="156">parent, status,</text><text class="tiny" x="740" y="178">val, stderr,</text><text class="tiny" x="740" y="200">per_task …</text>
+    <rect class="box violet" x="976" y="10" width="160" height="60" rx="8"/><text class="title mono" x="1056" y="46" text-anchor="middle" font-size="15">tui.py</text>
+    <rect class="box violet" x="976" y="90" width="160" height="60" rx="8"/><text class="title mono" x="1056" y="114" text-anchor="middle" font-size="14">backend</text><text class="sub" x="1056" y="136" text-anchor="middle">runs.py</text>
+    <rect class="box violet" x="976" y="170" width="160" height="60" rx="8"/><text class="title mono" x="1056" y="206" text-anchor="middle" font-size="14">render_html</text>
+    <path class="line" d="M230,32 L340,110" marker-end="url(#a15)"/>
+    <path class="line" d="M230,88 L340,130" marker-end="url(#a15)"/>
+    <path class="line" d="M230,144 L340,150" marker-end="url(#a15)"/>
+    <path class="line" d="M230,200 L340,170" marker-end="url(#a15)"/>
+    <path class="line" d="M230,256 L340,200" marker-end="url(#a15)"/>
+    <path class="line" d="M630,145 L720,145" marker-end="url(#a15)"/>
+    <path class="line" d="M920,100 L976,40" marker-end="url(#a15)"/>
+    <path class="line" d="M920,145 L976,120" marker-end="url(#a15)"/>
+    <path class="line" d="M920,190 L976,200" marker-end="url(#a15)"/>
+    <rect class="box" x="340" y="300" width="580" height="80" rx="12"/>
+    <text class="title mono" x="360" y="330" font-size="15">eventstream.read_new_events(path, offset)</text>
+    <text class="sub" x="360" y="356">byte-offset tail, partial last line left unread → SSE route, --follow, tail</text>
+    <path class="line" d="M115,278 L115,340 L340,340" marker-end="url(#a15)"/>
+  </svg>
+  <p class="small muted">Source: core/cap_evolve/dashboard.py (line ~1444), tui.py, eventstream.py, dashboard/backend/capevolve_dashboard/runs.py</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[13:20–14:20]</span> reduce_run lives in core/cap_evolve/dashboard.py. It takes a RunDir and returns a dict with two keys: graph and summary. It folds events.jsonl in order, and joins other artifacts: baseline.json for the seed, final.json for the sealed test, per-task rollouts for the task matrix, graph.jsonl and the work folder for gate rows, and only the spend from state.json. Everything passes through redact, so a shared dashboard never leaks a credential.</p>
+    <p>The graph has one node per candidate with parent, status, val, stderr, and per-task rewards. The summary has status, best id, deltas, cost by role, splits, and gate decisions. Three consumers call the same function: tui.py renders terminal frames, the dashboard backend runs.py serves it to the React app, and render_html makes a static file. That is why the terminal and the web never disagree. For live tailing, eventstream reads new bytes from an offset and leaves a half-written last line for the next read.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[13:20–14:20]</span> reduce_run נמצא ב-core/cap_evolve/dashboard.py. הוא מקבל RunDir ומחזיר dict עם שני מפתחות: graph ו-summary. הוא מקפל את events.jsonl לפי הסדר, ומצרף תוצרים נוספים: baseline.json בשביל ה-seed, ‏final.json בשביל ה-test החתום, ה-rollouts לכל task בשביל מטריצת ה-tasks, ‏graph.jsonl ותיקיית work בשביל שורות ה-gate, ומ-state.json רק את ההוצאות. הכול עובר דרך redact, כך ש-dashboard משותף לעולם לא חושף credential.</p>
+    <p>בגרף יש node לכל candidate עם parent, status, val, stderr ו-reward לכל task. ב-summary יש סטטוס, best id, הפרשים, עלות לפי תפקיד, splits והחלטות gate. שלושה צרכנים קוראים לאותה פונקציה: tui.py מצייר פריימים בטרמינל, ה-backend של ה-dashboard ב-runs.py מגיש אותה לאפליקציית React, ו-render_html יוצר קובץ סטטי. לכן הטרמינל והווב לעולם לא חלוקים. למעקב חי, eventstream קורא בתים חדשים מ-offset ומשאיר שורה אחרונה חצי כתובה לקריאה הבאה.</p>
+  </aside>
+</section>
+
+<!-- ═══ 16. schema v2 ═══ -->
+<section class="slide">
+  <h2>Run schema v2: additive, never raises</h2>
+  <div class="row">
+    <div class="col">
+      <table class="compact">
+        <tr><th>v2 kind</th><th>required keys</th></tr>
+        <tr><td><code>candidate_proposed</code></td><td><code>id, parents</code></td></tr>
+        <tr><td><code>eval_coverage</code></td><td><code>tag, split, task_ids, trials</code></td></tr>
+        <tr><td><code>eval_state</code></td><td><code>id, to</code></td></tr>
+        <tr><td><code>decision</code></td><td><code>id, decision</code></td></tr>
+        <tr><td><code>optimizer_spend</code></td><td><code>role, usd</code></td></tr>
+        <tr><td><code>schema_warning</code></td><td><code>of, bad_keys</code></td></tr>
+      </table>
+    </div>
+    <div class="col">
+      <div class="flow">
+        <div class="step"><b>unevaluated</b></div><div class="arrow">→</div>
+        <div class="step blue"><b>screened</b></div><div class="arrow">→</div>
+        <div class="step amber"><b>partial</b></div><div class="arrow">→</div>
+        <div class="step green"><b>full</b></div>
+      </div>
+      <p class="small mt"><code>eval_state</code> is monotone: <code>advance_eval_state</code> never moves back.</p>
+      <ul class="small">
+        <li><code>schema_v2.emit</code>: bad payload → <code>schema_warning</code> event, returns False</li>
+        <li><code>normalize_node</code> fills v2 keys for a v1 run</li>
+        <li><code>queued</code> reads as <code>proposed</code></li>
+      </ul>
+    </div>
+  </div>
+  <p class="small muted mt">Source: docs/RUN_SCHEMA_V2.md, core/cap_evolve/schema_v2.py</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[14:20–15:00]</span> Run schema v2 is the contract for new fields. docs/RUN_SCHEMA_V2.md lists them, and schema_v2.py is the only code that knows the enum values and the required keys. Two rules. First, everything is additive and optional, so a version one run renders unchanged. Second, emitters never raise. emit checks required keys and enum values. If one is wrong, it logs a schema_warning event and returns False. Telemetry must never fail an evaluation.</p>
+    <p>On the reader side, normalize_node fills missing v2 fields from legacy ones. An example from a real run: candidate nine had a val_mean, but it was screen-killed on eight of thirty tasks. So val_mean alone is not proof of a full eval; the node reads as screened. eval_state moves only forward: unevaluated, screened, partial, full.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[14:20–15:00]</span> Run schema v2 הוא החוזה לשדות חדשים. docs/RUN_SCHEMA_V2.md מפרט אותם, ו-schema_v2.py הוא הקוד היחיד שמכיר את ערכי ה-enum ואת המפתחות החובה. שני כללים. ראשית, הכול תוספתי ואופציונלי, כך שריצה בגרסה אחת מוצגת בלי שינוי. שנית, emitters לעולם לא זורקים חריגה. emit בודק מפתחות חובה וערכי enum. אם משהו שגוי, הוא רושם אירוע schema_warning ומחזיר False. טלמטריה לעולם לא אמורה להכשיל הערכה.</p>
+    <p>בצד הקורא, normalize_node ממלא שדות v2 חסרים משדות ישנים. דוגמה מריצה אמיתית: ל-candidate תשע היה val_mean, אבל הוא נפסל ב-screen על שמונה מתוך שלושים tasks. לכן val_mean לבד אינו הוכחה להערכה מלאה; ה-node נקרא screened. ‏eval_state זז רק קדימה: unevaluated, ‏screened, ‏partial, ‏full.</p>
+  </aside>
+</section>
+
+<!-- ═══ 17. Candidate graph ═══ -->
+<section class="slide">
+  <h2>Candidate graph and lineage</h2>
+  <div class="row">
+    <div class="col">
+      <svg class="diagram" viewBox="0 0 560 330">
+        <defs><marker id="a17" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8b98a9"/></marker></defs>
+        <rect class="box" x="210" y="10" width="140" height="46" rx="10"/><text class="title mono" x="280" y="40" text-anchor="middle" font-size="16">seed</text>
+        <rect class="box green" x="40" y="110" width="160" height="46" rx="10"/><text class="title mono" x="120" y="140" text-anchor="middle" font-size="16">cand_1 ✓</text>
+        <rect class="box red" x="360" y="110" width="160" height="46" rx="10"/><text class="title mono" x="440" y="140" text-anchor="middle" font-size="16">cand_2 ✗</text>
+        <rect class="box amber" x="10" y="220" width="160" height="46" rx="10"/><text class="title mono" x="90" y="250" text-anchor="middle" font-size="16">cand_3 tip</text>
+        <rect class="box blue" x="210" y="220" width="160" height="46" rx="10"/><text class="title mono" x="290" y="250" text-anchor="middle" font-size="16">cand_4 tip</text>
+        <rect class="box violet" x="140" y="290" width="200" height="38" rx="10"/><text class="tiny" x="240" y="315" text-anchor="middle">merge: parents [3,4]</text>
+        <path class="line" d="M260,56 L140,110" marker-end="url(#a17)"/>
+        <path class="line" d="M300,56 L420,110" marker-end="url(#a17)"/>
+        <path class="line" d="M110,156 L90,220" marker-end="url(#a17)"/>
+        <path class="line" d="M150,156 L270,220" marker-end="url(#a17)"/>
+        <path class="line dash" d="M90,266 L200,290" marker-end="url(#a17)"/>
+        <path class="line dash" d="M290,266 L270,290" marker-end="url(#a17)"/>
+        <text class="label" x="400" y="190">rejected: closed lineage</text>
+        <text class="label" x="400" y="250">merge_base(3,4) = cand_1</text>
+      </svg>
+    </div>
+    <div class="col">
+      <div class="term"><span class="name">graph.py</span><div class="def">append-only <code>graph.jsonl</code>; last record per <code>id</code> wins. A <b>view</b>, not a source of truth.</div></div>
+      <div class="term violet mt"><span class="name">CandidateGraph</span><div class="def"><code>parents_of</code>, <code>children_of</code>, <code>is_descendant</code>, <code>frontier()</code>, <code>branches()</code></div></div>
+      <div class="term amber mt"><span class="name">lineage.py</span><div class="def"><code>tips</code>, <code>ancestors</code>, <code>merge_base</code>, <code>validate</code> (no self-parent, no cycle)</div></div>
+      <div class="term green mt"><span class="name">ParetoArchive</span><div class="def">bounded non-dominated set for <code>gate_mode: pareto</code>; capacity 15, crowding-distance eviction</div></div>
+    </div>
+  </div>
+  <p class="small muted">status: proposed · screened · superseded · gated · accepted · rejected</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[15:00–16:10]</span> graph.jsonl is the candidate DAG. Each line is a node record with id, parents, status, val_mean, and courtesy copies of the screen and gate rows. A node gets a new line at each state transition, and the last record per id wins. The docstring is clear: this is a view. Every field except id, parents and status can be rebuilt from events and the gate tables. record_iteration writes one node for every judged candidate.</p>
+    <p>CandidateGraph is a read-only query layer. frontier returns active tips: not rejected or superseded, and with no active child. branches returns one root-to-tip path per tip. lineage.py adds ancestors, merge_base, which is the common ancestor with the smallest total distance, and validate, which refuses a self-parent or a cycle. In this picture, cand_3 and cand_4 are tips, and their merge base is cand_1. ParetoArchive is the persistent frontier for multi-objective gating. It holds at most fifteen points by default and evicts the most crowded one.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[15:00–16:10]</span> ‏graph.jsonl הוא ה-DAG של ה-candidates. כל שורה היא רשומת node עם id, ‏parents, ‏status, ‏val_mean, ועותקי נוחות של שורות ה-screen וה-gate. node מקבל שורה חדשה בכל מעבר מצב, והרשומה האחרונה לכל id מנצחת. ה-docstring ברור: זו תצוגה. כל שדה חוץ מ-id, ‏parents ו-status אפשר לבנות מחדש מהאירועים ומטבלאות ה-gate. record_iteration כותב node אחד לכל candidate שנשפט.</p>
+    <p>‏CandidateGraph הוא שכבת שאילתות לקריאה בלבד. frontier מחזיר את הקצוות הפעילים: לא rejected ולא superseded, ובלי ילד פעיל. branches מחזיר מסלול אחד מהשורש לקצה עבור כל קצה. lineage.py מוסיף את ancestors, את merge_base, שהוא האב המשותף עם המרחק הכולל הקטן ביותר, ואת validate, שמסרב ל-parent עצמי או למעגל. בתמונה, cand_3 ו-cand_4 הם קצוות, וה-merge base שלהם הוא cand_1. ‏ParetoArchive הוא ה-frontier הקבוע ל-gating רב-יעדי. הוא מחזיק לכל היותר חמש עשרה נקודות כברירת מחדל ומוציא את הנקודה הצפופה ביותר.</p>
+  </aside>
+</section>
+
+<!-- ═══ 18. Hash, cache, store ═══ -->
+<section class="slide">
+  <h2>Content hash, caches and the version store</h2>
+  <div class="row">
+    <div class="col">
+<pre class="tight"><span class="k">def</span> <span class="f">hash_candidate_dir</span>(cdir) -&gt; str:
+    h = hashlib.sha256()
+    <span class="c"># sorted; skips NON_CAPABILITY_*</span>
+    <span class="k">for</span> p <span class="k">in</span> editable_files:
+        h.update(rel_path + <span class="s">b"\0"</span>)
+        h.update(p.read_bytes() + <span class="s">b"\0"</span>)
+    <span class="k">return</span> h.hexdigest()</pre>
+      <p class="small">Over <b>content</b>, not id or mtime. Any edit, even whitespace, changes the key.</p>
+    </div>
+    <div class="col">
+      <table class="compact">
+        <tr><th>Object</th><th>File</th><th>Key</th></tr>
+        <tr><td><code>EvalCache</code></td><td><code>eval_cache.json</code></td><td><code>&lt;hash&gt;::&lt;task_id&gt;</code></td></tr>
+        <tr><td><code>eval_index</code></td><td><code>eval_index.jsonl</code></td><td><code>cap_hash</code>, task, trial</td></tr>
+        <tr><td><code>graph</code> v2</td><td><code>graph.jsonl</code></td><td><code>capability_hash</code></td></tr>
+        <tr><td><code>VersionStore</code></td><td><code>.git/</code></td><td>commit per iteration</td></tr>
+      </table>
+      <ul class="small mt">
+        <li><code>EvalCache</code> is gepa only; <code>evaluate_candidate</code> never reads it</li>
+        <li><code>eval_index</code> pools trials of identical bytes</li>
+        <li>store: <code>git</code> (default) · <code>copy</code> · <code>command</code></li>
+      </ul>
+    </div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[16:10–17:00]</span> hash_candidate_dir is a SHA-256 over sorted relative paths and file bytes, skipping the NON_CAPABILITY lists from slide six. Two byte-identical candidates hash the same, even under different ids. Three things use this one value. EvalCache, in cache.py, is a small JSON file keyed by hash and task id. It stores reward, feedback, and a truncated slice of output and trace, never gold. It is used by gepa only; a plain hill-climb never touches it.</p>
+    <p>The evidence ledger, eval_index.jsonl, is an append-only, rebuildable index of rollouts keyed by the same cap_hash. When you re-measure identical bytes, for example a control copy of the parent, you just get more trials on the same hash. And in schema v2 the graph node field capability_hash is that exact value. Finally, VersionStore. With git, the default, it commits the run directory after every iteration, accepted or not, so git log is the run history. The command store runs a user command, like publishing to a skills store, and fires only for accepted candidates.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[16:10–17:00]</span> ‏hash_candidate_dir הוא SHA-256 על נתיבים יחסיים ממוינים ועל תוכן הקבצים, תוך דילוג על רשימות NON_CAPABILITY משקף שש. שני candidates זהים בבתים מקבלים אותו hash, גם עם מזהים שונים. שלושה דברים משתמשים בערך הזה. EvalCache, ב-cache.py, הוא קובץ JSON קטן עם מפתח של hash ו-task id. הוא שומר reward, ‏feedback, וחתיכה מקוצרת של output ו-trace, אף פעם לא gold. רק gepa משתמש בו; hill-climb רגיל לא נוגע בו.</p>
+    <p>ה-evidence ledger, ‏eval_index.jsonl, הוא אינדקס של rollouts שרק מוסיפים אליו ואפשר לבנות מחדש, עם מפתח של אותו cap_hash. כשמודדים שוב בתים זהים, למשל עותק control של ה-parent, פשוט מקבלים עוד trials על אותו hash. וב-schema v2 השדה capability_hash של node בגרף הוא בדיוק הערך הזה. לבסוף, VersionStore. עם git, ברירת המחדל, הוא עושה commit ל-run directory אחרי כל איטרציה, מתקבלת או לא, כך ש-git log הוא היסטוריית הריצה. ה-command store מריץ פקודה של המשתמש, למשל פרסום ל-skills store, ומופעל רק ל-candidates שהתקבלו.</p>
+  </aside>
+</section>
+
+<!-- ═══ 19. Memory ═══ -->
+<section class="slide">
+  <h2>Memory: audit logs and what the optimizer reads</h2>
+  <div class="row">
+    <div class="col">
+      <h3>Write-only audit (<code>memory.py</code>)</h3>
+      <div class="term red"><span class="name">RejectedMemory</span><div class="def"><code>rejected.jsonl</code>: <code>{candidate_id, summary, reason, val}</code></div></div>
+      <div class="term green mt"><span class="name">History</span><div class="def"><code>history.jsonl</code>: <code>{candidate_id, summary, val}</code></div></div>
+      <p class="small mt">Nothing in core re-reads them. Readers: the dashboard Memory panel, and an optimizer that greps them.</p>
+    </div>
+    <div class="col">
+      <h3>Plug-in scheme: <code>MemorySkill</code></h3>
+      <table class="compact">
+        <tr><th>Hook</th><th><code>md-files</code> (default)</th><th><code>wiki</code></th></tr>
+        <tr><td><code>seed</code></td><td>LEDGER, JOURNAL, PROCESS, RUNMAP</td><td><code>wiki/</code> at run root</td></tr>
+        <tr><td><code>augment_instructions</code></td><td>pointer block</td><td>absolute path</td></tr>
+        <tr><td><code>write_handover</code></td><td>fold JOURNAL + accumulators</td><td>no-op</td></tr>
+      </table>
+      <p class="small mt">Chosen by <code>memory_skill</code> in <code>capevolve.yaml</code>. Classes: <code>MdFilesMemory</code>, <code>WikiMemory</code> in <code>harness.py</code>.</p>
+    </div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[17:00–17:50]</span> There are two kinds of memory. memory.py has two small append-only writers. RejectedMemory writes rejected.jsonl with the reason for every gate reject. History writes history.jsonl for every accepted candidate. The docstring says they are write-only by design: nothing in the core reads them back. The dashboard reads them for its Memory panel.</p>
+    <p>What the optimizer is told each iteration comes from a MemorySkill. It has three hooks: seed writes the memory files, augment_instructions adds a pointer to the prompt, and write_handover runs after the gate. The default, md-files, writes LEDGER.md, which the framework rebuilds from step events, plus JOURNAL.md, the optimizer's own append-only handover, PROCESS.md, and RUNMAP.md with prior_iterations. The wiki scheme lets the optimizer write weakness and solution cards straight into the run root. All of these file names are in NON_CAPABILITY_FILES, so they never count as capability edits. Chapter seven covers the memory wiki skill in more depth.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[17:00–17:50]</span> יש שני סוגים של זיכרון. ב-memory.py יש שני כותבים קטנים שרק מוסיפים. RejectedMemory כותב את rejected.jsonl עם הסיבה לכל דחייה של ה-gate. ‏History כותב את history.jsonl לכל candidate שהתקבל. ה-docstring אומר שהם לכתיבה בלבד בכוונה: שום דבר ב-core לא קורא אותם בחזרה. ה-dashboard קורא אותם בשביל פאנל ה-Memory.</p>
+    <p>מה שה-optimizer מקבל בכל איטרציה מגיע מ-MemorySkill. יש לו שלושה hooks: ‏seed כותב את קבצי הזיכרון, augment_instructions מוסיף הפניה ל-prompt, ו-write_handover רץ אחרי ה-gate. ברירת המחדל, md-files, כותבת LEDGER.md, שה-framework בונה מחדש מאירועי step, ועוד JOURNAL.md, יומן ההעברה של ה-optimizer עצמו, PROCESS.md, ו-RUNMAP.md עם prior_iterations. סכמת ה-wiki מאפשרת ל-optimizer לכתוב כרטיסי חולשה ופתרון ישירות לשורש הריצה. כל שמות הקבצים האלה נמצאים ב-NON_CAPABILITY_FILES, ולכן הם אף פעם לא נחשבים שינוי ב-capability. בפרק שבע נרחיב על ה-memory wiki skill.</p>
+  </aside>
+</section>
+
+<!-- ═══ 20. JSON over stdout ═══ -->
+<section class="slide">
+  <h2>The wire: JSON over stdout</h2>
+  <svg class="diagram" viewBox="0 0 1136 250">
+    <defs><marker id="a20" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8b98a9"/></marker></defs>
+    <rect class="box blue" x="0" y="70" width="230" height="100" rx="12"/><text class="title mono" x="115" y="110" text-anchor="middle" font-size="16">cli.py</text><text class="sub" x="115" y="136" text-anchor="middle">cap-evolve run</text>
+    <rect class="box amber" x="420" y="70" width="290" height="100" rx="12"/><text class="title mono" x="565" y="104" text-anchor="middle" font-size="15">skills/phases/evaluate/</text><text class="title mono" x="565" y="126" text-anchor="middle" font-size="15">scripts/run.py</text><text class="sub" x="565" y="152" text-anchor="middle">harness.evaluate_candidate</text>
+    <rect class="box" x="906" y="20" width="230" height="70" rx="12"/><text class="title mono" x="1021" y="52" text-anchor="middle" font-size="16">stdout</text><text class="sub" x="1021" y="74" text-anchor="middle">one JSON object, last</text>
+    <rect class="box" x="906" y="150" width="230" height="70" rx="12"/><text class="title mono" x="1021" y="182" text-anchor="middle" font-size="16">stderr</text><text class="sub" x="1021" y="204" text-anchor="middle">adapter prints, logs</text>
+    <path class="line" d="M230,100 L420,100" marker-end="url(#a20)"/><text class="label mono" x="325" y="90" text-anchor="middle">subprocess.run(cmd)</text>
+    <path class="line" d="M710,85 L906,55" marker-end="url(#a20)"/><text class="label mono" x="808" y="112" text-anchor="middle">print(json.dumps(...))</text>
+    <path class="line" d="M710,145 L906,185" marker-end="url(#a20)"/><text class="label mono" x="808" y="150" text-anchor="middle">redirect_stdout</text>
+    <path class="line dash" d="M906,40 L120,40 L120,70" marker-end="url(#a20)"/><text class="label mono" x="500" y="32" text-anchor="middle">_json_payload(proc.stdout)</text>
+  </svg>
+  <div class="grid-3">
+    <div class="card"><h3>Payload</h3><p><code>SplitResult.to_dict()</code>: <code>reward</code>, <code>stderr</code>, <code>pass_k</code>, <code>per_task</code>, <code>n_scored</code>…</p></div>
+    <div class="card"><h3>Defense 1</h3><p>harness sends all adapter output to stderr during run + score</p></div>
+    <div class="card"><h3>Defense 2</h3><p><code>_json_payload</code> tries JSON object starts, newest first</p></div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[17:50–18:40]</span> The core and the skills talk through processes. cap-evolve run in cli.py starts each phase skill's scripts/run.py as a subprocess. The script does its work through the harness and prints exactly one JSON object to stdout, for example SplitResult.to_dict for evaluate. That is why every type has to_dict and from_dict: any host, in any language, can parse the result.</p>
+    <p>The contract breaks if anything else prints to stdout. A real example from the comments: SpreadsheetBench's comparator printed a line on every passing check, and that killed a run right after an eleven-minute baseline. So there are two defenses. The harness wraps run and score in redirect_stdout to stderr. And cli._json_payload, if the whole stdout is not JSON, scans for lines that start an object and decodes the newest one first. One more fact: in the current code, the core reads these payloads as plain dicts. Score.from_dict and Rollout.from_dict are used by tests and one adapter, not by the core path.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[17:50–18:40]</span> ה-core וה-skills מדברים דרך תהליכים. cap-evolve run ב-cli.py מפעיל את scripts/run.py של כל phase skill כ-subprocess. הסקריפט עושה את העבודה דרך ה-harness ומדפיס בדיוק אובייקט JSON אחד ל-stdout, למשל SplitResult.to_dict בשלב evaluate. זו הסיבה שלכל טיפוס יש to_dict ו-from_dict: כל host, בכל שפה, יכול לפרסר את התוצאה.</p>
+    <p>החוזה נשבר אם משהו אחר מדפיס ל-stdout. דוגמה אמיתית מההערות: ה-comparator של SpreadsheetBench הדפיס שורה בכל בדיקה שעברה, וזה הרג ריצה מיד אחרי baseline של אחת עשרה דקות. לכן יש שתי הגנות. ה-harness עוטף את ה-run וה-score ב-redirect_stdout ל-stderr. ו-cli._json_payload, אם כל ה-stdout אינו JSON, סורק שורות שמתחילות אובייקט ומפענח קודם את החדשה ביותר. עוד עובדה: בקוד הנוכחי ה-core קורא את ה-payloads האלה כ-dicts רגילים. Score.from_dict ו-Rollout.from_dict משמשים בבדיקות וב-adapter אחד, לא במסלול של ה-core.</p>
+  </aside>
+</section>
+
+<!-- ═══ 21. Config objects ═══ -->
+<section class="slide">
+  <h2>Optimizer config, cost and pricing</h2>
+  <div class="grid-3">
+    <div class="card blue">
+      <h3><code>optimizer_config.py</code></h3>
+      <p class="small">8 ablation switches: <code>dag_parallel</code>, <code>active_eval</code> (off), <code>smart_merge</code>, <code>cost_gating</code>, <code>failure_clustering</code>, <code>pregate</code>, <code>context_digest</code>, <code>history</code></p>
+      <p class="small"><b>Precedence:</b> env <code>CAPEVOLVE_&lt;NAME&gt;</code> → <code>optimizer.ablation.&lt;name&gt;</code> → legacy <code>ablation.&lt;name&gt;</code> → default</p>
+      <p class="small">Unknown key → <code>ValueError</code></p>
+    </div>
+    <div class="card amber">
+      <h3><code>optimizer_cost.py</code></h3>
+      <p class="small">Agent-mode runs have no headless transcript. <code>harvest</code> reads Claude Code session logs, prices new messages, feeds <code>update_spent</code>.</p>
+      <p class="small">Seen ids in <code>optimizer_cost_seen.json</code> → no double charge.</p>
+      <p class="small">Mode: <code>CAPEVOLVE_OPTIMIZER_COST</code> = <code>window</code> | <code>session</code> | <code>off</code></p>
+    </div>
+    <div class="card violet">
+      <h3><code>pricing.py</code></h3>
+      <p class="small"><code>PRICING</code>: model substring → (input, output) $/MTok, longest key first.</p>
+      <p class="small">Last-resort fallback for <code>cap-evolve estimate</code>: calibration from real runs → user flags → this table.</p>
+      <p class="small">Verified date: <code>PRICING_VERIFIED</code></p>
+    </div>
+  </div>
+  <div class="callout amber mt" style="font-size:18px">The spec itself is a plain <code>dict</code> from <code>specfile.read_yaml</code> — a small YAML reader with no dependency. There is no <code>Spec</code> class.</div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[18:40–19:25]</span> Three small config modules sit on the optimizer side. optimizer_config.py has one resolver for eight ablation switches. Each switch turns off a newer behavior and falls back to the legacy one. All are on by default except active_eval. The precedence is fixed: an environment variable wins, then optimizer.ablation in the spec, then a legacy top-level ablation table, then the default. A typo raises ValueError, because a typo must not run the wrong experiment. Small note: the docstring of resolve still says seven switches; the table has eight.</p>
+    <p>optimizer_cost.py meters agent-mode runs. It reads Claude Code's own session logs, prices unseen messages at list price, and remembers which message ids it already counted. pricing.py is a table of list prices, used only as a last resort by the estimate command. And the spec is a plain dict. specfile.read_yaml uses PyYAML if present, else a minimal reader, so the core stays pure stdlib.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[18:40–19:25]</span> בצד ה-optimizer יש שלושה מודולי config קטנים. optimizer_config.py מכיל resolver אחד לשמונה מתגי ablation. כל מתג מכבה התנהגות חדשה וחוזר להתנהגות הישנה. כולם דולקים כברירת מחדל חוץ מ-active_eval. סדר העדיפויות קבוע: משתנה סביבה מנצח, אחריו optimizer.ablation ב-spec, אחריו טבלת ablation ישנה ברמה העליונה, ואז ברירת המחדל. שגיאת כתיב זורקת ValueError, כי שגיאת כתיב לא אמורה להריץ ניסוי לא נכון. הערה קטנה: ה-docstring של resolve עדיין אומר שבעה מתגים; בטבלה יש שמונה.</p>
+    <p>‏optimizer_cost.py מודד עלות בריצות agent mode. הוא קורא את יומני הסשן של Claude Code עצמו, מתמחר הודעות שעוד לא נספרו לפי מחיר מחירון, וזוכר אילו מזהי הודעות כבר ספר. pricing.py הוא טבלת מחירים, שמשמשת רק כמוצא אחרון בפקודת estimate. וה-spec הוא dict רגיל. specfile.read_yaml משתמש ב-PyYAML אם הוא מותקן, ואחרת בקורא מינימלי, כך שה-core נשאר stdlib טהור.</p>
+  </aside>
+</section>
+
+<!-- ═══ 22. Takeaways ═══ -->
+<section class="slide">
+  <h2>Key takeaways</h2>
+  <div class="grid-2">
+    <ul>
+      <li>Four types: <code>Task</code>, <code>Rollout</code>, <code>Score</code>, <code>Candidate</code></li>
+      <li><code>Score</code> clamps to 0..1; one primary metric</li>
+      <li>Adapter: 3 required, 5 defaulted, 3 <code>hasattr</code> fast paths</li>
+      <li>Infra error = missing data, never a zero</li>
+      <li>One ignore list feeds hash, gepa and diff</li>
+    </ul>
+    <ul>
+      <li><code>events.jsonl</code> is the truth; <code>state.json</code> is a cache</li>
+      <li><code>reduce_run</code> feeds both TUI and dashboard</li>
+      <li><code>graph.jsonl</code> is a view; last record wins</li>
+      <li>Content hash keys every cache and ledger</li>
+      <li>Phases speak one JSON object on stdout</li>
+    </ul>
+  </div>
+  <div class="callout green mt"><b>Next: Chapter 5 · Anatomy of a run</b> — <code>05-anatomy-of-a-run.html</code>. We follow these objects through one <code>cap-evolve run</code>, step by step, with its processes and threads.</div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[19:25–20:00]</span> Let me sum up. There are four shared types, and Score protects the statistics. The adapter has three required methods, five hooks with defaults, and three fast paths found by hasattr. An infrastructure failure is missing data. One ignore list decides what counts as the capability.</p>
+    <p>On disk, events.jsonl is the source of truth, and state.json is a derived cache with locked, atomic writes. reduce_run is the single projection for the terminal and the web. The graph is a view. The content hash keys the caches and the evidence ledger. And phases talk to the CLI with one JSON object on stdout. A good exercise for this week: open demo_session in core/cap_evolve, read events.jsonl line by line, and match each line to a slide from today. In chapter five we follow these objects through a full run.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[19:25–20:00]</span> נסכם. יש ארבעה טיפוסים משותפים, ו-Score מגן על הסטטיסטיקה. ל-adapter יש שלוש מתודות חובה, חמישה hooks עם ברירות מחדל, ושלושה fast paths שמזוהים עם hasattr. כשל תשתית הוא מידע חסר. רשימת התעלמות אחת קובעת מה נחשב ל-capability.</p>
+    <p>על הדיסק, events.jsonl הוא מקור האמת, ו-state.json הוא cache נגזר עם כתיבות אטומיות ונעולות. reduce_run הוא ההקרנה היחידה לטרמינל ולווב. הגרף הוא תצוגה. ה-content hash הוא המפתח של ה-caches ושל ה-evidence ledger. וה-phases מדברים עם ה-CLI באובייקט JSON אחד על stdout. תרגיל טוב לשבוע הזה: לפתוח את demo_session ב-core/cap_evolve, לקרוא את events.jsonl שורה אחר שורה, ולהתאים כל שורה לשקף מהיום. בפרק חמש נעקוב אחרי האובייקטים האלה לאורך ריצה מלאה.</p>
+  </aside>
+</section>
+
+</div></div>
+<script src="assets/deck.js"></script>
+</body>
+</html>

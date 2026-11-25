@@ -236,3 +236,100 @@ def test_importing_ctypes_transitively_is_not_a_foreign_code_violation(tmp_path)
     bad = _cand(tmp_path, "import ctypes\nctypes.CDLL('libc.so.6')\n", "c_bad")
     r = _smoke(bad)
     assert not r["ok"] and "foreign-code" in r["detail"]
+
+
+# ---- skill scripts are imported the way the target loads them (#895 GLM smoke, cand_0001) --------------------
+# The target never sees a skill script as a file: ``helpers.kernel_bootstrap`` defines every
+# ``skills/<skill>/scripts/*.py`` as ``skills.<skill>.<script>`` from its text, in file-name order, with a
+# ``__file__`` that is not a file on disk. The smoke must load them the same way, or it passes a helper the
+# target cannot import (and refuses one it can).
+
+def _tree(tmp_path, files: dict, name="c"):
+    root = tmp_path / name
+    for rel, body in files.items():
+        p = root / rel
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(body, encoding="utf-8")
+    return root
+
+
+# a_main imports z_util; z_util sorts AFTER a_main, so the package import fails in the target, and the
+# fallback (the script's own dir on sys.path) only works when the script is a real file.
+FALLBACK = {
+    "skills/s/scripts/a_main.py": (
+        "import os, sys\n"
+        "try:\n    from .z_util import twice\n"
+        "except ImportError:\n"
+        "    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))\n"
+        "    from z_util import twice\n\n"
+        "def run(x):\n    return twice(x)\n"),
+    "skills/s/scripts/z_util.py": "def twice(x):\n    return 2 * x\n",
+}
+# b_main imports a_util, which sorts BEFORE it: the target can load this.
+ORDERED = {
+    "skills/s/scripts/a_util.py": "def twice(x):\n    return 2 * x\n",
+    "skills/s/scripts/b_main.py": "from .a_util import twice\n\ndef run(x):\n    return twice(x)\n",
+}
+
+
+def test_a_sibling_import_that_only_works_from_a_file_is_refused(tmp_path):
+    r = _smoke(_tree(tmp_path, FALLBACK), [])
+    assert not r["ok"]
+    assert "skills.s.a_main" in r["detail"] and "No module named 'z_util'" in r["detail"], r["detail"]
+    assert "as the target loads them" in r["detail"]
+    # the old file-based import passed it: that is the gap this closes
+    assert _smoke(_tree(tmp_path, FALLBACK, "c_file"), [], skills_loader="file")["ok"]
+
+
+def test_a_relative_sibling_import_the_target_can_load_passes(tmp_path):
+    r = _smoke(_tree(tmp_path, ORDERED), [])
+    assert r["ok"], r["detail"]
+    # the old file-based import refused it ("no known parent package"): it was stricter than the target
+    assert not _smoke(_tree(tmp_path, ORDERED, "c_file"), [], skills_loader="file")["ok"]
+
+
+def test_call_fixtures_run_on_the_module_the_target_loads(tmp_path):
+    row = {"helper": "skills/s/scripts/b_main.py", "kind": "call", "call": "run", "args": [21]}
+    r = _smoke(_tree(tmp_path, ORDERED), [row])
+    assert r["ok"], r["detail"]
+    assert r["runs"] == 3                     # one tree import + two fixture runs
+    bad = {**ORDERED, "skills/s/scripts/b_main.py": "def run(x):\n    from z_missing import f\n    return f(x)\n"}
+    r = _smoke(_tree(tmp_path, bad, "c2"), [row])
+    assert not r["ok"] and "z_missing" in r["detail"], r["detail"]
+
+
+def test_a_changed_helper_that_breaks_an_unchanged_sibling_is_refused(tmp_path):
+    parent = _tree(tmp_path, {"skills/s/scripts/a_base.py": "VALUE = 1\n",
+                              "skills/s/scripts/b_user.py": "from .a_base import VALUE\n"}, "p")
+    cand = _tree(tmp_path, {"skills/s/scripts/a_base.py": "OTHER = 1\n",
+                            "skills/s/scripts/b_user.py": "from .a_base import VALUE\n"}, "c")
+    r = helper_smoke.run_smoke(cand, CFG, parent=parent, fixtures=[])
+    assert not r["ok"] and "skills.s.b_user" in r["detail"], r["detail"]
+    assert r["files"] == ["skills/s/scripts/a_base.py"]     # only the changed file is "new", the whole tree is loaded
+
+
+def test_deleting_a_helper_an_unchanged_sibling_imports_is_refused(tmp_path):
+    """No remaining file changed, but the tree the target loads did (review of #1016, round 1)."""
+    parent = _tree(tmp_path, {"skills/s/scripts/a_base.py": "VALUE = 1\n",
+                              "skills/s/scripts/b_user.py": "from .a_base import VALUE\n"}, "p")
+    cand = _tree(tmp_path, {"skills/s/scripts/b_user.py": "from .a_base import VALUE\n"}, "c")
+    r = helper_smoke.run_smoke(cand, CFG, parent=parent, fixtures=[])
+    assert not r["skipped"] and not r["ok"] and "skills.s.b_user" in r["detail"], r
+    # a deletion nothing depends on still passes, and the file loader keeps the old (skip) behaviour
+    ok = _tree(tmp_path, {"skills/s/scripts/a_base.py": "VALUE = 1\n"}, "c_ok")
+    assert helper_smoke.run_smoke(ok, CFG, parent=parent, fixtures=[])["ok"]
+    assert helper_smoke.run_smoke(cand, {**CFG, "skills_loader": "file"}, parent=parent, fixtures=[])["skipped"]
+
+
+def test_helpers_outside_skill_scripts_still_import_from_their_file(tmp_path):
+    c = _tree(tmp_path, {"tools/util.py": "import json\n\ndef f():\n    return json.dumps([1])\n"})
+    cfg = {**CFG, "executable_dirs": ["tools"]}
+    r = helper_smoke.run_smoke(c, cfg, fixtures=[])
+    assert r["ok"] and r["files"] == ["tools/util.py"], r["detail"]
+
+
+def test_skills_loader_is_validated_and_defaults_to_kernel():
+    assert helpers.resolve({})["skills_loader"] == "kernel"
+    assert helpers.resolve({"helpers": {"skills_loader": "file"}})["skills_loader"] == "file"
+    with pytest.raises(ValueError, match="skills_loader"):
+        helpers.resolve({"helpers": {"skills_loader": "files"}})

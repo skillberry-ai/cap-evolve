@@ -187,6 +187,26 @@ def test_skills_tree_problems_refuse_symlinks_gold_names_and_binaries(tmp_path):
     assert any("not allowed" in p for p in helpers.skills_tree_problems(src))
 
 
+def test_the_gate_applies_the_targets_skills_tree_check(tmp_path):
+    """The target refuses a whole skills tree (every rollout) on any ``skills_tree_problems`` finding, so the
+    gate's surface check must refuse it first, for free (#895 GLM HC-2 smoke: a helper named answers.py
+    passed the gate, then all 36 rung-1 rollouts were refused as "gold-named file")."""
+    cfg = helpers.resolve({"helpers": {"enabled": True}, "surface": {"executable_dirs": ["skills/*/scripts"]}})
+    assert cfg["skills_loader"] == "kernel"
+    c = _cand(tmp_path, {"skills/a/scripts/answers.py": "def f():\n    return 1\n", "skills/a/SKILL.md": "# a\n",
+                         "skills/a/notes.csv": "x\n"})
+    probs = helpers.surface_problems(c, cfg)
+    assert any("skills/a/scripts/answers.py: gold-named file" in p for p in probs), probs
+    assert any("skills/a/notes.csv" in p and "not allowed" in p for p in probs), probs
+    assert all("refuses the whole skills/ tree" in p for p in probs if p.startswith("skills/a/"))
+    # a target that runs the scripts as files does not stage the tree: none of these apply
+    assert not any("gold-named" in p or "not allowed" in p
+                   for p in helpers.surface_problems(c, {**cfg, "skills_loader": "file"}))
+    # a clean tree adds nothing
+    ok = _cand(tmp_path / "ok", {"skills/a/scripts/fmt.py": "x = 1\n", "skills/a/SKILL.md": "# a\n"})
+    assert helpers.surface_problems(ok, cfg) == []
+
+
 def test_token_is_a_plain_replace_and_prompt_text_comes_from_skill_md(tmp_path):
     assert helpers.render_skills_root("see {skills_root}.a and {literal}", "skills") == "see skills.a and {literal}"
     _cand(tmp_path, {"my-skill/SKILL.md": "---\nname: my-skill\ndescription: does a thing\n---\nCall norm.f(x).\n"})
@@ -294,7 +314,7 @@ def _vendored_exec_code(monkeypatch):
     stub = types.ModuleType("jupyter_kernel_cli")
     stub.ClientJupyterKernel = object
     monkeypatch.setitem(sys.modules, "jupyter_kernel_cli", stub)
-    path = Path(__file__).resolve().parents[2] / "third_party/spreadsheetbench/inference/code_exec.py"
+    path = Path(__file__).resolve().parents[2] / "benchmarks/spreadsheetbench/harness/inference/code_exec.py"
     spec = importlib.util.spec_from_file_location("_vendored_code_exec", path)
     m = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(m)
@@ -433,6 +453,7 @@ def test_a_helpers_config_error_propagates_out_of_the_round_pregate_not_fail_ope
                                log_event=lambda *a, **k: None)
     cand = tmp_path / "cand"
     cand.mkdir()
+    (tmp_path / "seed").mkdir()     # a real run always has its seed snapshot; the helper gate requires it
     monkeypatch.setattr(rnd, "spec_for_run", lambda run_dir, project: {"helpers": {"enabled": True, "bogus": 1}})
     with pytest.raises(ValueError, match="unknown helpers key"):
         rnd.pregate_failure(rd, tmp_path, "parent", cand, None)
@@ -451,9 +472,95 @@ def test_round_pregate_hands_the_smoke_only_feedback_rollouts_of_the_parent(monk
     rd = types.SimpleNamespace(candidate_dir=lambda t: tmp_path / t, rollouts=tmp_path / "rollouts", root=tmp_path,
                                log_event=lambda *a, **k: None)
     seen = {}
+    (tmp_path / "seed").mkdir()     # a real run always has its seed snapshot; the helper gate requires it
     monkeypatch.setattr(rnd, "spec_for_run", lambda run_dir, project: {"helpers": {"enabled": True}})
     monkeypatch.setattr(rnd.pregate, "run", lambda *a, **k: (seen.update(k), {"ok": True, "warnings": []})[1])
     cand = tmp_path / "cand"
     cand.mkdir()
     assert rnd.pregate_failure(rd, tmp_path, "parent", cand, None) is None
     assert [p.parent.name for p in seen["traces"]] == ["feedback"]
+
+
+def test_a_missing_seed_snapshot_stops_the_round_pregate_not_fail_open(monkeypatch, tmp_path):
+    import types
+    from cap_evolve import helper_gate
+    rnd = _round_module(monkeypatch)
+    rd = types.SimpleNamespace(candidate_dir=lambda t: tmp_path / t, rollouts=tmp_path / "rollouts", root=tmp_path,
+                               log_event=lambda *a, **k: None)
+    cand = tmp_path / "cand"
+    cand.mkdir()
+    monkeypatch.setattr(rnd, "spec_for_run", lambda run_dir, project: {"helpers": {"enabled": True}})
+    with pytest.raises(helper_gate.GateConfigError, match="seed"):
+        rnd.pregate_failure(rd, tmp_path, "parent", cand, None)
+
+
+# ---- #912: ordinary spreadsheet code is not a task-id branch or a gold path ---------------------------
+# Each case is a line the lint refused in exp895 (issue #895), shortened. None of them reads gold or
+# branches on which task is running, so a helper that contains it must pass.
+_EXCEL_NAMES = ", ".join(f"'F{i}'" for i in range(30))
+
+
+@pytest.mark.parametrize("src", [
+    # a parameter named after the task template's own field, in an error message (exp895: 13 candidates)
+    "def check(answer_position):\n    if not answer_position:\n"
+    "        raise ValueError('answer_position must be a non-empty string')\n",
+    "def check(p):\n    raise ValueError(f'answer_position {p!r} is empty')\n",
+    "def check(p):\n    raise ValueError('answer_position %r is empty' % (p,))\n",
+    "def check(p):\n    raise ValueError('answer_position {} is empty'.format(p))\n",
+    "def check(p):\n    raise ValueError('answer_position ' + str(p) + ' is empty')\n",
+    "__all__ = ['parse_answer_position']\n\ndef parse_answer_position(s):\n    return s\n",
+    "import logging\nlog = logging.getLogger(__name__)\n\ndef f(p):\n    log.warning('answer_position %r is empty', p)\n",
+    # a docstring that mentions the words, with a slash (main's lint refused it as a path)
+    '"""Fill the range named by task/answer_position; see the split/notes section."""\n',
+    # a sheet name or row index compared with None (exp895: 7 candidates)
+    "def ws_of(wb, sheet_name=None):\n    if sheet_name is None:\n        return wb.active\n    return wb[sheet_name]\n",
+    "def ws_of(wb, sheet_name):\n    return wb[sheet_name] if sheet_name is not None else wb.active\n",
+    "def r(row_idx=None):\n    if row_idx is None:\n        return 1\n    return row_idx\n",
+    # a set of Excel function names: membership only, it stores no answers (exp895: 1 candidate)
+    "_NEW = {" + _EXCEL_NAMES + "}\n\ndef needs_prefix(fn):\n    return fn.upper() in _NEW\n",
+    # the helpers the shared #895 guidance itself suggests
+    "def write_range(ws, answer_position, values):\n"
+    "    if ':' not in answer_position:\n        raise ValueError('answer_position must be a range like A1:B2')\n",
+    "def verify_output(path, answer_position):\n    import openpyxl\n"
+    "    wb = openpyxl.load_workbook(path)\n    return wb, answer_position\n",
+])
+def test_ordinary_spreadsheet_code_passes_the_lint(src):
+    assert _lint(src) == []
+
+
+@pytest.mark.parametrize("src,needle", [
+    # gold paths are still refused, however the path is built
+    ("def f(root):\n    return open(root + '/gold/x.xlsx')\n", "evaluator/gold"),
+    ("import os\n\ndef f(root, n):\n    return open(os.path.join(root, 'gold', n))\n", "evaluator/gold"),
+    ("from pathlib import Path\n\ndef f(r):\n    return (Path(r) / 'answers' / 'a.xlsx').read_bytes()\n",
+     "evaluator/gold"),
+    ("def f():\n    return open('answer.json').read()\n", "evaluator/gold"),
+    ("G = 'data/1_10452_golden.xlsx'\n", "evaluator/gold"),
+    ("def f(p):\n    return open(f'{p}/splits/test.json')\n", "evaluator/gold"),
+    # ... and when the protected word is held in a variable and joined later (review of #1008)
+    ("D = 'gold'\n\ndef f(r, n):\n    return open(r + '/' + D + '/' + n)\n", "evaluator/gold"),
+    ("D = 'golden'\n\ndef f(n):\n    return open(D + n)\n", "evaluator/gold"),
+    ("G = ['ground_truth', 'x']\n\ndef f(r):\n    import os\n    return open(os.path.join(r, *G))\n",
+     "evaluator/gold"),
+    ("def f(r):\n    d = 'splits'\n    return open(r + '/' + d + '/x')\n", "evaluator/gold"),
+    # prose exemptions do not cover a path: a file call inside a raise, a user function named like a logger
+    # method, an __all__ entry the module does not define
+    ("def f():\n    raise ValueError(open('/d/gold/x').read())\n", "evaluator/gold"),
+    ("def error(p):\n    return open(p)\n\ndef f():\n    return error('/data/gold/x.xlsx')\n", "evaluator/gold"),
+    ("__all__ = ['golden']\n", "evaluator/gold"),
+    # ... nor a path handed to another call inside a message (review round 2 of #1008)
+    ("def rd(p):\n    return open(p).read()\n\ndef f():\n    print(rd('/d/gold/x.json'))\n", "evaluator/gold"),
+    ("def rd(p):\n    return open(p).read()\n\ndef f():\n    raise ValueError(rd('gold'))\n", "evaluator/gold"),
+    ("import shutil\n\ndef f():\n    raise RuntimeError(shutil.move('splits', 'x'))\n", "evaluator/gold"),
+    ("import os\n\ndef f(log):\n    log.info(os.path.abspath('gold'))\n", "evaluator/gold"),
+    ("def f(r):\n    print(r, d := 'gold')\n    return open(r + '/' + d)\n", "evaluator/gold"),
+    # task-identity branches are still refused when they compare with a real literal
+    ("def f(task_id):\n    if task_id == '10452':\n        return 42\n", "task identity"),
+    ("def f(sample_id):\n    return 1 if sample_id in ('a1', 'b2') else 0\n", "task identity"),
+    # answer tables are still refused: a dict and a list store values
+    ("T = {" + ", ".join(f"'k{i}': 'v{i}'" for i in range(25)) + "}\n", "lookup table"),
+    ("T = [" + _EXCEL_NAMES + "]\n", "lookup table"),
+])
+def test_real_findings_are_still_refused(src, needle):
+    out = _lint(src)
+    assert out and any(needle in x for x in out), out

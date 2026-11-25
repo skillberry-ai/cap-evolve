@@ -1,5 +1,0 @@
-{
-  "train": ["bike-rebalance"],
-  "val": ["bike-rebalance"],
-  "test": ["bike-rebalance"]
-}

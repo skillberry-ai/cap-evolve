@@ -1,5 +1,0 @@
-{
-  "train": ["flink-query"],
-  "val": ["flink-query"],
-  "test": ["flink-query"]
-}

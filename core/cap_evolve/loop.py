@@ -14,7 +14,7 @@ import math
 from dataclasses import dataclass, field
 from typing import Callable, Sequence
 
-from . import stats
+from . import feedback_digest, stats
 from .types import Score
 
 
@@ -169,6 +169,24 @@ def aggregate_scores(split: str, scores: Sequence[Score], ks: Sequence[int] = (1
     )
 
 
+def _collapses(parts: list) -> bool:
+    """True when every pooled evaluation gave the same UNLABELLED text: then every pooled trial
+    gave it, and the text alone says so (``join_trial_feedback``'s rule)."""
+    first = parts[0][0] if parts else ""
+    return (bool(first) and first != feedback_digest.NO_FEEDBACK
+            and not feedback_digest.has_labels(first) and all(t == first for t, _ in parts))
+
+
+def _pooled_text(parts: list) -> str:
+    """One evaluation, or the same unlabelled text from all: that text as it is. No text at
+    all: "". Otherwise every evaluation, labelled, under its own evaluation line."""
+    if not any(feedback_digest.strip_labels(text) for text, _ in parts):
+        return ""                                  # no evaluation gave any text
+    if len(parts) == 1 or _collapses(parts):
+        return parts[0][0]
+    return feedback_digest.pooled_feedback([(lb, None) for _, lb in parts])
+
+
 def pool_split_results(a: SplitResult, b: SplitResult, ks: Sequence[int] = (1, 2)) -> SplitResult:
     """Pool two evaluations of the SAME unmodified candidate into one honest SplitResult.
 
@@ -184,7 +202,7 @@ def pool_split_results(a: SplitResult, b: SplitResult, ks: Sequence[int] = (1, 2
     trials — nothing is discarded, nothing is invented.
     """
     by_task: dict[str, list[float]] = {}
-    feedback: dict[str, str] = {}
+    feedback: dict[str, list] = {}   # tid -> [(text, labelled text)], one per distinct evaluation
     errored: dict[str, bool] = {}
     errored_trials: dict[str, int] = {}
     for res in (a, b):
@@ -195,16 +213,29 @@ def pool_split_results(a: SplitResult, b: SplitResult, ks: Sequence[int] = (1, 2
             raw = pt.get("raw") or {}
             trials = pt.get("trial_rewards") or []
             by_task.setdefault(tid, []).extend(float(x) for x in trials)
-            if pt.get("feedback"):
-                feedback[tid] = pt["feedback"]
+            # Every pooled evaluation's feedback, each labelled with its own trial rewards
+            # (feedback_digest). A side that is itself a pooled result carries its (labelled)
+            # parts in raw["feedback_parts"]: pooling again extends one flat list.
+            # A side whose trials gave no text still counts: its rewards are listed under
+            # "(no feedback)", so the other side's text is never read as every trial's.
+            if raw.get("feedback_parts"):
+                parts = [(str(x).strip(), str(x).strip()) for x in raw["feedback_parts"]]
+            else:
+                fb = str(pt.get("feedback") or "").strip() or (feedback_digest.NO_FEEDBACK if trials else "")
+                parts = [(fb, feedback_digest.label_unlabelled(fb, trials))]
+            # EVERY evaluation is kept (nothing is discarded): two evaluations with the same
+            # words and rewards are still two evaluations, and their trials are all named.
+            feedback.setdefault(tid, []).extend((t, lb) for t, lb in parts if t)
             errored[tid] = errored.get(tid, False) or bool(raw.get("errored"))
             errored_trials[tid] = errored_trials.get(tid, 0) + int(raw.get("errored_trials") or 0)
     from .stats import mean, stderr
     scores = [
-        Score(task_id=t, reward=mean(tr), feedback=feedback.get(t, ""),
+        Score(task_id=t, reward=mean(tr), feedback=_pooled_text(feedback.get(t, [])),
               n=len(tr), stderr=stderr(tr), trial_rewards=tr,
               raw={"errored": errored.get(t, False), "errored_trials": errored_trials.get(t, 0),
-                   "valid_trials": len(tr), "n_trials": len(tr)})
+                   "valid_trials": len(tr), "n_trials": len(tr),
+                   **({"feedback_parts": [lb for _, lb in feedback[t]]}
+                      if len(feedback.get(t, [])) > 1 and not _collapses(feedback[t]) else {})})
         for t, tr in by_task.items()
     ]
     return aggregate_scores(a.split or b.split, scores, ks=ks)

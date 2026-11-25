@@ -1,5 +1,0 @@
-{
-  "train": ["econ-detrending-correlation"],
-  "val": ["econ-detrending-correlation"],
-  "test": ["econ-detrending-correlation"]
-}

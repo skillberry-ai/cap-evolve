@@ -1,0 +1,690 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chapter 7 · Algorithms, optimizers, skills</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Fira+Sans:wght@400;600;700;800&family=Rubik:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/deck.css">
+<style>
+  .slide table.tight td, .slide table.tight th { padding: 6px 10px; }
+  .slide table.tight td { font-size: 16px; }
+  .slide pre.sm { font-size: 15px; line-height: 1.42; padding: 12px 16px; }
+  .slide .tree.sm { font-size: 15px; line-height: 1.45; }
+  .card.compact { padding: 14px 16px; }
+  .card.compact p, .card.compact li { font-size: 16px; }
+  .card.compact h3 { font-size: 19px; }
+  .term.sm .def { font-size: 16px; }
+  .gap-sm { gap: 12px; }
+  .card.green, .card.amber, .card.violet, .card.red { color: var(--body); }
+  .grid-4 > .card { min-width: 0; }
+  .card code { overflow-wrap: anywhere; }
+</style>
+</head>
+<body data-chapter="Chapter 7 · Algorithms, optimizers, skills" data-minutes="20">
+<div id="stage"><div id="canvas">
+
+<!-- ═══ 1. Title ═══ -->
+<section class="slide title">
+  <div class="kicker">cap-evolve onboarding · Chapter 7 of 8</div>
+  <h1>Algorithms, optimizers, skills</h1>
+  <p class="lead">The skill library on top of the core: phases, capabilities, search algorithms, optimizer backends, hosts, and how to add your own.</p>
+  <div class="meta"><span class="pill blue">20 minutes</span><span class="pill">Level: deep</span><span class="pill amber">skills/ · core/cap_evolve/</span></div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[0:00–0:40]</span> Welcome to chapter 7. In chapters 5 and 6 we followed one run through the core and saw how the gate keeps results honest. Now we look at the other half of the system: the skills. Almost everything a user picks in cap-evolve is a skill. The algorithm is a skill. The capability that says what may be edited is a skill. Even the optimizer runner is a skill. By the end of this chapter you will know each component type, how the search algorithms differ, how an optimizer CLI is plugged in, what agent orchestration mode is, and exactly which files you touch to extend the system.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[0:00–0:40]</span> ברוכים הבאים לפרק 7. בפרקים 5 ו-6 עקבנו אחרי run אחד בתוך ה-core וראינו איך ה-gate שומר על תוצאות כנות. עכשיו נסתכל על החצי השני של המערכת: ה-skills. כמעט כל דבר שמשתמש בוחר ב-cap-evolve הוא skill. ה-algorithm הוא skill. ה-capability שמגדיר מה מותר לערוך הוא skill. אפילו ה-runner של ה-optimizer הוא skill. בסוף הפרק תדעו מה כל סוג component עושה, במה האלגוריתמים שונים, איך מחברים optimizer CLI, מה זה agent orchestration mode, ואילו קבצים בדיוק נוגעים בהם כדי להרחיב את המערכת.</p>
+  </aside>
+</section>
+
+<!-- ═══ 2. Agenda ═══ -->
+<section class="slide">
+  <h2>What you will learn</h2>
+  <div class="grid-2">
+    <div class="card blue compact"><h3>1 · The skill model</h3><p>SKILL.md + meta.yaml + scripts/run.py, wired by <code>manifest.json</code></p></div>
+    <div class="card compact"><h3>2 · Phases and capabilities</h3><p>The pipeline steps, and the four "what you may edit" menus</p></div>
+    <div class="card violet compact"><h3>3 · Algorithms</h3><p>hill-climb, gepa, skillopt, agent-optimize, evograph (deprecated)</p></div>
+    <div class="card amber compact"><h3>4 · Optimizer backends</h3><p><code>registry.yaml</code> rows, <code>run-optimizer</code>, model routing</p></div>
+    <div class="card compact"><h3>5 · Interventions, memory, agent mode</h3><p>blackbox delivery, memory wiki, the conversational agent as optimizer</p></div>
+    <div class="card green compact"><h3>6 · Hosts, plugin, extending</h3><p><code>install.sh --host</code>, Claude Code hooks, adding a capability / optimizer / algorithm / benchmark</p></div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[0:40–1:30]</span> Here is the plan. First, the skill model: what files make up one skill and how skills are connected. Second, the phase skills that form the pipeline, and the four capability skills. Each capability skill is a menu of allowed edits. Third, the algorithms. This is the largest part. We compare five of them. Fourth, optimizer backends. An optimizer backend is the coding agent CLI that actually writes the edit, like Claude Code or Codex. Fifth, three smaller topics: interventions, memory, and agent orchestration mode. Last, hosts, the Claude Code plugin, and the extension recipes. Chapter 2 defined most of these terms at concept level. Here we go into the files and the code.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[0:40–1:30]</span> זו התוכנית. קודם, מודל ה-skill: מאילו קבצים בנוי skill אחד ואיך skills מתחברים. שנית, ה-phase skills שבונים את ה-pipeline, וארבעת ה-capability skills. כל capability skill הוא תפריט של עריכות מותרות. שלישית, האלגוריתמים. זה החלק הכי גדול, ונשווה חמישה מהם. רביעית, optimizer backends. optimizer backend הוא ה-coding agent CLI שבאמת כותב את העריכה, כמו Claude Code או Codex. חמישית, שלושה נושאים קטנים: interventions, memory, ו-agent orchestration mode. בסוף, hosts, ה-plugin של Claude Code, והמתכונים להרחבה. בפרק 2 הגדרנו את רוב המונחים ברמת הרעיון. כאן אנחנו נכנסים לקבצים ולקוד.</p>
+  </aside>
+</section>
+
+<!-- ═══ 3. Library over a tiny core ═══ -->
+<section class="slide">
+  <h2>A library of Agent Skills over a tiny core</h2>
+  <svg class="diagram" viewBox="0 0 1136 430">
+    <defs><marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8b98a9"/></marker></defs>
+    <!-- core -->
+    <rect class="box amber" x="398" y="150" width="340" height="130" rx="14"/>
+    <text class="title" x="568" y="182" text-anchor="middle" font-size="20">core/cap_evolve  (pure stdlib)</text>
+    <text class="label mono" x="568" y="210" text-anchor="middle" font-size="14">splits.py · gate.py · rundir.py</text>
+    <text class="label mono" x="568" y="232" text-anchor="middle" font-size="14">harness.py · gepa.py · skillopt.py</text>
+    <text class="label" x="568" y="258" text-anchor="middle" font-size="14">honesty rules live here, not in skills</text>
+    <!-- components -->
+    <rect class="box blue" x="20" y="20" width="250" height="82" rx="12"/>
+    <text class="title" x="145" y="52" text-anchor="middle">orchestrate (2)</text>
+    <text class="label mono" x="145" y="78" text-anchor="middle" font-size="13">orchestrate · using-cap-evolve</text>
+    <rect class="box blue" x="300" y="20" width="250" height="82" rx="12"/>
+    <text class="title" x="425" y="52" text-anchor="middle">phases (8)</text>
+    <text class="label mono" x="425" y="78" text-anchor="middle" font-size="13">intake … gate … report</text>
+    <rect class="box green" x="586" y="20" width="250" height="82" rx="12"/>
+    <text class="title" x="711" y="52" text-anchor="middle">capabilities (4)</text>
+    <text class="label mono" x="711" y="78" text-anchor="middle" font-size="13">system-prompt · tools · …</text>
+    <rect class="box violet" x="866" y="20" width="250" height="82" rx="12"/>
+    <text class="title" x="991" y="52" text-anchor="middle">algorithms (5)</text>
+    <text class="label mono" x="991" y="78" text-anchor="middle" font-size="13">hill-climb · gepa · …</text>
+    <rect class="box" x="20" y="330" width="250" height="82" rx="12"/>
+    <text class="title" x="145" y="362" text-anchor="middle">optimizers (1 + registry)</text>
+    <text class="label mono" x="145" y="388" text-anchor="middle" font-size="13">run-optimizer · registry.yaml</text>
+    <rect class="box" x="300" y="330" width="250" height="82" rx="12"/>
+    <text class="title" x="425" y="362" text-anchor="middle">interventions (1)</text>
+    <text class="label mono" x="425" y="388" text-anchor="middle" font-size="13">llm-proxies/blackbox</text>
+    <rect class="box" x="586" y="330" width="250" height="82" rx="12"/>
+    <text class="title" x="711" y="362" text-anchor="middle">memory (1)</text>
+    <text class="label mono" x="711" y="388" text-anchor="middle" font-size="13">wiki</text>
+    <rect class="box" x="866" y="330" width="250" height="82" rx="12"/>
+    <text class="title" x="991" y="362" text-anchor="middle">_registry</text>
+    <text class="label mono" x="991" y="388" text-anchor="middle" font-size="13">build_manifest.py · manifest.json</text>
+    <!-- arrows -->
+    <path class="line" d="M145,102 L470,150" marker-end="url(#a3)"/>
+    <path class="line" d="M425,102 L520,150" marker-end="url(#a3)"/>
+    <path class="line" d="M711,102 L616,150" marker-end="url(#a3)"/>
+    <path class="line" d="M991,102 L668,150" marker-end="url(#a3)"/>
+    <path class="line" d="M145,330 L470,280" marker-end="url(#a3)"/>
+    <path class="line" d="M425,330 L520,280" marker-end="url(#a3)"/>
+    <path class="line" d="M711,330 L616,280" marker-end="url(#a3)"/>
+    <path class="line dash" d="M991,330 L668,280" marker-end="url(#a3)"/>
+    <text class="label" x="30" y="134" font-size="14">python scripts/run.py → one JSON on stdout</text>
+    <text class="label" x="1110" y="134" text-anchor="end" font-size="14">import cap_evolve</text>
+  </svg>
+  <p class="small muted">Source: docs/ARCHITECTURE.md line 3 · skills/_registry/manifest.json (22 skills)</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[1:30–2:40]</span> The first line of docs/ARCHITECTURE.md says it directly: cap-evolve is a library of Agent Skills over a tiny pure-stdlib core. The core is the amber box. It owns the rules that must not be bypassed: the seeded splits, the gate, the sealed test in rundir.py. The core also holds the loop engines, such as harness.py, gepa.py and skillopt.py.</p>
+    <p>Around it are 22 skills in seven component types. The counts are on the boxes: two orchestrate skills, eight phases, four capabilities, five algorithms, one optimizer runner with a registry, one intervention, and one memory skill. Each skill is a thin script that imports cap_evolve and prints one JSON object. This split is the key design choice. A skill is text plus a script, so an agent can read it and follow it. The honesty rules sit in code that no skill and no prompt can edit.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[1:30–2:40]</span> השורה הראשונה ב-docs/ARCHITECTURE.md אומרת את זה ישירות: cap-evolve הוא ספרייה של Agent Skills מעל core קטן ב-pure stdlib. ה-core הוא הקופסה הכתומה. הוא מחזיק את הכללים שאסור לעקוף: ה-splits עם seed, ה-gate, וה-test החתום ב-rundir.py. ה-core מחזיק גם את מנועי הלולאה, כמו harness.py, gepa.py ו-skillopt.py.</p>
+    <p>מסביב יש 22 skills בשבעה סוגי component. המספרים כתובים על הקופסאות: שני orchestrate, שמונה phases, ארבעה capabilities, חמישה algorithms, optimizer runner אחד עם registry, intervention אחד ו-memory skill אחד. כל skill הוא script דק שעושה import ל-cap_evolve ומדפיס אובייקט JSON אחד. זו החלטת התכנון המרכזית. skill הוא טקסט ועוד script, אז agent יכול לקרוא אותו ולפעול לפיו. כללי הכנות יושבים בקוד שאף skill ואף prompt לא יכולים לערוך.</p>
+  </aside>
+</section>
+
+<!-- ═══ 4. Anatomy of a skill ═══ -->
+<section class="slide">
+  <h2>Anatomy of one skill</h2>
+  <div class="row">
+    <div class="col" style="flex:0.9">
+      <div class="tree sm"><span class="d">skills/capabilities/system-prompt/</span>
+├── <span class="h">SKILL.md</span>       <span class="c"># frontmatter + body</span>
+├── <span class="h">meta.yaml</span>      <span class="c"># registry entry</span>
+├── <span class="d">references/</span>    <span class="c"># deeper docs</span>
+└── <span class="d">scripts/</span>
+    ├── _bootstrap.py <span class="c"># sys.path → core</span>
+    ├── abstract.py   <span class="c"># materialize/validate</span>
+    ├── check.py      <span class="c"># real smoke test</span>
+    └── <span class="h">run.py</span>        <span class="c"># prints 1 JSON</span></div>
+      <p class="small muted mt">Optional: <code>prompt/PROMPT.md</code>, <code>inputs/INPUTS.md</code></p>
+    </div>
+    <div class="col">
+      <pre class="sm"><span class="c"># meta.yaml</span>
+<span class="k">component:</span> capability
+<span class="k">name:</span> system-prompt
+<span class="k">entry:</span> scripts/run.py
+<span class="k">abstract:</span> scripts/abstract.py
+<span class="k">check:</span> scripts/check.py
+<span class="k">needs:</span> []
+<span class="k">provides:</span> [candidate]
+<span class="k">compatible_with:</span>
+  <span class="k">optimizers:</span> [<span class="s">"*"</span>]
+  <span class="k">algorithms:</span> [<span class="s">"*"</span>]</pre>
+      <pre class="sm"><span class="c">$ python scripts/run.py --path seed_capability</span>
+{<span class="s">"candidate"</span>: {...}, <span class="s">"valid"</span>: {<span class="s">"ok"</span>: <span class="n">true</span>, ...}}</pre>
+    </div>
+  </div>
+  <p class="small muted">Source: skills/capabilities/system-prompt/{meta.yaml, scripts/run.py} · docs/EXTENDING.md</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[2:40–3:50]</span> Every skill has the same shape. SKILL.md is what a host agent loads. Its frontmatter has name, description, component, needs and provides. The description matters most, because a host shows only the description before it decides to load the skill. meta.yaml is the machine side. Its <code>component:</code> key says which of the seven types this is. It also names the entry, abstract and check scripts and the needs and provides tokens.</p>
+    <p>In the scripts folder, run.py does the work and prints exactly one JSON object on stdout. For example, the system-prompt run.py builds a Candidate and validates it, then prints the candidate and a valid block. check.py is a smoke test that must fail on stubs. abstract.py holds the methods, such as materialize and validate. _bootstrap.py only puts core on sys.path, so the script runs standalone.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[2:40–3:50]</span> לכל skill יש אותו מבנה. SKILL.md הוא מה שה-host agent טוען. ב-frontmatter יש name, description, component, needs ו-provides. ה-description הכי חשוב, כי host מציג רק אותו לפני שהוא מחליט לטעון את ה-skill. meta.yaml הוא הצד של המכונה. המפתח <code>component:</code> אומר לאיזה מתוך שבעת הסוגים ה-skill שייך. הוא גם נותן את שמות ה-scripts של entry, abstract ו-check, ואת ה-tokens של needs ו-provides.</p>
+    <p>בתיקיית scripts, run.py עושה את העבודה ומדפיס בדיוק אובייקט JSON אחד ל-stdout. למשל, ה-run.py של system-prompt בונה Candidate, בודק אותו, ומדפיס את ה-candidate ובלוק valid. check.py הוא smoke test שחייב להיכשל על stubs. abstract.py מחזיק את המתודות, כמו materialize ו-validate. ‏_bootstrap.py רק מוסיף את ה-core ל-sys.path, כדי שה-script ירוץ לבד.</p>
+  </aside>
+</section>
+
+<!-- ═══ 5. Registry and wiring ═══ -->
+<section class="slide">
+  <h2>Wiring: <code>needs</code> and <code>provides</code> tokens</h2>
+  <div class="row">
+    <div class="col" style="flex:1.15">
+      <table class="tight">
+        <tr><th>Token</th><th>Produced by</th><th>Consumed by</th></tr>
+        <tr><td><code>project</code>, <code>tasks</code></td><td>intake</td><td>baseline, orchestrate</td></tr>
+        <tr><td><code>candidate</code></td><td>capabilities, algorithms</td><td>evaluate, finalize</td></tr>
+        <tr><td><code>scores</code>, <code>traces</code></td><td>evaluate, baseline</td><td>diagnose, gate, algorithms</td></tr>
+        <tr><td><code>reflective_dataset</code></td><td>diagnose</td><td>gepa</td></tr>
+        <tr><td><code>decision</code></td><td>gate</td><td>algorithms</td></tr>
+        <tr><td><code>report</code></td><td>finalize, report</td><td>(terminal)</td></tr>
+      </table>
+    </div>
+    <div class="col" style="flex:0.85">
+      <div class="flow vertical">
+        <div class="step"><b>meta.yaml × 22</b><span>one per skill folder</span></div><div class="arrow">↓</div>
+        <div class="step blue"><b>build_manifest.py</b><span>walks the tree, any depth</span></div><div class="arrow">↓</div>
+        <div class="step amber"><b>manifest.json</b><span>{"skills": {...}, "errors": [...]}</span></div><div class="arrow">↓</div>
+        <div class="step"><b>cli.py · orchestrate</b><span>resolve entry, match tokens</span></div>
+      </div>
+    </div>
+  </div>
+  <p class="small muted mt">Source: docs/EXTENDING.md "How wiring works" · skills/_registry/build_manifest.py · cli.py <code>_resolve_skills</code></p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[3:50–4:50]</span> How do 22 skills become one pipeline? Each meta.yaml declares tokens. A token is a name for a kind of data. build_manifest.py walks all meta.yaml files and writes skills/_registry/manifest.json. The manifest has two keys: skills and errors. The orchestrate skill and cli.py read it. cli.py uses it to find each skill's entry script, in the function <code>_resolve_skills</code>.</p>
+    <p>The table shows the real tokens. For example, evaluate provides scores and traces. diagnose needs both and provides reflective_dataset. Only gepa declares reflective_dataset as a need. The other algorithms read traces directly. The <code>compatible_with</code> lists use a star, which means any. That star is what gives you any capability with any algorithm with any optimizer. You can add a new token. Just make sure some skill provides it before another skill needs it, or the orchestrator flags an unmet need.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[3:50–4:50]</span> איך 22 skills הופכים ל-pipeline אחד? כל meta.yaml מצהיר על tokens. token הוא שם לסוג של מידע. ‏build_manifest.py עובר על כל קבצי meta.yaml וכותב את skills/_registry/manifest.json. ל-manifest יש שני מפתחות: skills ו-errors. ה-orchestrate skill ו-cli.py קוראים אותו. ‏cli.py משתמש בו כדי למצוא את ה-entry script של כל skill, בפונקציה <code>_resolve_skills</code>.</p>
+    <p>הטבלה מראה את ה-tokens האמיתיים. למשל, evaluate נותן scores ו-traces. ‏diagnose צריך את שניהם ונותן reflective_dataset. רק gepa מצהיר על reflective_dataset כצורך. שאר האלגוריתמים קוראים traces ישירות. ברשימות <code>compatible_with</code> יש כוכבית, שפירושה הכול. הכוכבית הזו נותנת כל capability עם כל algorithm עם כל optimizer. אפשר להוסיף token חדש. רק צריך לוודא שיש skill שנותן אותו לפני ש-skill אחר צריך אותו, אחרת ה-orchestrator יסמן תלות חסרה.</p>
+  </aside>
+</section>
+
+<!-- ═══ 6. Orchestrate + phases ═══ -->
+<section class="slide">
+  <h2>Orchestrate and the eight phase skills</h2>
+  <div class="flow">
+    <div class="step blue"><b>intake</b><span>scaffold, ask for missing inputs</span></div><div class="arrow">→</div>
+    <div class="step red"><b>implement-and-check</b><span>HARD GATE: check green</span></div><div class="arrow">→</div>
+    <div class="step"><b>baseline</b><span>freeze splits, score seed on val</span></div><div class="arrow">→</div>
+    <div class="step violet"><b>&lt;algorithm&gt;</b><span>loop until budget / stall</span></div><div class="arrow">→</div>
+    <div class="step amber"><b>finalize</b><span>sealed test, once</span></div><div class="arrow">→</div>
+    <div class="step green"><b>report</b><span>report.md, dashboard</span></div>
+  </div>
+  <div class="row mt">
+    <div class="col">
+      <div class="card compact"><h3>Used inside the loop</h3>
+        <ul><li><code>evaluate</code>: score a candidate on train|val, pass^k</li>
+        <li><code>diagnose</code>: traces → failure clusters ("textual gradient")</li>
+        <li><code>gate</code>: accept / reject, always on val</li></ul></div>
+    </div>
+    <div class="col">
+      <div class="card blue compact"><h3>Two orchestrate skills</h3>
+        <ul><li><code>using-cap-evolve</code>: router; reads <code>.capevolve</code> state, names the next command</li>
+        <li><code>orchestrate</code>: runs every phase in order, refuses to skip a check</li></ul></div>
+    </div>
+  </div>
+  <p class="small muted">Source: skills/phases/*/meta.yaml · skills/orchestrate/{orchestrate,using-cap-evolve}/SKILL.md</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[4:50–5:50]</span> A phase is one step of the pipeline, packed as a skill. Six phases form the outer chain you see here. intake collects inputs and must ask the user for any missing needed input. It never invents one. implement-and-check is the hard gate: <code>cap-evolve check</code> must print ok before any money is spent. baseline freezes the splits and scores the seed. Then the algorithm runs. finalize touches test once. report writes the result.</p>
+    <p>Three phases are used inside the loop: evaluate, diagnose and gate. In agent mode the agent calls their run.py scripts directly. The two orchestrate skills sit on top. using-cap-evolve is the router. It does not run anything. It reads the on-disk state and says what comes next: intake, check, a resume, or a reuse of a sealed baseline. orchestrate is the driver that sequences the phases. One small note: orchestrate's SKILL.md still says the default algorithm is "all-at-once". That is the old name. cli.py maps it to hill-climb with focus all.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[4:50–5:50]</span> phase הוא שלב אחד ב-pipeline, ארוז כ-skill. שישה phases בונים את השרשרת החיצונית שרואים כאן. ‏intake אוסף קלטים, וחייב לשאול את המשתמש על כל קלט נדרש שחסר. הוא אף פעם לא ממציא קלט. ‏implement-and-check הוא ה-hard gate: ‏<code>cap-evolve check</code> חייב להחזיר ok לפני שמוציאים כסף. ‏baseline מקפיא את ה-splits ומודד את ה-seed. אחר כך רץ ה-algorithm. ‏finalize נוגע ב-test פעם אחת. ‏report כותב את התוצאה.</p>
+    <p>שלושה phases משמשים בתוך הלולאה: evaluate, diagnose ו-gate. ב-agent mode ה-agent קורא ישירות ל-run.py שלהם. שני ה-orchestrate skills יושבים למעלה. ‏using-cap-evolve הוא ה-router. הוא לא מריץ כלום. הוא קורא את המצב בדיסק ואומר מה הצעד הבא: intake, check, resume, או שימוש חוזר ב-baseline חתום. ‏orchestrate הוא ה-driver שמריץ את ה-phases לפי הסדר. הערה קטנה: ב-SKILL.md של orchestrate עדיין כתוב שה-algorithm ברירת המחדל הוא "all-at-once". זה השם הישן. ‏cli.py ממפה אותו ל-hill-climb עם focus all.</p>
+  </aside>
+</section>
+
+<!-- ═══ 7. Capabilities ═══ -->
+<section class="slide">
+  <h2>Capabilities: what the optimizer may edit</h2>
+  <div class="grid-4 gap-sm">
+    <div class="card green compact"><h3>system-prompt</h3><p>Prompt / policy files: <code>prompt.txt</code>, <code>policy.md</code>, <code>SYSTEM.md</code></p><p class="muted">Levers: rewrite a rule, add its reason, consolidate, add a sourced rule, add an example, restructure</p></div>
+    <div class="card green compact"><h3>tools</h3><p>Agent-owned tools: docs, schema, code, composite tools, add / remove</p><p class="muted">Levers: guards scoped to the violating condition, clearer return and error text</p></div>
+    <div class="card amber compact"><h3>mcp-tool</h3><p>External MCP server: descriptions, per-param docs, examples, which tools are exposed</p><p class="muted">No schema, no handler, no compose edits</p></div>
+    <div class="card violet compact"><h3>skill-package</h3><p>A whole Agent Skill: <code>description</code>, body, references, <code>scripts/</code></p><p class="muted">Highest lever: the trigger description; a skipped step becomes a bundled script</p></div>
+  </div>
+  <div class="callout mt">Each SKILL.md has a <b>"What you can change here"</b> menu. The harness copies it into the optimizer workdir as <code>./guidance/&lt;cap&gt;/</code> and into the agent's native skills dir.</div>
+  <p class="small muted mt">Source: skills/capabilities/*/SKILL.md · docs/ARCHITECTURE.md "What the optimizer receives"</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[5:50–7:00]</span> A capability, from chapter 2, is the part of the agent we optimize. Each of the four capability skills is a menu of allowed edits for one kind of artifact. system-prompt covers prompt and policy text. Its levers are edit classes, such as "add the reason to a bare rule". tools covers tools the agent owns, so the optimizer may change the code itself. mcp-tool is for an MCP server that someone else owns. Only presentation edits are allowed there. skill-package covers a whole Agent Skill. Its top lever is the description, because that is the only text a host loads before the skill fires.</p>
+    <p>How does the optimizer see this menu? The harness copies the chosen capability skill into the workdir as guidance, and also into the agent's native skills folder, for example .claude/skills for Claude Code. So a headless agent loads it without any flag. A spec can list two capabilities, such as system-prompt and tools together.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[5:50–7:00]</span> capability, מפרק 2, הוא החלק של ה-agent שאנחנו מייעלים. כל אחד מארבעת ה-capability skills הוא תפריט של עריכות מותרות לסוג אחד של artifact. ‏system-prompt מכסה טקסט של prompt ו-policy. ה-levers שלו הם סוגי עריכה, כמו "הוסף את הסיבה לכלל חשוף". ‏tools מכסה tools שה-agent עצמו מחזיק, כך שה-optimizer מותר לשנות את הקוד. ‏mcp-tool מיועד ל-MCP server שמישהו אחר מחזיק, ושם מותרות רק עריכות של הצגה. ‏skill-package מכסה Agent Skill שלם. ה-lever הכי חזק שלו הוא ה-description, כי זה הטקסט היחיד ש-host טוען לפני שה-skill מופעל.</p>
+    <p>איך ה-optimizer רואה את התפריט? ה-harness מעתיק את ה-capability skill שנבחר ל-workdir כ-guidance, וגם לתיקיית ה-skills הטבעית של ה-agent, למשל .claude/skills עבור Claude Code. כך headless agent טוען אותו בלי שום flag. ‏spec יכול לציין שני capabilities, למשל system-prompt ו-tools ביחד.</p>
+  </aside>
+</section>
+
+<!-- ═══ 8. Edit boundaries ═══ -->
+<section class="slide">
+  <h2>Edit boundaries are stated and checked</h2>
+  <div class="row">
+    <div class="col" style="flex:1.1">
+      <h3>mcp-tool: who owns what</h3>
+      <table class="tight">
+        <tr><th>Edit</th><th>Owner</th><th>Here?</th></tr>
+        <tr><td><code>description</code>, per-param docs, examples</td><td>client</td><td class="green">yes</td></tr>
+        <tr><td>which tools the model sees (add / remove)</td><td>client</td><td class="green">yes</td></tr>
+        <tr><td>wire <code>inputSchema</code> (type, required, enum)</td><td>server</td><td class="red">no</td></tr>
+        <tr><td>handler code, server-side compose</td><td>server</td><td class="red">no</td></tr>
+      </table>
+    </div>
+    <div class="col" style="flex:0.9">
+      <div class="term green sm"><span class="name">system-prompt</span><span class="kind">rule</span><div class="def">Never drop a needed rule. <code>apply()</code> counts constraint-bearing lines before and after, and puts a net loss in <code>report["warnings"]</code>.</div></div>
+      <div class="term sm mt"><span class="name">tools</span><span class="kind">rule</span><div class="def">Never bare-remove a tool. Add → verify → swap. Write the real body, never <code>...</code> or <code>pass</code>. Keep under ~20 tools.</div></div>
+      <div class="term violet sm mt"><span class="name">skill-package</span><span class="kind">rule</span><div class="def">Bundled scripts need a <code>--self-check</code>; <code>validate()</code> runs it before any rollout.</div></div>
+    </div>
+  </div>
+  <p class="small muted mt">Source: skills/capabilities/mcp-tool/SKILL.md · system-prompt/SKILL.md §"Never drop a needed rule" · tools/SKILL.md</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[7:00–8:00]</span> Each capability also states hard edit boundaries. The mcp-tool table is the clearest example. The server owns the wire inputSchema and the handler. A candidate that edits them is invalid against the real server. It fails at tools/call, and the run still pays the full rollout cost to learn that.</p>
+    <p>system-prompt has the rule "never drop a needed rule". Consolidation cuts words, never rules. This rule is also checked by code: apply() counts lines that carry constraints before and after each edit and reports a net loss as a warning. A warning is not a failure. It asks the optimizer to state in PROCESS.md where each dropped constraint went. tools has "never bare-remove a tool": first add the safer replacement, then verify it, then swap. Bare removal strands every task that needed the tool. skill-package asks for a self-check entry on each bundled script.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[7:00–8:00]</span> כל capability גם מגדיר גבולות עריכה קשיחים. הטבלה של mcp-tool היא הדוגמה הכי ברורה. ה-server מחזיק את ה-inputSchema וה-handler. ‏candidate שעורך אותם לא תקף מול ה-server האמיתי. הוא נכשל ב-tools/call, וה-run עדיין משלם את כל עלות ה-rollouts כדי לגלות את זה.</p>
+    <p>ב-system-prompt יש את הכלל "לעולם לא מוחקים כלל נחוץ". איחוד מקצץ מילים, לא כללים. הכלל הזה גם נבדק בקוד: ‏apply() סופר שורות שנושאות אילוצים לפני ואחרי כל עריכה, ומדווח ירידה נטו כ-warning. ‏warning הוא לא כישלון. הוא מבקש מה-optimizer לכתוב ב-PROCESS.md לאן עבר כל אילוץ שנמחק. ב-tools יש "לעולם לא מסירים tool בלי תחליף": קודם מוסיפים את התחליף הבטוח, בודקים אותו, ורק אז מחליפים. הסרה חשופה משאירה בלי פתרון כל task שהיה צריך את ה-tool. ‏skill-package דורש self-check לכל script שמצורף.</p>
+  </aside>
+</section>
+
+<!-- ═══ 9. Hill-climb ═══ -->
+<section class="slide">
+  <h2>hill-climb: parent is always the current best</h2>
+  <div class="flow">
+    <div class="step"><b>parent = best_id</b><span>copy to work/&lt;cand&gt;</span></div><div class="arrow">→</div>
+    <div class="step blue"><b>prompt</b><span>failure index + protect ids</span></div><div class="arrow">→</div>
+    <div class="step violet"><b>optimizer</b><span>edits workdir in place</span></div><div class="arrow">→</div>
+    <div class="step"><b>eval val</b><span>--n-trials per task</span></div><div class="arrow">→</div>
+    <div class="step amber"><b>gate</b><span>paired Δ &gt; k·SE</span></div><div class="arrow">→</div>
+    <div class="step green"><b>commit</b><span>every candidate</span></div>
+  </div>
+  <table class="tight mt">
+    <tr><th><code>--focus</code></th><th>Each iteration emphasizes</th><th>Use when</th></tr>
+    <tr><td><code>all</code> (default)</td><td>every failing val task</td><td>broad gaps; the usual choice</td></tr>
+    <tr><td><code>cyclic</code></td><td>one val task at a time, round-robin</td><td>many unrelated failure modes</td></tr>
+    <tr><td><code>hardest-first</code></td><td>val tasks by parent reward, ascending</td><td>a few hard tasks dominate</td></tr>
+  </table>
+  <div class="callout amber mt"><b>Opt-in HC-2</b> (<code>hc2: true</code> → <code>--hc2</code>, <code>core/cap_evolve/hc2.py</code>): K=4 proposals per round from distinct failure clusters, judged by the shared <code>P2Evaluator</code>.</div>
+  <p class="small muted">Source: skills/algorithms/hill-climb/{SKILL.md, scripts/run.py} → <code>harness.hill_climb_loop</code>, <code>harness.run_step</code></p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[8:00–9:10]</span> hill-climb is the default algorithm. Its run.py is a thin wrapper over harness.hill_climb_loop. One iteration is harness.run_step, which chapter 5 walked through. The parent is always the current best. Why? Every accepted candidate already passed the gate, so the best is the only candidate with evidence behind it. The cost: a specialist that trades one task class for another can never be kept. If you want that, use gepa.</p>
+    <p>The <code>--focus</code> flag changes only which failing val tasks the prompt emphasizes. Protection of passing tasks always covers the whole val split. The old skill names all-at-once, cyclic and hardest-first are aliases in cli.py. HC-2 is an opt-in extension in hc2.py. It makes K proposals per round, each from a different failure cluster, with a diversity check against recently rejected diffs. It uses the same P2 evaluator as the agent-optimize conductor.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[8:00–9:10]</span> ‏hill-climb הוא האלגוריתם ברירת המחדל. ה-run.py שלו הוא עטיפה דקה מעל harness.hill_climb_loop. איטרציה אחת היא harness.run_step, שעברנו עליו בפרק 5. ה-parent הוא תמיד ה-best הנוכחי. למה? כל candidate שהתקבל כבר עבר את ה-gate, אז ה-best הוא היחיד שיש מאחוריו ראיות. המחיר: ‏specialist שמחליף סוג אחד של tasks בסוג אחר לא יכול להישמר. אם רוצים את זה, משתמשים ב-gepa.</p>
+    <p>ה-flag ‏<code>--focus</code> משנה רק אילו val tasks שנכשלו ה-prompt מדגיש. ההגנה על tasks שעוברים תמיד מכסה את כל ה-val split. השמות הישנים all-at-once, cyclic ו-hardest-first הם aliases ב-cli.py. ‏HC-2 היא הרחבה שמפעילים ידנית, ב-hc2.py. היא מייצרת K הצעות בכל סבב, כל אחת מ-failure cluster אחר, עם בדיקת גיוון מול diffs שנדחו לאחרונה. היא משתמשת באותו P2 evaluator שה-conductor של agent-optimize משתמש בו.</p>
+  </aside>
+</section>
+
+<!-- ═══ 10. GEPA ═══ -->
+<section class="slide">
+  <h2>gepa: minibatch gate, then the full-val gate</h2>
+  <svg class="diagram" viewBox="0 0 1136 380">
+    <defs><marker id="a10" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8b98a9"/></marker></defs>
+    <rect class="box amber" x="20" y="40" width="210" height="120" rx="12"/>
+    <text class="title" x="125" y="72" text-anchor="middle">Pareto frontier</text>
+    <text class="label" x="125" y="98" text-anchor="middle" font-size="14">per val instance</text>
+    <text class="label mono" x="125" y="122" text-anchor="middle" font-size="13">pareto_per_instance</text>
+    <text class="label" x="125" y="144" text-anchor="middle" font-size="13">frequency-weighted pick</text>
+    <rect class="box blue" x="280" y="40" width="210" height="120" rx="12"/>
+    <text class="title" x="385" y="72" text-anchor="middle">Minibatch</text>
+    <text class="label" x="385" y="98" text-anchor="middle" font-size="14">--minibatch-size 4</text>
+    <text class="label" x="385" y="122" text-anchor="middle" font-size="14">train ids, eval-cached</text>
+    <rect class="box violet" x="540" y="40" width="230" height="120" rx="12"/>
+    <text class="title" x="655" y="72" text-anchor="middle">Reflect + optimize</text>
+    <text class="label mono" x="655" y="98" text-anchor="middle" font-size="13">REFLECTION.md</text>
+    <text class="label mono" x="655" y="120" text-anchor="middle" font-size="13">FOCUS.md (round_robin)</text>
+    <text class="label" x="655" y="144" text-anchor="middle" font-size="13">failing minibatch traces</text>
+    <rect class="box" x="820" y="40" width="296" height="120" rx="12"/>
+    <text class="title" x="968" y="72" text-anchor="middle">Local gate (cheap)</text>
+    <text class="label mono" x="968" y="100" text-anchor="middle" font-size="14">sum(child) &gt; sum(parent)</text>
+    <text class="label" x="968" y="124" text-anchor="middle" font-size="13">same minibatch · else drop</text>
+    <rect class="box green" x="820" y="230" width="296" height="120" rx="12"/>
+    <text class="title" x="968" y="262" text-anchor="middle">Full-val gate (honest)</text>
+    <text class="label mono" x="968" y="290" text-anchor="middle" font-size="14">_full_val_gate → gate.decide</text>
+    <text class="label" x="968" y="314" text-anchor="middle" font-size="13">paired, val only</text>
+    <rect class="box" x="400" y="230" width="330" height="120" rx="12"/>
+    <text class="title" x="565" y="262" text-anchor="middle">Optional merge</text>
+    <text class="label mono" x="565" y="290" text-anchor="middle" font-size="13">_find_merge_pair · _build_merge</text>
+    <text class="label" x="565" y="314" text-anchor="middle" font-size="13">two dominators, common ancestor</text>
+    <text class="label" x="565" y="334" text-anchor="middle" font-size="13">--max-merges 2</text>
+    <path class="line" d="M230,100 L280,100" marker-end="url(#a10)"/>
+    <path class="line" d="M490,100 L540,100" marker-end="url(#a10)"/>
+    <path class="line" d="M770,100 L820,100" marker-end="url(#a10)"/>
+    <path class="line" d="M968,160 L968,230" marker-end="url(#a10)"/>
+    <text class="label" x="980" y="200" font-size="14">pass</text>
+    <path class="line" d="M820,290 L730,290" marker-end="url(#a10)"/>
+    <text class="label" x="738" y="280" font-size="13">on accept</text>
+    <path class="line dash" d="M400,290 L125,290 L125,160" marker-end="url(#a10)"/>
+    <text class="label" x="150" y="280" font-size="13">accepted child joins pool + frontier</text>
+  </svg>
+  <p class="small muted">Source: core/cap_evolve/gepa.py <code>gepa_loop</code> · selection.py · budget: <code>--max-metric-calls</code></p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[9:10–10:30]</span> gepa implements the GEPA paper, arXiv 2507.19457, in core/cap_evolve/gepa.py. It reuses the core's honest pieces, such as evaluate_candidate and gate.decide, and adds two mechanisms. First, the parent comes from a per-instance Pareto frontier. Each candidate is scored per val task. Any candidate that wins at least one task stays a possible parent, and the pick is weighted by how many tasks it wins. So a specialist that solved one hard task is not lost because its mean is lower.</p>
+    <p>Second, a cheap filter sits before the expensive gate. The parent and the child run on the same small train minibatch, four tasks by default. The child must have a larger sum. Only then does gepa pay for a full val evaluation and the real paired gate. The minibatch never accepts anything. It can only reject. Budget is counted in metric calls. Merges are optional: two frontier candidates with a common ancestor are combined file by file, then gated like any child.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[9:10–10:30]</span> ‏gepa מממש את מאמר GEPA, ‏arXiv 2507.19457, בקובץ core/cap_evolve/gepa.py. הוא משתמש שוב בחלקים הכנים של ה-core, כמו evaluate_candidate ו-gate.decide, ומוסיף שני מנגנונים. ראשון, ה-parent נבחר מתוך Pareto frontier לפי instance. כל candidate מקבל ציון לכל val task. כל candidate שמנצח לפחות task אחד נשאר parent אפשרי, והבחירה משוקללת לפי כמה tasks הוא מנצח. כך specialist שפתר task קשה אחד לא הולך לאיבוד רק כי הממוצע שלו נמוך יותר.</p>
+    <p>שני, יש מסנן זול לפני ה-gate היקר. ה-parent וה-child רצים על אותו minibatch קטן של train, ארבעה tasks כברירת מחדל. ל-child צריך להיות סכום גבוה יותר. רק אז gepa משלם על הערכה מלאה של val ועל ה-paired gate האמיתי. ה-minibatch אף פעם לא מקבל candidate. הוא רק יכול לדחות. התקציב נספר ב-metric calls. ‏merges הם אופציונליים: שני candidates מה-frontier עם אב משותף מתאחדים קובץ אחרי קובץ, ואז עוברים gate כמו כל child.</p>
+  </aside>
+</section>
+
+<!-- ═══ 11. SkillOpt ═══ -->
+<section class="slide">
+  <h2>skillopt: epochs and a textual learning rate</h2>
+  <div class="row">
+    <div class="col" style="flex:1.05">
+      <svg class="diagram" viewBox="0 0 560 300">
+        <text class="label" x="10" y="20" font-size="14">edit budget L per step (cosine, --edit-budget 4 → --min-edit-budget 2)</text>
+        <line class="line" x1="40" y1="260" x2="550" y2="260"/>
+        <line class="line" x1="40" y1="40" x2="40" y2="260"/>
+        <text class="label" x="28" y="264" text-anchor="end" font-size="13">0</text>
+        <text class="label" x="28" y="210" text-anchor="end" font-size="13">1</text>
+        <text class="label" x="28" y="160" text-anchor="end" font-size="13">2</text>
+        <text class="label" x="28" y="110" text-anchor="end" font-size="13">3</text>
+        <text class="label" x="28" y="60" text-anchor="end" font-size="13">4</text>
+        <rect class="box blue" x="52" y="60" width="38" height="200"/>
+        <rect class="box blue" x="102" y="60" width="38" height="200"/>
+        <rect class="box blue" x="152" y="60" width="38" height="200"/>
+        <rect class="box blue" x="202" y="60" width="38" height="200"/>
+        <rect class="box blue" x="252" y="110" width="38" height="150"/>
+        <rect class="box blue" x="302" y="110" width="38" height="150"/>
+        <rect class="box blue" x="352" y="160" width="38" height="100"/>
+        <rect class="box blue" x="402" y="160" width="38" height="100"/>
+        <rect class="box blue" x="452" y="160" width="38" height="100"/>
+        <rect class="box blue" x="502" y="160" width="38" height="100"/>
+        <text class="label" x="295" y="284" text-anchor="middle" font-size="13">step 1 … 10   (build_schedule("cosine", 4, 2, 10))</text>
+      </svg>
+    </div>
+    <div class="col" style="flex:0.95">
+      <ul class="small">
+        <li>Single lineage: parent is the current best, like hill-climb</li>
+        <li><code>--epochs 4</code> × mini-batches of <b>train</b>; seeded shuffle per epoch</li>
+        <li>L is told in words only: "make at most L bounded edits"</li>
+        <li>Per-epoch rejected-edit buffer, reset and bounded each epoch</li>
+        <li>Epoch boundary (epoch ≥ 2): one extra "slow update" step, gated on val like any step</li>
+      </ul>
+      <div class="callout red small">Known gap #371: the train minibatch ids filter <b>val</b> rows, so the focus block is empty.</div>
+    </div>
+  </div>
+  <p class="small muted">Source: core/cap_evolve/{skillopt.py <code>skillopt_loop</code>, lr_schedule.py} · skills/algorithms/skillopt/SKILL.md "Known gaps"</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[10:30–11:30]</span> skillopt follows the SkillOpt paper. It keeps a strict single lineage like hill-climb, but organizes steps into epochs over mini-batches of train tasks. The new idea is a textual learning rate. That is an integer edit budget per step, made by lr_schedule.build_schedule with a constant, linear or cosine shape. The chart shows the real default: cosine from 4 down to 2 over ten steps. The budget reaches the optimizer only as a sentence. Nothing clips it mechanically.</p>
+    <p>Each epoch keeps a small buffer of rejected edits, so the next prompt says what to avoid. At each epoch boundary there is one extra consolidation step: fix the regressions without breaking stable successes. That step is gated on val too, never forced. Be aware: the SKILL.md has an honest "Known gaps" section. For example, issue 371: the minibatch ids come from train but filter val rows, so the per-step focus is empty today.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[10:30–11:30]</span> ‏skillopt מבוסס על מאמר SkillOpt. הוא שומר על שושלת אחת קפדנית כמו hill-climb, אבל מארגן את הצעדים ב-epochs מעל mini-batches של train tasks. הרעיון החדש הוא textual learning rate. זה תקציב עריכות שלם לכל צעד, שנבנה על ידי lr_schedule.build_schedule בצורה constant, ‏linear או cosine. הגרף מראה את ברירת המחדל האמיתית: ‏cosine מ-4 עד 2 לאורך עשרה צעדים. התקציב מגיע ל-optimizer רק כמשפט. שום דבר לא חותך אותו מכנית.</p>
+    <p>כל epoch שומר buffer קטן של עריכות שנדחו, כך שה-prompt הבא אומר ממה להימנע. בכל גבול epoch יש צעד איחוד נוסף אחד: לתקן את ה-regressions בלי לשבור הצלחות יציבות. גם הצעד הזה עובר gate על val, אף פעם לא מתקבל בכוח. שימו לב: ב-SKILL.md יש סעיף "Known gaps" כן. למשל, issue 371: ה-ids של ה-minibatch באים מ-train אבל מסננים שורות של val, אז ה-focus בכל צעד ריק היום.</p>
+  </aside>
+</section>
+
+<!-- ═══ 12. agent-optimize ═══ -->
+<section class="slide">
+  <h2>agent-optimize: the agent is the optimizer</h2>
+  <div class="flow">
+    <div class="step"><b>diagnose + digest</b><span>clusters, posteriors, merge_opps</span></div><div class="arrow">→</div>
+    <div class="step blue"><b>act.py propose</b><span>hypothesis + pregate</span></div><div class="arrow">→</div>
+    <div class="step"><b>act.py probe</b><span>only missing cells</span></div><div class="arrow">→</div>
+    <div class="step green"><b>promote</b><span>full-val coverage</span></div><div class="arrow">/</div>
+    <div class="step red"><b>prune</b><span>--reason</span></div><div class="arrow">→</div>
+    <div class="step amber"><b>finalize</b><span>--n-confirm 3, seal once</span></div>
+  </div>
+  <div class="grid-3 mt">
+    <div class="card compact"><h3>Hypothesis rule</h3><p><code>hypotheses.validate</code>: covers ≥ 2 tasks or headroom ≥ 0.06. Single-task edits sit below noise.</p></div>
+    <div class="card compact"><h3>Siblings and merge</h3><p>Several candidates in parallel <code>work/TAG</code> copies; <code>act.py merge A B</code> folds complementary branches.</p></div>
+    <div class="card compact"><h3>Commit requirements</h3><p><code>commit.py</code> refuses without a real <code>DIAGNOSIS.json</code> and a filled ranked-issue list (or a written justification). A <code>JOURNAL.md</code> entry per round.</p></div>
+  </div>
+  <p class="small muted mt-lg">Source: skills/algorithms/agent-optimize/{SKILL.md, scripts/act.py, commit.py, round.py, digest.py} · core/cap_evolve/hypotheses.py</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[11:30–12:50]</span> agent-optimize runs only in agent orchestration mode. There is no optimizer subprocess. The conversational agent itself writes the edits. The scripts decide the numbers, and the agent judges. The loop is six verbs in act.py plus digest.py. Each round starts with diagnose, then the digest: one screen with budget, noise, clusters, and branch posteriors. propose copies the parent into work/TAG. On the second call it checks the hypothesis and runs a free pregate. probe evaluates only the cells the ledger lacks. promote needs full val coverage. prune records a reason.</p>
+    <p>Three rules matter. A hypothesis must cover at least two tasks or 0.06 of headroom, because a one-task edit is below the noise. Siblings are parallel candidates in separate work copies. round.py also adds a null control, a byte-identical copy, so each round measures its own noise floor. And commit.py refuses a commit without a DIAGNOSIS.json and a ranked issue list, unless you pass a written justification.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[11:30–12:50]</span> ‏agent-optimize רץ רק ב-agent orchestration mode. אין optimizer subprocess. ה-agent השיחתי עצמו כותב את העריכות. ה-scripts מחליטים על המספרים, וה-agent שופט. הלולאה היא שישה פעלים ב-act.py ועוד digest.py. כל סבב מתחיל ב-diagnose, ואחר כך ה-digest: מסך אחד עם תקציב, רעש, clusters ו-posteriors של הענפים. ‏propose מעתיק את ה-parent ל-work/TAG. בקריאה השנייה הוא בודק את ה-hypothesis ומריץ pregate שלא עולה כלום. ‏probe מעריך רק את התאים שחסרים ב-ledger. ‏promote דורש כיסוי מלא של val. ‏prune רושם סיבה.</p>
+    <p>שלושה כללים חשובים. ‏hypothesis חייב לכסות לפחות שני tasks או 0.06 של headroom, כי עריכה ל-task אחד נמצאת מתחת לרעש. ‏siblings הם candidates מקבילים בעותקי work נפרדים. ‏round.py גם מוסיף null control, עותק זהה בבייטים, כך שכל סבב מודד את רצפת הרעש שלו. ו-commit.py מסרב ל-commit בלי DIAGNOSIS.json ובלי ranked issue list, אלא אם מעבירים הצדקה כתובה.</p>
+  </aside>
+</section>
+
+<!-- ═══ 13. Compare ═══ -->
+<section class="slide">
+  <h2>The five algorithms side by side</h2>
+  <table class="tight">
+    <tr><th>Algorithm</th><th>Mode</th><th>Parent choice</th><th>Cheap filter before val gate</th><th>Core code</th><th>Pick it when</th></tr>
+    <tr><td><b>hill-climb</b></td><td>both</td><td>current best</td><td>none (HC-2: kill-only rungs)</td><td><code>harness.py</code>, <code>hc2.py</code></td><td>first run, binary scorers</td></tr>
+    <tr><td><b>gepa</b></td><td>both</td><td>Pareto, per instance</td><td>train minibatch sum</td><td><code>gepa.py</code>, <code>selection.py</code></td><td>costly rollouts, rich feedback</td></tr>
+    <tr><td><b>skillopt</b></td><td>both</td><td>current best</td><td>none</td><td><code>skillopt.py</code>, <code>lr_schedule.py</code></td><td>you want annealing per epoch</td></tr>
+    <tr><td><b>agent-optimize</b></td><td>agent only</td><td>agent's choice</td><td>probe subset, pregate</td><td>its own <code>scripts/</code></td><td>search needs judgment</td></tr>
+    <tr><td class="muted"><b>evograph</b></td><td class="muted">agent only</td><td class="muted">weakness graph</td><td class="red">no val gate</td><td class="muted"><code>scripts/now.py</code></td><td class="red">deprecated</td></tr>
+  </table>
+  <div class="callout mt">All of them accept only through the paired val gate in core (evograph excepted, which is why it is deprecated). Test stays sealed in every case.</div>
+  <p class="small muted mt">Source: core/cap_evolve/branding.py <code>ALGORITHMS</code> · <code>cap-evolve algorithms</code> · docs/AGENT_ORCHESTRATION.md</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[12:50–13:50]</span> Here are the five side by side. The table follows branding.ALGORITHMS, which is what the <code>cap-evolve algorithms</code> command prints and what doctor checks. "Both" in the mode column means the algorithm runs deterministically, and its SKILL.md also has an agent-mode loop, so the agent can drive it. agent-optimize and evograph are agent only. Doctor fails a spec that selects them without <code>orchestration_mode: agent</code>.</p>
+    <p>The real differences are the parent choice and the cheap filter. hill-climb and skillopt always fork the best. gepa samples from a frontier. agent-optimize lets the agent choose. evograph is deprecated. It sent one solver per weakness, which is the same fan-out agent-optimize has, but it accepted merges on a self-reported train delta. It had no val gate. It stays only so that old run dirs remain readable. Its weakness-graph format lives on as the wiki memory skill.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[12:50–13:50]</span> הנה החמישה אחד ליד השני. הטבלה מבוססת על branding.ALGORITHMS, שזה מה שהפקודה <code>cap-evolve algorithms</code> מדפיסה ומה ש-doctor בודק. "both" בעמודת ה-mode אומר שהאלגוריתם רץ באופן דטרמיניסטי, וב-SKILL.md שלו יש גם agent-mode loop, כך שה-agent יכול להריץ אותו. ‏agent-optimize ו-evograph הם agent בלבד. ‏doctor נכשל על spec שבוחר בהם בלי <code>orchestration_mode: agent</code>.</p>
+    <p>ההבדלים האמיתיים הם בבחירת ה-parent ובמסנן הזול. ‏hill-climb ו-skillopt תמיד מתפצלים מה-best. ‏gepa דוגם מתוך frontier. ‏agent-optimize נותן ל-agent לבחור. ‏evograph הוא deprecated. הוא שלח solver אחד לכל weakness, וזה אותו fan-out שיש ב-agent-optimize, אבל הוא קיבל merges לפי train delta שהוא דיווח בעצמו. לא היה לו val gate. הוא נשאר רק כדי ש-run dirs ישנים יהיו קריאים. פורמט ה-weakness graph שלו ממשיך לחיות כ-memory skill בשם wiki.</p>
+  </aside>
+</section>
+
+<!-- ═══ 14. Optimizer backends ═══ -->
+<section class="slide">
+  <h2>Optimizer backends: one runner, one registry</h2>
+  <div class="row">
+    <div class="col" style="flex:1.1">
+      <pre class="sm"><span class="c"># skills/optimizers/registry.yaml (one row)</span>
+<span class="f">claude-code:</span>
+  <span class="k">command_template:</span> <span class="s">"claude -p {prompt_text} --permission-mode</span>
+<span class="s">    acceptEdits --allowedTools Bash --disallowedTools Monitor</span>
+<span class="s">    --model {model}"</span>
+  <span class="k">env_keys:</span> <span class="s">"ANTHROPIC_API_KEY"</span>
+  <span class="k">json_flag:</span> <span class="s">"--output-format json"</span>
+  <span class="k">transcript_flag:</span> <span class="s">"--output-format stream-json --verbose"</span>
+  <span class="k">budget_flag:</span> <span class="s">"--max-turns {budget}"</span>
+  <span class="k">usd_budget_flag:</span> <span class="s">"--max-budget-usd {usd}"</span>
+  <span class="k">skills_dir:</span> <span class="s">".claude/skills"</span>
+  <span class="k">instructions_file:</span> <span class="s">"CLAUDE.md"</span>
+  <span class="k">parallel:</span> <span class="s">"true"</span></pre>
+    </div>
+    <div class="col" style="flex:0.9">
+      <p class="small"><b>14 rows:</b> <code>mock</code> (offline), <code>generic</code>, <code>claude-code</code>, <code>codex</code>, <code>gemini-cli</code>, <code>opencode</code>, <code>openclaw</code>, <code>ibm-bob</code>, <code>cursor</code>, <code>droid</code>, <code>copilot</code>, <code>kimi</code>, <code>pi</code>, <code>antigravity</code></p>
+      <div class="flow vertical">
+        <div class="step"><b>cli.py builds opt_cmd</b><span>run-optimizer --name X --json --workdir {workdir} --prompt {prompt}</span></div><div class="arrow">↓</div>
+        <div class="step blue"><b>run.py: load_registry()</b><span>expand command_template</span></div><div class="arrow">↓</div>
+        <div class="step violet"><b>agent CLI, cwd = workdir</b><span>stdout → one JSON: returncode, cost</span></div>
+      </div>
+    </div>
+  </div>
+  <p class="small muted">Source: skills/optimizers/{registry.yaml, run-optimizer/scripts/run.py} · cli.py <code>opt_cmd</code> · core/cap_evolve/model_routing.py</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[13:50–15:10]</span> An optimizer backend is the coding agent CLI that writes each edit. All of them follow one contract: get a workdir copy of the parent plus an INSTRUCTIONS.md, and edit files in place. So one runner, run-optimizer, serves them all. The only thing that differs is a row in registry.yaml.</p>
+    <p>Look at the claude-code row. command_template has placeholders: prompt_text is the contents of INSTRUCTIONS.md, and an empty model drops itself together with its flag. json_flag asks for machine output, so run.py can parse the cost. budget_flag and usd_budget_flag map per-iteration caps. skills_dir is where the harness places capability skills so the agent finds them natively. instructions_file gets a short pointer block. parallel tells the prompt it may fan out subagents. mock is offline and deterministic, driven by mock_script.json. Chapter 8 uses it for local debugging. The model comes from model_routing.resolve_model with the role "propose". It falls back to optimizer_model.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[13:50–15:10]</span> ‏optimizer backend הוא ה-coding agent CLI שכותב כל עריכה. כולם עובדים לפי חוזה אחד: מקבלים עותק workdir של ה-parent ועוד INSTRUCTIONS.md, ועורכים את הקבצים במקום. לכן runner אחד, run-optimizer, משרת את כולם. הדבר היחיד שמשתנה הוא שורה ב-registry.yaml.</p>
+    <p>תסתכלו על השורה של claude-code. ב-command_template יש placeholders: ‏prompt_text הוא התוכן של INSTRUCTIONS.md, ו-model ריק מוחק את עצמו יחד עם ה-flag שלו. ‏json_flag מבקש פלט למכונה, כדי ש-run.py יוכל לחלץ את העלות. ‏budget_flag ו-usd_budget_flag ממפים תקרות לכל איטרציה. ‏skills_dir הוא המקום שבו ה-harness שם את ה-capability skills כדי שה-agent ימצא אותם באופן טבעי. ‏instructions_file מקבל בלוק קצר שמפנה ל-INSTRUCTIONS.md. ‏parallel אומר ל-prompt שמותר לפצל ל-subagents. ‏mock עובד offline ובאופן דטרמיניסטי, לפי mock_script.json. בפרק 8 נשתמש בו לדיבאג מקומי. ה-model מגיע מ-model_routing.resolve_model עם ה-role ‏"propose", ואם אין, חוזר ל-optimizer_model.</p>
+  </aside>
+</section>
+
+<!-- ═══ 15. Interventions + memory ═══ -->
+<section class="slide">
+  <h2>Interventions and memory</h2>
+  <div class="row">
+    <div class="col">
+      <h3>Intervention: how a candidate reaches the model</h3>
+      <svg class="diagram" viewBox="0 0 540 230">
+        <defs><marker id="a15" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8b98a9"/></marker></defs>
+        <rect class="box" x="10" y="20" width="150" height="70" rx="10"/>
+        <text class="title" x="85" y="50" text-anchor="middle" font-size="15">agent under test</text>
+        <text class="label" x="85" y="72" text-anchor="middle" font-size="13">unchanged</text>
+        <rect class="box violet" x="200" y="20" width="150" height="70" rx="10"/>
+        <text class="title" x="275" y="50" text-anchor="middle" font-size="15">Proxy-Agent</text>
+        <text class="label mono" x="275" y="72" text-anchor="middle" font-size="13">:7000</text>
+        <rect class="box" x="390" y="20" width="140" height="70" rx="10"/>
+        <text class="title" x="460" y="50" text-anchor="middle" font-size="15">upstream LLM</text>
+        <rect class="box amber" x="200" y="140" width="150" height="70" rx="10"/>
+        <text class="title" x="275" y="170" text-anchor="middle" font-size="15">Skillberry Store</text>
+        <text class="label mono" x="275" y="192" text-anchor="middle" font-size="13">:8000</text>
+        <path class="line" d="M160,55 L200,55" marker-end="url(#a15)"/>
+        <path class="line" d="M350,55 L390,55" marker-end="url(#a15)"/>
+        <path class="line" d="M275,140 L275,90" marker-end="url(#a15)"/>
+        <text class="label" x="10" y="160" font-size="13">cap-evolve deploys</text>
+        <text class="label" x="10" y="178" font-size="13">each candidate here</text>
+        <path class="line dash" d="M140,170 L200,170" marker-end="url(#a15)"/>
+      </svg>
+      <p class="small"><code>intervention: direct</code> (default) or <code>blackbox</code>; unknown values fail in <code>intervention.py</code>.</p>
+    </div>
+    <div class="col">
+      <h3>Memory: what carries across iterations</h3>
+      <div class="term sm"><span class="name">md-files</span><span class="kind">default</span><div class="def">LEDGER / JOURNAL / PROCESS / RUNMAP in each workdir (<code>MdFilesMemory</code>)</div></div>
+      <div class="term violet sm mt"><span class="name">wiki</span><span class="kind">memory_skill: wiki</span><div class="def">Weakness graph at <code>&lt;run_dir&gt;/wiki/</code>: <code>weaknesses/&lt;slug&gt;.md</code> + <code>solutions/</code>. Absolute path.</div></div>
+      <div class="term amber sm mt"><span class="name">memory.py</span><span class="kind">audit</span><div class="def"><code>MemorySkill</code> hooks: seed, augment_instructions, write_handover. <code>RejectedMemory</code>, <code>History</code>: write-only jsonl.</div></div>
+    </div>
+  </div>
+  <p class="small muted">Source: core/cap_evolve/{intervention.py, memory.py} · harness.py <code>MEMORY_SKILLS</code> · skills/memory/wiki · docs/BLACKBOX.md</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[15:10–16:10]</span> Two independent axes. The capability says what is edited. The intervention says how the edited artifact reaches the model. The default, direct, means the runner reads files from disk. blackbox is for clients who cannot share their agent. cap-evolve deploys each candidate into the Skillberry Store. The Skillberry Proxy-Agent sits between the agent and the LLM and injects the skill into the agent's calls. The benchmark is never modified. intervention.py validates the value by name, so a typo cannot silently fall back to direct. It also runs a preflight check that the stack is up.</p>
+    <p>Memory is the second topic. The default scheme, md-files, writes LEDGER, JOURNAL, PROCESS and RUNMAP into each workdir. With <code>memory_skill: wiki</code>, the optimizer instead keeps a weakness graph at the run dir's absolute path, so every iteration sees the same live tree. memory.py defines the MemorySkill interface plus two write-only audit logs for the dashboard.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[15:10–16:10]</span> שני צירים בלתי תלויים. ה-capability אומר מה עורכים. ה-intervention אומר איך ה-artifact הערוך מגיע למודל. ברירת המחדל, direct, פירושה שה-runner קורא קבצים מהדיסק. ‏blackbox מיועד ללקוחות שלא יכולים לשתף את ה-agent שלהם. ‏cap-evolve פורס כל candidate ל-Skillberry Store. ה-Skillberry Proxy-Agent יושב בין ה-agent לבין ה-LLM ומזריק את ה-skill לקריאות של ה-agent. ה-benchmark אף פעם לא משתנה. ‏intervention.py בודק את הערך לפי שם, כך ששגיאת כתיב לא יכולה ליפול בשקט ל-direct. הוא גם מריץ preflight שבודק שה-stack באוויר.</p>
+    <p>הנושא השני הוא memory. ברירת המחדל, md-files, כותבת LEDGER, ‏JOURNAL, ‏PROCESS ו-RUNMAP לכל workdir. עם <code>memory_skill: wiki</code>, ה-optimizer מחזיק במקום זה weakness graph בנתיב האבסולוטי של ה-run dir, כך שכל איטרציה רואה את אותו עץ חי. ‏memory.py מגדיר את הממשק MemorySkill ועוד שני audit logs שרק כותבים אליהם, עבור ה-dashboard.</p>
+  </aside>
+</section>
+
+<!-- ═══ 16. Agent orchestration mode ═══ -->
+<section class="slide">
+  <h2>Agent orchestration mode in depth</h2>
+  <svg class="diagram" viewBox="0 0 1136 330">
+    <defs><marker id="a16" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8b98a9"/></marker></defs>
+    <rect class="box blue" x="20" y="30" width="230" height="110" rx="12"/>
+    <text class="title" x="135" y="62" text-anchor="middle">cap-evolve run</text>
+    <text class="label" x="135" y="88" text-anchor="middle" font-size="14">check → baseline</text>
+    <text class="label" x="135" y="110" text-anchor="middle" font-size="14">then returns</text>
+    <rect class="box amber" x="300" y="30" width="270" height="110" rx="12"/>
+    <text class="title" x="435" y="62" text-anchor="middle">handoff JSON</text>
+    <text class="label mono" x="435" y="88" text-anchor="middle" font-size="13">{"mode":"agent","run_dir",</text>
+    <text class="label mono" x="435" y="108" text-anchor="middle" font-size="13">"algorithm","stop_condition"}</text>
+    <rect class="box violet" x="620" y="30" width="250" height="110" rx="12"/>
+    <text class="title" x="745" y="62" text-anchor="middle">same chat agent</text>
+    <text class="label" x="745" y="88" text-anchor="middle" font-size="14">edits, evaluate, gate</text>
+    <text class="label" x="745" y="110" text-anchor="middle" font-size="14">phase scripts per round</text>
+    <rect class="box green" x="920" y="30" width="196" height="110" rx="12"/>
+    <text class="title" x="1018" y="62" text-anchor="middle">finalize</text>
+    <text class="label mono" x="1018" y="88" text-anchor="middle" font-size="13">phases/finalize/</text>
+    <text class="label mono" x="1018" y="108" text-anchor="middle" font-size="13">scripts/run.py</text>
+    <path class="line" d="M250,85 L300,85" marker-end="url(#a16)"/>
+    <path class="line" d="M570,85 L620,85" marker-end="url(#a16)"/>
+    <path class="line" d="M870,85 L920,85" marker-end="url(#a16)"/>
+    <path class="line dash" d="M700,140 C700,190 790,190 790,140" marker-end="url(#a16)"/>
+    <text class="label" x="745" y="205" text-anchor="middle" font-size="13">rounds</text>
+    <!-- guards -->
+    <rect class="box red" x="20" y="230" width="350" height="86" rx="12"/>
+    <text class="title" x="195" y="260" text-anchor="middle" font-size="16">Core guards (both modes)</text>
+    <text class="label" x="195" y="284" text-anchor="middle" font-size="13">evaluate --split only train|val · val-only gate</text>
+    <text class="label" x="195" y="302" text-anchor="middle" font-size="13">2nd finalize raises TestSealError</text>
+    <rect class="box" x="393" y="230" width="350" height="86" rx="12"/>
+    <text class="title" x="568" y="260" text-anchor="middle" font-size="16">Hooks (Claude Code plugin)</text>
+    <text class="label" x="568" y="284" text-anchor="middle" font-size="13">Stop: nudge until finalized</text>
+    <text class="label" x="568" y="302" text-anchor="middle" font-size="13">PostToolUse: goal_reminder every 12 Bash calls</text>
+    <rect class="box" x="766" y="230" width="350" height="86" rx="12"/>
+    <text class="title" x="941" y="260" text-anchor="middle" font-size="16">Unattended variants</text>
+    <text class="label mono" x="941" y="284" text-anchor="middle" font-size="13">--agent-driver claude-code → host.py</text>
+    <text class="label mono" x="941" y="302" text-anchor="middle" font-size="13">ao_engine: conductor → conductor.py</text>
+  </svg>
+  <p class="small muted">Source: docs/AGENT_ORCHESTRATION.md · cli.py (agent branch) · plugins/cap-evolve/hooks/{require_green_check,goal_reminder}.py</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[16:10–17:30]</span> Orchestration mode is one spec key. Deterministic is the default: cap-evolve run sequences the whole loop and spawns an optimizer subprocess per iteration. With <code>orchestration_mode: agent</code>, cap-evolve run does check and baseline, prints a handoff JSON, and returns. There is no algorithm subprocess and no automatic finalize. Then the same conversational agent that ran intake drives the loop. It is not a new agent. In agent mode the agent is the optimizer. It calls evaluate, gate and diagnose scripts each round, and seals by running the finalize phase script. The user can steer or stop at any round.</p>
+    <p>What keeps it honest? First, the core guards: evaluate accepts only train or val, and a second finalize raises TestSealError. Second, hooks: the Stop hook nudges the agent until the run is finalized, and goal_reminder re-shows the stop_condition predicates every twelve Bash calls. For CI there are two unattended paths: <code>--agent-driver</code> runs host.py, which guarantees a seal, and <code>ao_engine: conductor</code> lets code run the loop.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[16:10–17:30]</span> ‏orchestration mode הוא מפתח אחד ב-spec. ‏deterministic הוא ברירת המחדל: ‏cap-evolve run מריץ את כל הלולאה ומפעיל optimizer subprocess לכל איטרציה. עם <code>orchestration_mode: agent</code>, ‏cap-evolve run עושה check ו-baseline, מדפיס handoff JSON, וחוזר. אין algorithm subprocess ואין finalize אוטומטי. אחר כך אותו agent שיחתי שהריץ את intake מוביל את הלולאה. זה לא agent חדש. ב-agent mode ה-agent הוא ה-optimizer. בכל סבב הוא קורא ל-scripts של evaluate, ‏gate ו-diagnose, וחותם על ידי הרצת ה-finalize phase script. המשתמש יכול לכוון או לעצור בכל סבב.</p>
+    <p>מה שומר על זה כן? קודם, ה-guards של ה-core: ‏evaluate מקבל רק train או val, ו-finalize שני זורק TestSealError. שנית, hooks: ה-Stop hook דוחף את ה-agent להמשיך עד שה-run עובר finalize, ו-goal_reminder מציג שוב את ה-predicates של stop_condition כל שתים עשרה קריאות Bash. ל-CI יש שתי דרכים בלי אדם: ‏<code>--agent-driver</code> מריץ את host.py, שמבטיח seal, ו-<code>ao_engine: conductor</code> נותן לקוד להריץ את הלולאה.</p>
+  </aside>
+</section>
+
+<!-- ═══ 17. Hosts and plugin ═══ -->
+<section class="slide">
+  <h2>Hosts and the Claude Code plugin</h2>
+  <div class="row">
+    <div class="col" style="flex:0.85">
+      <h3><code>install.sh --host</code></h3>
+      <table class="tight">
+        <tr><th>Host</th><th>Skills dir</th></tr>
+        <tr><td>claude</td><td><code>~/.claude/skills</code></td></tr>
+        <tr><td>codex</td><td><code>~/.agents/skills</code></td></tr>
+        <tr><td>gemini</td><td><code>~/.gemini/extensions/cap-evolve/skills</code></td></tr>
+        <tr><td>opencode</td><td><code>~/.config/opencode/skills</code></td></tr>
+        <tr><td>cursor</td><td><code>$PWD/.cursor/skills</code></td></tr>
+        <tr><td>bob</td><td><code>~/.bob/skills</code></td></tr>
+      </table>
+      <p class="small muted">Also openclaw, droid, copilot, kimi, pi, antigravity. Flat copy, then <code>build_manifest.py</code>.</p>
+    </div>
+    <div class="col" style="flex:1.15">
+      <h3><code>plugins/cap-evolve/</code></h3>
+      <table class="tight">
+        <tr><th>Hook</th><th>Script</th><th>Effect</th></tr>
+        <tr><td>PreToolUse<br><span class="muted">Edit|Write</span></td><td><code>deny_sealed_edits.py</code></td><td>exit 2 on <code>splits.json</code>, <code>rollouts/test/</code>, gold files</td></tr>
+        <tr><td>Stop, SubagentStop</td><td><code>require_green_check.py</code></td><td>block until <code>cap-evolve check</code> is green</td></tr>
+        <tr><td>PostToolUse<br><span class="muted">Bash</span></td><td><code>goal_reminder.py</code></td><td>re-show stop_condition (agent mode)</td></tr>
+        <tr><td>SessionStart</td><td><code>inject_router.py</code></td><td>point to <code>using-cap-evolve</code></td></tr>
+      </table>
+      <p class="small muted">Slash commands: <code>/cap-evolve:&lt;skill&gt;</code> (plugin <code>skills</code> → <code>../../skills</code>). Subagents: diagnoser (read-only), proposer.</p>
+    </div>
+  </div>
+  <p class="small muted">Source: install.sh <code>detect_dest</code> · plugins/cap-evolve/{hooks/hooks.json, .claude-plugin/plugin.json, agents/}</p>
+  <aside class="notes" lang="en">
+    <p><span class="time">[17:30–18:40]</span> A host is the agent app that loads the skills. install.sh copies every skill folder flat into the host's skills dir and rebuilds the manifest there. <code>--host</code> picks a known dir. Codex uses .agents/skills, not .codex. Gemini bundles skills inside an extension. Note the difference from the registry's skills_dir field: install.sh puts the skill library in the user's home, while skills_dir is where the harness puts capability skills inside each optimizer workdir.</p>
+    <p>For Claude Code there is also a plugin. Its skills folder is a symlink to the repo skills, so every skill becomes a <code>/cap-evolve:</code> slash command. It ships two subagents, a read-only diagnoser and a writing proposer. The hooks are core-owned Python scripts. Claude Code runs them, not the model, so a model that rewrites its own instructions still cannot pass them. They no-op outside a run dir and fail open on their own bugs, because core also enforces the same rules.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[17:30–18:40]</span> ‏host הוא אפליקציית ה-agent שטוענת את ה-skills. ‏install.sh מעתיק כל תיקיית skill בצורה שטוחה לתיקיית ה-skills של ה-host, ובונה שם מחדש את ה-manifest. ‏<code>--host</code> בוחר תיקייה מוכרת. ‏Codex משתמש ב-.agents/skills, לא ב-.codex. ‏Gemini אורז skills בתוך extension. שימו לב להבדל מהשדה skills_dir ב-registry: ‏install.sh שם את ספריית ה-skills בתיקיית הבית של המשתמש, ואילו skills_dir הוא המקום שבו ה-harness שם capability skills בתוך כל optimizer workdir.</p>
+    <p>ל-Claude Code יש גם plugin. תיקיית ה-skills שלו היא symlink ל-skills של ה-repo, כך שכל skill הופך ל-slash command מסוג <code>/cap-evolve:</code>. הוא מגיע עם שני subagents: ‏diagnoser לקריאה בלבד ו-proposer שכותב. ה-hooks הם scripts של Python בבעלות ה-core. ‏Claude Code מריץ אותם, לא המודל, כך שמודל שכותב מחדש את ההוראות של עצמו עדיין לא יכול לעבור אותם. הם לא עושים כלום מחוץ ל-run dir, ונפתחים כשיש בהם באג, כי גם ה-core אוכף את אותם כללים.</p>
+  </aside>
+</section>
+
+<!-- ═══ 18. Extending ═══ -->
+<section class="slide">
+  <h2>How to extend cap-evolve</h2>
+  <div class="grid-4 gap-sm">
+    <div class="card green compact"><h3>Capability</h3><p>= one folder</p><ul><li><code>cp -R benchmarks/_scaffold/skill skills/capabilities/&lt;x&gt;</code></li><li>fill SKILL.md, meta.yaml, scripts</li><li><code>build_manifest.py</code> + <code>check.py</code></li></ul></div>
+    <div class="card amber compact"><h3>Optimizer</h3><p>= one registry row</p><ul><li>add to <code>registry.yaml</code></li><li>prose in <code>run-optimizer/references/&lt;name&gt;.md</code></li><li>no new skill dir</li></ul></div>
+    <div class="card violet compact"><h3>Algorithm</h3><p>= skill folder + core loop</p><ul><li><code>skills/algorithms/&lt;x&gt;/scripts/run.py</code></li><li>reuse <code>run_step</code>, <code>gate.decide</code></li><li>row in <code>branding.ALGORITHMS</code></li></ul></div>
+    <div class="card blue compact"><h3>Benchmark</h3><p>= adapter + spec</p><ul><li>read <code>ADDING_A_BENCHMARK.md</code></li><li>start from <code>_scaffold/project/</code></li><li>or a template from <code>ADAPTER_TEMPLATES.md</code></li></ul></div>
+  </div>
+  <div class="row mt">
+    <div class="col"><pre class="sm"><span class="c"># copy-and-run template (docs/ADAPTER_TEMPLATES.md)</span>
+cp -r benchmarks/generic/jsonl_litellm/template/* \
+      .capevolve/project/adapters/
+cp benchmarks/_shared/model_config.py .capevolve/project/adapters/
+cap-evolve check &amp;&amp; cap-evolve run</pre></div>
+    <div class="col" style="flex:0.7"><div class="callout amber small">No code access? <code>intervention: blackbox</code> (docs/BLACKBOX.md): optimize through the Skillberry proxy instead of an adapter that edits files.</div></div>
+  </div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[18:40–19:30]</span> Extending never means editing core honesty code. A new capability is one folder: copy the scaffold, fill in SKILL.md and meta.yaml, write a real check.py, rebuild the manifest. A new optimizer is one registry row, plus a short reference file. An algorithm is a skill folder whose run.py calls a loop that reuses run_step and gate.decide. It also needs a row in branding.ALGORITHMS, or doctor reports "unknown algorithm_skill". A benchmark is an adapter with three methods: tasks, run_target and score. Start from _scaffold/project or a template, and pass cap-evolve check first.</p>
+    <p>One correction for your reading: ADAPTER_TEMPLATES.md says to copy from benchmarks/_shared/&lt;template&gt;, but today only model_config.py lives there. The templates are under benchmarks/generic and the per-benchmark folders, as the table in the same doc links. For clients who cannot share code, the blackbox path from slide 15 applies.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[18:40–19:30]</span> הרחבה אף פעם לא דורשת לערוך את קוד הכנות של ה-core. ‏capability חדש הוא תיקייה אחת: מעתיקים את ה-scaffold, ממלאים SKILL.md ו-meta.yaml, כותבים check.py אמיתי, ובונים מחדש את ה-manifest. ‏optimizer חדש הוא שורה אחת ב-registry, ועוד קובץ reference קצר. ‏algorithm הוא תיקיית skill שה-run.py שלה קורא ללולאה שמשתמשת שוב ב-run_step וב-gate.decide. צריך גם שורה ב-branding.ALGORITHMS, אחרת doctor מדווח "unknown algorithm_skill". ‏benchmark הוא adapter עם שלוש מתודות: tasks, ‏run_target ו-score. מתחילים מ-_scaffold/project או מ-template, ועוברים קודם cap-evolve check.</p>
+    <p>תיקון אחד לקריאה שלכם: ב-ADAPTER_TEMPLATES.md כתוב להעתיק מ-benchmarks/_shared/&lt;template&gt;, אבל היום יש שם רק את model_config.py. ה-templates נמצאים תחת benchmarks/generic ובתיקיות של כל benchmark, כמו שהטבלה באותו מסמך מקשרת. ללקוחות שלא יכולים לשתף קוד, מתאים מסלול ה-blackbox משקף 15.</p>
+  </aside>
+</section>
+
+<!-- ═══ 19. Takeaways ═══ -->
+<section class="slide">
+  <h2>Key takeaways</h2>
+  <div class="grid-2">
+    <div class="card blue compact"><h3>Skills are thin, core is strict</h3><p>22 skills print JSON; splits, gate and seal live in <code>core/cap_evolve</code>.</p></div>
+    <div class="card green compact"><h3>Capabilities are edit menus</h3><p>"What you can change here" plus hard boundaries, copied into every workdir.</p></div>
+    <div class="card violet compact"><h3>Algorithms differ in parent choice and cheap filters</h3><p>Every accept still goes through the paired val gate.</p></div>
+    <div class="card amber compact"><h3>An optimizer is a registry row</h3><p><code>run-optimizer</code> + <code>registry.yaml</code>; <code>mock</code> for offline work.</p></div>
+  </div>
+  <div class="callout mt"><b>Next, chapter 8:</b> debug and observe a run (events, dashboard, replay, toy_calc + mock), the test environment and CI, and your first-week plan.</div>
+  <aside class="notes" lang="en">
+    <p><span class="time">[19:30–20:00]</span> Four things to keep. Skills are thin and readable. The rules that make results honest are in core and in core-owned hooks. Capabilities are menus of allowed edits with hard limits. Algorithms differ mainly in how they choose a parent and how they filter cheaply, but every accept goes through the same val gate. An optimizer backend is just a registry row. In chapter 8 we use exactly this knowledge: we run toy_calc with the mock optimizer, look at events and the dashboard, and learn the test setup. We end with your first-week plan.</p>
+  </aside>
+  <aside class="notes" lang="he">
+    <p><span class="time">[19:30–20:00]</span> ארבעה דברים לזכור. ה-skills דקים וקריאים. הכללים שהופכים תוצאות לכנות נמצאים ב-core וב-hooks בבעלות ה-core. ה-capabilities הם תפריטים של עריכות מותרות עם גבולות קשיחים. האלגוריתמים שונים בעיקר באופן שבו הם בוחרים parent ובמסננים הזולים, אבל כל קבלה עוברת דרך אותו val gate. ‏optimizer backend הוא פשוט שורה ב-registry. בפרק 8 נשתמש בדיוק בידע הזה: נריץ toy_calc עם ה-mock optimizer, נסתכל על events ועל ה-dashboard, ונלמד את סביבת הבדיקות. נסיים עם תוכנית לשבוע הראשון שלכם.</p>
+  </aside>
+</section>
+
+</div></div>
+<script src="assets/deck.js"></script>
+</body>
+</html>

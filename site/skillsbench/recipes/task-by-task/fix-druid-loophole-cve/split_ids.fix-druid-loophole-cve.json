@@ -1,5 +1,0 @@
-{
-  "train": ["fix-druid-loophole-cve"],
-  "val": ["fix-druid-loophole-cve"],
-  "test": ["fix-druid-loophole-cve"]
-}

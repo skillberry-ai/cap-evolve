@@ -427,7 +427,7 @@ def test_healthy_tasks_do_not_trip_the_ci_assertion(tmp_path):
 # key off was never set: `raw` came back `{"errored": false, "valid_trials": 1}`, the
 # scorer's 0.0 was averaged in as a measurement, `assert_run.py`'s `measured` check
 # saw nothing wrong, the leg went GREEN, and `mean reward 0.000 → 0.000` was published
-# to benchmark-history as a real swebench result while the optimizer burned $3.44
+# to the benchmark records as a real swebench result while the optimizer burned $3.44
 # against feedback that contained no signal.
 #
 # The rollout-side hole (above) was closed by #307. This is its scoring-side twin: an

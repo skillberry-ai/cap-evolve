@@ -1,6 +1,6 @@
 """A finished rollout's sandbox container must be released, not left to a 10-minute timeout.
 
-The vendored server (third_party/spreadsheetbench/code_exec_docker/api.py) only reclaims a
+The vendored server (benchmarks/spreadsheetbench/harness/code_exec_docker/api.py) only reclaims a
 container when `cleanup_kernels` sees it idle past a hardcoded `KERNEL_TIMEOUT = 10 * 60`,
 or on a force-cleanup at SIGINT. Every rollout gets a fresh conv_id and nothing releases it
 when the rollout ends, so at 8-way concurrency ~50 containers are alive at any moment — and
@@ -13,8 +13,8 @@ Run 30691123806 left **176** `conv-capevolve-*` containers running on the runner
 websocket` throughout its sandbox log. At three full seeds (2,279 rollouts each) that
 accumulation is a runner-health problem, not a cosmetic one.
 
-Fixed without touching `third_party/`: that directory is a filtered subtree which must stay
-byte-identical to upstream for `git subtree pull` to work (NOTICE.md), so the adapter serves
+Fixed without touching `benchmarks/spreadsheetbench/harness/`: that directory is a filtered copy
+which must stay byte-identical to upstream so it can be refreshed cleanly (NOTICE.md), so the adapter serves
 a small wrapper that IMPORTS the vendored handler and adds a `/release` route.
 """
 
@@ -26,7 +26,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 ADAPTER_DIR = REPO / "benchmarks" / "spreadsheetbench" / "template"
-VENDOR_API = REPO / "third_party" / "spreadsheetbench" / "code_exec_docker" / "api.py"
+VENDOR_API = REPO / "benchmarks" / "spreadsheetbench" / "harness" / "code_exec_docker" / "api.py"
 
 
 def _load_adapter_module():

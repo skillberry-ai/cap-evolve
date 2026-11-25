@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # fetch_data.sh — download a SpreadsheetBench dataset variant at CI/run time.
 #
-# The harness code is vendored (third_party/spreadsheetbench, a filtered git subtree);
+# The harness code is vendored (benchmarks/spreadsheetbench/harness, a filtered git subtree);
 # the DATA (spreadsheet files) is deliberately NOT vendored — it's tens of MB of xlsx
 # blobs that don't belong in git history. This script fetches it into a cache dir so
 # repeated runs don't re-download.

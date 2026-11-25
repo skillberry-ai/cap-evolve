@@ -1,6 +1,6 @@
 """A sandbox container that fails to START must be retried, not reported as a failed rollout.
 
-The vendored `JupyterGatewayDocker.__enter__` (third_party/spreadsheetbench/code_exec_docker/jupyter.py)
+The vendored `JupyterGatewayDocker.__enter__` (benchmarks/spreadsheetbench/harness/code_exec_docker/jupyter.py)
 picks a free port, RELEASES it, and only then asks the engine to publish it, so a concurrent container can
 take the port in between. Under rootless podman this surfaces as `rootlessport listen tcp 0.0.0.0:<p>:
 bind: address already in use`, and pasta's network-namespace setup fails intermittently on its own
@@ -8,7 +8,7 @@ bind: address already in use`, and pasta's network-namespace setup fails intermi
 
 Both happen before the agent's first turn: no LLM call has been made, so a retry costs nothing and the
 rollout's outcome is unchanged. The staged copy of jupyter.py is patched to retry the start with a fresh
-port; `third_party/` stays byte-identical to upstream.
+port; `harness/` stays byte-identical to upstream.
 """
 
 import ast
@@ -21,7 +21,7 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 ADAPTER_DIR = REPO / "benchmarks" / "spreadsheetbench" / "template"
-VENDOR_JUPYTER = REPO / "third_party" / "spreadsheetbench" / "code_exec_docker" / "jupyter.py"
+VENDOR_JUPYTER = REPO / "benchmarks" / "spreadsheetbench" / "harness" / "code_exec_docker" / "jupyter.py"
 
 
 def _load_adapter_module():

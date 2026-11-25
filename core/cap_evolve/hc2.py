@@ -40,7 +40,9 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
+from . import feedback_digest, helper_gate
 from .evaluator import thread_map
+from .types import NON_CAPABILITY_DIRS
 
 
 @dataclass(frozen=True)
@@ -331,7 +333,8 @@ GOAL_NOTE = ("Aim for the edit with the largest expected reward gain on the WHOL
 
 
 def build_instructions(ctx, adapter_val, cluster, *, parent_dir: Path, algorithm: str, params: HC2Params,
-                       shown: dict, rejected_notes, retry_note: str = "", role: str = "cluster") -> str:
+                       shown: dict, rejected_notes, retry_note: str = "", role: str = "cluster",
+                       run_dir=None, optimizer=None) -> str:
     if role == "broad":
         label = f"failing traces of {len(cluster)} task(s) across ALL failure types on the feedback stratum"
         lead = ("This proposal is one of several made in parallel from the same incumbent. Your traces in "
@@ -355,7 +358,8 @@ def build_instructions(ctx, adapter_val, cluster, *, parent_dir: Path, algorithm
     if retry_note:
         extra.append(retry_note)
     return ctx.instructions(adapter_val, list(cluster), label, algorithm=algorithm,
-                            parent_dir=parent_dir, extra="\n\n".join(extra))
+                            parent_dir=parent_dir, extra="\n\n".join(extra), run_dir=run_dir,
+                            optimizer=optimizer)
 
 
 # ---- merging survivors --------------------------------------------------------------------------
@@ -438,7 +442,8 @@ def take_merge_pool(run_dir) -> dict | None:
 
 # ---- diversity gate -----------------------------------------------------------------------------
 
-_SKIP_DIRS = {"trajectories", "contrast", "guidance", "notes", "__pycache__"}
+# Every read-context dir (types.NON_CAPABILITY_DIRS), plus HC2's own contrast/notes scratch.
+_SKIP_DIRS = set(NON_CAPABILITY_DIRS) | {"contrast", "notes"}
 _SKIP_FILES = {"INSTRUCTIONS.md", "MEMORY.md", "STATE.md", "LEDGER.md", "JOURNAL.md", "RUNMAP.md",
                "PROCESS.md", "cross_trace_summary.md", "DIAGNOSIS.json"}
 
@@ -546,8 +551,14 @@ def _pooled_split_result(traces, tasks):
     for tid in sorted(tasks if tasks is not None else by):
         ts = by.get(tid, [])
         if ts:
+            # Every failing draw's signature, each distinct text once under its own trial and
+            # reward (the same join hill-climb, GEPA and SkillOpt use), not only the first one's.
+            failing = sorted((t for t in ts if t.reward < 1.0), key=lambda t: (t.tag, t.trial))
+            tags = {t.tag for t in failing}
             rows.append({"task_id": tid, "reward": sum(t.reward for t in ts) / len(ts),
-                         "feedback": next((t.signature for t in ts if t.reward < 1.0), "")[:500]})
+                         "feedback": feedback_digest.join_trial_feedback(
+                             [(t.trial if len(tags) == 1 else f"{t.tag} {t.trial}", t.reward, t.signature)
+                              for t in failing])})
     mean = sum(r["reward"] for r in rows) / len(rows) if rows else 0.0
     return SplitResult(split="feedback", reward=mean, stderr=0.0, per_task=rows,
                        n_tasks=len(rows), n_scored=len(rows))
@@ -675,7 +686,7 @@ def _internal_estimate_pending(run_dir) -> bool:
 
 
 def _prepare(adapter, run_dir, evaluator, ctx, params, view, cid, cl, *, incumbent_dir, traces, failed,
-             c_ids, algorithm, notes, retry_note="", others=(), role="cluster"):
+             c_ids, algorithm, notes, retry_note="", others=(), role="cluster", optimizer=None):
     """Build the workdir and the full prompt for one proposal (used for the first try AND retries, so a
     retry never loses the memory/consolidation parts)."""
     wd = Path(run_dir.root) / "work" / cid
@@ -683,7 +694,7 @@ def _prepare(adapter, run_dir, evaluator, ctx, params, view, cid, cl, *, incumbe
         shutil.rmtree(wd)
     wd.parent.mkdir(parents=True, exist_ok=True)
     shutil.copytree(incumbent_dir, wd)
-    ctx.inject(adapter, run_dir, wd, split=evaluator.proposer_split)
+    ctx.inject(adapter, run_dir, wd, split=evaluator.proposer_split, parent_dir=incumbent_dir)
     shown = write_cluster_context(wd, cluster=cl, failed=failed, traces=traces, params=params,
                                   confirm_ids=c_ids, others=others,
                                   limit=params.broad_max if role == "broad" else None)
@@ -691,7 +702,9 @@ def _prepare(adapter, run_dir, evaluator, ctx, params, view, cid, cl, *, incumbe
         (wd / "cross_trace_summary.md").write_text(cross_trace_summary(cl, failed), encoding="utf-8")
     instr = ctx.augment_instructions(
         build_instructions(ctx, view, cl, parent_dir=incumbent_dir, algorithm=algorithm, params=params,
-                           shown=shown, rejected_notes=notes, retry_note=retry_note, role=role), wd, run_dir)
+                           shown=shown, rejected_notes=notes, retry_note=retry_note, role=role,
+                           run_dir=run_dir, optimizer=optimizer), wd, run_dir)
+    feedback_digest.provide_linked(instr, wd, run_dir)      # the ./feedback_full/ files it links to
     return wd, instr, shown
 
 
@@ -720,7 +733,7 @@ def _propose_round(k, window, round_index, *, params, adapter, run_dir, evaluato
     view = _pooled_split_result(traces, None)
     notes = _rejected_notes(run_dir, window)
     kw = dict(incumbent_dir=incumbent_dir, traces=traces, failed=failed, c_ids=c_ids,
-              algorithm=algorithm, notes=notes)
+              algorithm=algorithm, notes=notes, optimizer=optimizer)
 
     # slots: [merged survivors] + [broad] + clusters, K in all; the merged candidate needs no proposer
     merged = _build_merged(run_dir, incumbent_id, incumbent_dir, base + 1, params) if params.merge_survivors else None
@@ -786,6 +799,17 @@ def _propose_round(k, window, round_index, *, params, adapter, run_dir, evaluato
             dropped[cid] = "empty diff" + (f" (optimizer error: {errors[cid][:200]})" if errors[cid] else "")
             continue
         diffs[cid] = d
+    # The helper gate (cap_evolve.helper_gate), before the round pays for any rollout: a proposal whose helper
+    # scripts are refused is dropped, like an empty or duplicate diff, and never enters the round.
+    from . import helper_gate
+    for cid in list(diffs):
+        refusal = helper_gate.check_candidate(run_dir, workdirs[cid], parent_dir=incumbent_dir,
+                                              parent_id=incumbent_id, project=ctx.project_dir)
+        if refusal is not None:
+            run_dir.log_event("helper_gate_refused", candidate=cid, parent=incumbent_id,
+                              report=refusal.to_dict(), reason=refusal.reason)
+            dropped[cid] = refusal.reason
+            del diffs[cid]
     for c in costs.values():
         run_dir.update_spent(optimizer_usd=c["usd"], optimizer_tokens=c["tokens"])
     pend = {"incumbent": incumbent_id, "cids": cids, "round_id": None, "dropped": dropped, "shown": shown,
@@ -974,7 +998,11 @@ def _snap_ignore(harness):
 def _status(pend, cid, v1, v2, cv):
     """(status, reason, indecisive) for one candidate. Only the C verdict BIT is ever written."""
     if cid in pend["dropped"]:
-        return "dropped", f"hc2 diversity gate: {pend['dropped'][cid]}", True
+        why = pend["dropped"][cid]
+        # A helper-gate refusal is "not scored", as in run_step: the prefix puts it in LEDGER.md's "Not scored"
+        # section with its finding, and _record files it in rejected memory, so the next proposer can fix it.
+        return "dropped", (f"{helper_gate.INDECISIVE_PREFIX}{why}" if why.startswith("the helper gate")
+                           else f"hc2 diversity gate: {why}"), True
     if cv is not None:
         return cv.status, f"P2 confirmation {cv.bit()}", cv.status == "unconfirmed"
     rv = v2 or v1
@@ -989,7 +1017,9 @@ def _rejected_notes(run_dir, n: int) -> list:
         recs = [json.loads(x) for x in p.read_text(encoding="utf-8").splitlines() if x.strip()]
     except (OSError, ValueError):
         return []
-    return [f"{r.get('candidate_id')}: {r.get('summary', '')[:160]} ({r.get('reason', '')[:120]})"
+    # An unscored candidate's reason IS the fix (e.g. the lint finding); 120 characters cut it before the finding.
+    return [f"{r.get('candidate_id')}: {r.get('summary', '')[:160]} "
+            f"({r.get('reason', '')[:500 if str(r.get('reason', '')).startswith('indecisive') else 120]})"
             for r in recs[-n:]]
 
 
@@ -1008,6 +1038,9 @@ def _record(run_dir, harness, cid, parent_id, workdir, status, reason, *, indeci
             history.add(cid, summary, getattr(rv, "mean", 0.0) or 0.0)
     elif not indecisive and rejected is not None:
         rejected.add(cid, summary, reason, getattr(rv, "mean", None))
+    elif rejected is not None and reason.startswith(helper_gate.INDECISIVE_PREFIX):
+        # never measured, so it stays indecisive (no stall step), but the finding is what the proposer needs
+        rejected.add(cid, f"candidate {cid} (not scored: helper gate)", reason, None)
     if not indecisive and not accepted and diff is not None:
         rdiffs.add(cid, diff)
     if store is not None and not indecisive:

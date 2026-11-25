@@ -17,14 +17,13 @@ the `site/` directory is shipped verbatim. Dark-first, with a light-mode toggle.
 - `run-end-to-end.html` — step-by-step run on a real benchmark, τ²-bench airline
   (from `docs/REPRODUCE_tau2.md` + `benchmarks/tau2/examples/airline/DEMO.md`).
 - `results.html` — full benchmark detail (from `docs/RESULTS.md`); includes an inline SVG dumbbell chart.
-- `benchmarks.html` — live CI benchmark-run history; rendered by `benchmarks.js` from a JSON feed.
+- `benchmarks.html` — redirect to the benchmark-runs dashboard (https://skillberry-runs.github.io/dashboard/); `benchmark-ui/runs/**` redirect each old "Open UI" address to that run on the dashboard.
 - `architecture.html` — pipeline + optimizer context (from `docs/ARCHITECTURE.md`); includes an inline SVG pipeline diagram.
 - `optimize-your-own.html` — adapter contract + two adoption paths (from `docs/OPTIMIZE_YOUR_OWN.md`).
 - `agent-orchestration.html` — deterministic vs agent mode (from `docs/AGENT_ORCHESTRATION.md`).
 - `adapter-templates.html` — config-only adapter templates (from `docs/ADAPTER_TEMPLATES.md`).
 - `style.css` — one stylesheet (design tokens for dark + light, all components).
 - `js/site.js` — theme toggle, scroll-reveal (IntersectionObserver), TOC scrollspy, copy buttons. Progressive enhancement; content is fully readable without it.
-- `benchmarks.js` — fetches + renders the benchmark-run history table.
 - `assets/` — logo/mascot, favicon, and real dashboard screenshots (`dash-*.png`).
 
 ## Design system (quick reference)

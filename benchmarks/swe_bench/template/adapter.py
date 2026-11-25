@@ -465,7 +465,7 @@ def _build_eval_cmd(instance_ids: list[str], predictions_path, run_id: str) -> l
     Deterministic, and it only bites with 2+ instances: a single-instance call joins to a
     plain id and works, which is why `score()` was fine while `score_batch()` — the path CI
     always takes — never graded anything. No CI swebench leg had ever produced a non-zero
-    reward; the only real numbers in benchmark-history come from a different adapter.
+    reward; the only real numbers on the benchmark dashboard come from a different adapter.
     """
     return [
         sys.executable,

@@ -8,7 +8,7 @@ Reads a cap-evolve run directory (contains baseline.json / final.json / events.j
 / rollouts/) and writes two portable summaries next to those files:
 
   SUMMARY.md    — one-page human-readable, matches docs/RESULTS.md section style
-  summary.json  — machine-readable, matches site/benchmarks.fixture.json schema=1
+  summary.json  — machine-readable, matches the benchmark record schema=1 (skillberry-runs/dashboard site/benchmarks.fixture.json)
 
 Idempotent; safe to rerun on the same dir. Defaults extract MODEL/AGENT from the
 associated capevolve.yaml + adapter, but CLI flags override.
@@ -304,7 +304,7 @@ def to_markdown(summary: dict) -> str:
 
     # Emit RELATIVE artifact hints, not absolute paths — this file may end up
     # on a public detail page (e.g. via a `summary_url` field on a
-    # benchmark-history record) and a hard-coded /Users/... path would leak
+    # dashboard record) and a hard-coded /Users/... path would leak
     # local layout and fail relative-link checks in CI (lychee, etc.).
     run_name = Path(s["run_dir"]).name
     lines += [

@@ -47,4 +47,4 @@ in the private `cap-evolve-internal` repo under
 including its own git history (bundled) and a dashboard export. It predates
 this benchmark's CI wiring and was run directly against a local checkout, not
 through `run_suite.sh` — a fresh CI dispatch of `rfe-creator`/`full` is the
-way to get a *sealed*, benchmark-history-published result.
+way to get a *sealed*, dashboard-published result.

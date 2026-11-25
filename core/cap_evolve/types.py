@@ -44,7 +44,7 @@ NON_CAPABILITY_FILES = frozenset({
 #: context, an un-ignored read-context dir would bust gepa's eval cache every iteration
 #: and show up to gepa as an editable "component" to optimize.
 NON_CAPABILITY_DIRS = frozenset({
-    ".git", "__pycache__", "prior_iterations", "trajectories", "guidance",
+    ".git", "__pycache__", "prior_iterations", "trajectories", "guidance", "feedback_full",
     ".claude", ".agents", ".gemini", ".opencode", ".bob", ".cursor",
 })
 
