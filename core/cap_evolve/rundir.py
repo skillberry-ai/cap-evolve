@@ -773,6 +773,31 @@ class RunDir:
             self._seal_eval_surface_at_baseline()
         return dst
 
+    def eval_surface_project(self) -> Path | None:
+        """The project this run's eval surface belongs to: the one in its spec_resolved / run_config event,
+        else the sibling ``<work>/.capevolve/project``; None when neither is a real project."""
+        project = None
+        try:  # (1) the project the run was started with, from its spec_resolved / run_config event
+            with Path(self.events_path).open(encoding="utf-8") as f:
+                for line in f:
+                    try:
+                        ev = json.loads(line)
+                    except Exception:  # noqa: BLE001
+                        continue
+                    if ev.get("kind") in ("run_config", "spec_resolved") and ev.get("project"):
+                        project = Path(str(ev["project"]))
+                        break
+        except Exception:  # noqa: BLE001
+            pass
+        if project is None:  # (2) the standard sibling <work>/.capevolve/project; (3) else nothing
+            sib = self.root.resolve().parent / "project"
+            if sib.is_dir():
+                project = sib
+        if project is None or not (
+                (project / "adapters").is_dir() or (project / "adapter.py").is_file()):
+            return None
+        return project
+
     def _seal_eval_surface_at_baseline(self) -> None:
         """Record the project's eval-surface manifest when the seed is snapshotted, i.e. before the
         baseline is scored, so a scorer edited after the baseline is caught. The project is the one
@@ -784,23 +809,7 @@ class RunDir:
             path = self.private_dir / integrity.EVAL_SURFACE_MANIFEST
             if path.exists():
                 return
-            project = None
-            try:  # (1) the project the run was started with, from its spec_resolved / run_config event
-                with Path(self.events_path).open(encoding="utf-8") as f:
-                    for line in f:
-                        try:
-                            ev = json.loads(line)
-                        except Exception:  # noqa: BLE001
-                            continue
-                        if ev.get("kind") in ("run_config", "spec_resolved") and ev.get("project"):
-                            project = Path(str(ev["project"]))
-                            break
-            except Exception:  # noqa: BLE001
-                pass
-            if project is None:  # (2) the standard sibling <work>/.capevolve/project; (3) else nothing
-                sib = self.root.resolve().parent / "project"
-                if sib.is_dir():
-                    project = sib
+            project = self.eval_surface_project()
             if project is None or not (
                     (project / "adapters").is_dir() or (project / "adapter.py").is_file()):
                 return

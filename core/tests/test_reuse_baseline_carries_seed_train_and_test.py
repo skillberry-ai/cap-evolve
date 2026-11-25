@@ -143,21 +143,76 @@ def _events(rd, kind):
     return [e for e in map(json.loads, lines) if e.get("kind") == kind]
 
 
-def test_reuse_carries_the_earlier_seal_and_reports_an_edited_scorer(tmp_path, capsys):
+def _act_module():
+    d = str(REPO / "skills" / "algorithms" / "agent-optimize" / "scripts")
+    if d not in sys.path:
+        sys.path.insert(0, d)
+    import act
+    return act
+
+
+def _ctx(rd, project):
+    import types
+    return types.SimpleNamespace(run_dir=rd, project=str(project))
+
+
+def test_reuse_from_another_work_folder_with_identical_files_seals_on_time(tmp_path):
+    from cap_evolve import Budget, RunDir, harness, integrity
+
+    work_a, work_b = tmp_path / "a", tmp_path / "b"
+    pa = _project_with_scorer(work_a)
+    prior = _prior_run(work_a)
+    assert _events(prior, "eval_surface_recorded")[0]["late"] is False
+    pb = _project_with_scorer(work_b)
+    rd = RunDir.create(work_b / ".capevolve", ts="next", budget=Budget(max_iterations=0))
+    harness.reuse_baseline(prior.root, run_dir=rd)
+    ev = _events(rd, "eval_surface_carried")
+    assert ev and ev[-1]["ok"] is True
+    rec = _events(rd, "eval_surface_recorded")
+    assert rec and rec[-1]["late"] is False
+    man = integrity.read_manifest(Path(rd.private_dir) / integrity.EVAL_SURFACE_MANIFEST)
+    assert man["root"] == str(pb.resolve())
+    _act_module().guard_eval_surface(_ctx(rd, pb), "promote")  # does not raise
+    assert pa != pb
+
+
+def test_reuse_reports_an_edited_scorer_and_does_not_seal(tmp_path, capsys):
     from cap_evolve import Budget, RunDir, harness, integrity
 
     project = _project_with_scorer(tmp_path)
     prior = _prior_run(tmp_path)
-    man = Path(prior.private_dir) / integrity.EVAL_SURFACE_MANIFEST
-    assert man.exists()
     (project / "scorer.py").write_text("def score(*a): return 1.0\n")  # edited since the earlier run
     rd = RunDir.create(tmp_path / ".capevolve", ts="next", budget=Budget(max_iterations=0))
     harness.reuse_baseline(prior.root, run_dir=rd)
-    assert (Path(rd.private_dir) / integrity.EVAL_SURFACE_MANIFEST).read_text() == man.read_text()
     ev = _events(rd, "eval_surface_carried")
     assert ev and ev[-1]["ok"] is False and "scorer.py" in ev[-1]["reason"]
     assert "TAMPERED" in capsys.readouterr().err
     assert not _events(rd, "eval_surface_recorded")
+    assert not (Path(rd.private_dir) / integrity.EVAL_SURFACE_MANIFEST).exists()
+
+
+def test_reuse_of_a_late_earlier_seal_records_no_baseline_seal(tmp_path, capsys):
+    from cap_evolve import Budget, RunDir, harness, integrity
+
+    project = _project_with_scorer(tmp_path)
+    prior = _prior_run(tmp_path)
+    # make the earlier seal a late one, as any run from before the baseline seal existed has
+    ev_path = Path(prior.events_path)
+    lines = [json.loads(x) for x in ev_path.read_text(encoding="utf-8").splitlines()]
+    for e in lines:
+        if e.get("kind") == "eval_surface_recorded":
+            e["late"] = True
+            e.pop("at", None)
+    ev_path.write_text("".join(json.dumps(e) + "\n" for e in lines), encoding="utf-8")
+    rd = RunDir.create(tmp_path / ".capevolve", ts="next", budget=Budget(max_iterations=0))
+    harness.reuse_baseline(prior.root, run_dir=rd)
+    assert not (Path(rd.private_dir) / integrity.EVAL_SURFACE_MANIFEST).exists()
+    assert not _events(rd, "eval_surface_recorded") and not _events(rd, "eval_surface_carried")
+    capsys.readouterr()
+    _act_module().record_eval_surface(_ctx(rd, project))
+    rec = _events(rd, "eval_surface_recorded")
+    assert rec and rec[-1]["late"] is True
+    assert "sealed only now" in capsys.readouterr().err
 
 
 def test_reuse_without_an_earlier_seal_records_no_baseline_seal(tmp_path):
