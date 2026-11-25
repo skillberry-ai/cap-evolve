@@ -99,6 +99,12 @@ def _file_lock(lock_path: Path):
 SEALED_RECORDS = ("baseline.json", "final.json")
 
 
+def _check_record_name(name: str) -> None:
+    """``write_record`` / ``read_record`` take only a known record name, never a path (no ``..``, no separator)."""
+    if name not in SEALED_RECORDS:
+        raise ValueError(f"unknown run record {name!r}; known: {list(SEALED_RECORDS)}")
+
+
 class BudgetExhausted(RuntimeError):
     """A rollout reservation does not fit what is left of ``max_metric_calls`` / ``max_usd``.
 
@@ -572,6 +578,7 @@ class RunDir:
         (``{"val": {..., "per_task": [...]}}``, at any depth) goes to ``<sealed_dir>/<name>``; the run-tree
         file keeps the aggregates (reward, stderr, pass@k, n_scored, n_tasks) and ``sealed_per_task: true``.
         ``read_record`` merges the two back. Without a sealed split the file is written whole, as always."""
+        _check_record_name(name)
         keys, sd = set(self.sealed_splits), self.sealed_dir
         if not keys or sd is None:
             _atomic_write(self.root / name, json.dumps(payload, indent=2))
@@ -601,6 +608,7 @@ class RunDir:
     def read_record(self, name: str) -> dict:
         """The run record ``name`` with its sealed per-task results merged back (see ``write_record``).
         A record written before the split was sealed (the old layout) is returned as it is on disk."""
+        _check_record_name(name)
         d = json.loads((self.root / name).read_text(encoding="utf-8"))
         sd = self.sealed_dir
         if not d.pop("sealed_per_task", False) or sd is None or not (sd / name).exists():

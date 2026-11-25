@@ -524,3 +524,13 @@ def test_a_one_trial_baseline_is_topped_up_to_the_loops_trials_not_reused_as_is(
     trajs = sorted(p.name for p in (opt.calls[0]["snap"] / "trajectories").iterdir())
     assert trajs == sorted(f"{t}__seed__t{k}.json" for t in TR for k in range(3))
     assert rd.spent.metric_calls == len(VA) + len(TR) + 2 * len(TR) + 3 * len(VA)
+
+
+def test_run_records_take_only_a_known_name(tmp_path):
+    """write_record / read_record build a path from ``name``: a path-like or unknown name is refused (CodeQL py/path-injection)."""
+    rd = RunDir.create(tmp_path / ".capevolve", ts="rec")
+    for bad in ("../state.json", "sub/baseline.json", "/etc/passwd", "other.json", ""):
+        with pytest.raises(ValueError, match="unknown run record"):
+            rd.write_record(bad, {})
+        with pytest.raises(ValueError, match="unknown run record"):
+            rd.read_record(bad)
