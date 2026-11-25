@@ -867,7 +867,9 @@ def _full_val_gate(
     # Only when both sides shared a measured task, so ``broke: []`` cannot be read as
     # "broke nothing" on a step where there was nothing to compare (see ``movement``).
     _mv_extra = ({"broke": mv["broke"], "fixed": mv["fixed"],
-                  "n_broke": len(mv["broke"]), "n_fixed": len(mv["fixed"])}
+                  "regressed": mv["regressed"], "improved": mv["improved"],
+                  "n_broke": len(mv["broke"]), "n_fixed": len(mv["fixed"]),
+                  "n_regressed": len(mv["regressed"]), "n_improved": len(mv["improved"])}
                  if mv["n_shared"] else {})
     # Same statistics hill-climb logs (masked == full here: gepa never masks).
     _mv_extra.update(gate_statistics(parent_result, cand_val, None, planned=planned))

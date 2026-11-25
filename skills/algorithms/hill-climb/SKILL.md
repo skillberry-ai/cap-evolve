@@ -35,6 +35,15 @@ differences and point back here. One iteration is `harness.run_step`
    as the failure index plus an explicit *protect these passing ids* block
    (`harness.py:1803-1879`), and substituted into the project's optimizer-instructions
    template. `--focus` narrows which failures are emphasized; nothing else changes.
+   When the previous iteration of the same `hill_climb_loop` call was not accepted, a
+   *last rejected candidate vs the current best* block is appended (`_last_reject_block`):
+   that candidate's OWN judge feedback on every task it moved by more than 2·SE (all val
+   tasks, whatever `--focus` is), worse first, so its edit can be compared with the best's
+   feedback on the same tasks. It shares the failure index's feedback budget (at most half
+   of it). It follows the same rules as LEDGER.md: no block with the history ablation off;
+   under `ledger_noise_guard` below `ledger_min_trials` the changed tasks are listed with no
+   worse/better claim; only proposer-visible (feedback-split) tasks are shown. After a
+   resume, the first iteration has no block.
 3. **Inject context and memory.** Full trajectories, capability guidance, and the four
    cross-iteration files land in the workdir (`harness.py:1062-1094`) — see
    `references/run-step.md`.

@@ -50,7 +50,7 @@ from pathlib import Path
 
 from . import feedback_digest, harness
 from .lr_schedule import build_schedule
-from .loop import SplitResult
+from .loop import SplitResult, has_valid_trials
 from .rundir import RunDir
 
 # Buffer bounds (PITFALL: the rejected-edit buffer must be reset + bounded per
@@ -206,7 +206,11 @@ def _categorize(prev_pt: list, cur_pt: list) -> dict[str, list[dict]]:
         passed_after = after >= 1.0
         if after > before and resolved:
             cats["improved"].append(pt)
-        if passed_before and not passed_after and resolved:
+        # Any resolved drop, not only a 1.0 -> <1.0 one: on a 0-1 reward (an LLM judge, partial
+        # credit) a task that never reached 1.0 can still measurably regress, and requiring
+        # ``passed_before`` filed a 0.70 -> 0.32 drop under persistent_fail instead. A side with
+        # no valid trial is missing data, not a drop (``harness.movement``'s rule).
+        if after < before and resolved and has_valid_trials(prev[tid]) and has_valid_trials(pt):
             cats["regressed"].append(pt)
         elif not passed_before and not passed_after:
             cats["persistent_fail"].append(pt)

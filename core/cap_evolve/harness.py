@@ -2161,7 +2161,8 @@ def _candidate_task_impact(run_dir: RunDir, cid: str, split: str = "val",
         cand, par, n_min = pooled
         if n_min < gcfg.ledger_min_trials:
             flips = sorted(t for t in shared if abs(cand[t] - par[t]) > 1e-9)
-            return {"broke": [], "fixed": [], "unresolved": flips, "delta": delta, "parent": parent_id,
+            return {"broke": [], "fixed": [], "regressed": [], "improved": [], "values": {},
+                    "unresolved": flips, "delta": delta, "parent": parent_id,
                     "causal": False, "n_min": n_min, "n_flips": len(flips),
                     "null_flips": round(null_flip_expectation(
                         [(cand[t] + par[t]) / 2.0 for t in shared], max(1, n_min)), 2),
@@ -2210,7 +2211,8 @@ def _pooled_task_rates(run_dir: RunDir, cid: str, parent_id: str, split: str, ca
 
 def _classify_moves(par: dict, cand: dict, par_se: dict, cand_se: dict,
                     shared) -> dict:
-    """Sort ``shared`` task ids into ``broke`` / ``fixed`` / ``unresolved``. THE rule.
+    """Sort ``shared`` task ids into ``broke`` / ``fixed`` / ``regressed`` / ``improved`` /
+    ``unresolved``. THE rule.
 
     Takes four ``{task_id: float}`` maps — the two sides' per-task rewards and their per-task
     SEs — so the two callers can reach it from different evidence and still be unable to
@@ -2222,24 +2224,49 @@ def _classify_moves(par: dict, cand: dict, par_se: dict, cand_se: dict,
     copies of one bar does.
 
     ``broke`` requires the parent to have scored a FULL 1.0: "measured-and-passed, now
-    doesn't". ``fixed`` is the mirror. A sub-``2·SE`` mover is ``unresolved`` — it moved, the
-    measurement cannot say the edit did it, and asserting causality either way is the thing
-    that poisoned three rounds of reasoning on run_finalrun6. Callers that must not count
-    MISSING data as movement filter by ``has_valid_trials`` before calling (see ``movement``).
+    doesn't". ``fixed`` is the mirror. A resolved move that crosses neither — the parent was
+    below 1.0 and the candidate stays below it, the only kind of move a continuous reward
+    (an LLM judge's 0-1 score, a partial-credit grader) usually makes — is ``regressed`` or
+    ``improved`` by its sign. Without those two lists such a move landed in NO list: a
+    0.70 → 0.32 drop on a judge-scored task read as "nothing regressed", and the journal told
+    the optimizer to keep the batch that caused it. ``values`` holds ``[parent, candidate]``
+    for every resolved mover, so a reader sees how far it moved. A sub-``2·SE`` mover is
+    ``unresolved`` — it moved, the measurement cannot say the edit did it, and asserting
+    causality either way is the thing that poisoned three rounds of reasoning on
+    run_finalrun6. Callers that must not count MISSING data as movement filter by
+    ``has_valid_trials`` before calling (see ``movement``).
     """
     eps = 1e-9
-    broke, fixed, unresolved = [], [], []
+    broke, fixed, regressed, improved, unresolved = [], [], [], [], []
+    values: dict = {}
     for t in sorted(shared):
         d = cand[t] - par[t]
         if abs(d) <= eps:
             continue
         if not move_is_resolved(par[t], cand[t], par_se.get(t, 0.0), cand_se.get(t, 0.0)):
             unresolved.append(t)
-        elif par[t] >= 1.0 - eps and d < 0:
+            continue
+        values[t] = [par[t], cand[t]]
+        if par[t] >= 1.0 - eps and d < 0:
             broke.append(t)
         elif par[t] < 1.0 - eps and cand[t] >= 1.0 - eps:
             fixed.append(t)
-    return {"broke": broke, "fixed": fixed, "unresolved": unresolved}
+        elif d < 0:
+            regressed.append(t)
+        else:
+            improved.append(t)
+    return {"broke": broke, "fixed": fixed, "regressed": regressed, "improved": improved,
+            "unresolved": unresolved, "values": values}
+
+
+def _fmt_moves(impact: dict, key: str, limit: int, empty: str = "") -> str:
+    """``task (0.70→0.32), …`` for one of ``impact``'s mover lists, ``empty`` when it has none."""
+    vals = impact.get("values") or {}
+    out = []
+    for t in (impact.get(key) or [])[:limit]:
+        v = vals.get(t)
+        out.append(f"{t} ({v[0]:.2f}→{v[1]:.2f})" if v else str(t))
+    return ", ".join(out) or empty
 
 
 def movement(parent_per_task, cand_per_task) -> dict:
@@ -2272,7 +2299,8 @@ def movement(parent_per_task, cand_per_task) -> dict:
                  if has_valid_trials(pt)}
     shared = [t for t in cand_rows if t in par_rows]
     if not shared:
-        return {"broke": [], "fixed": [], "unresolved": [], "n_shared": 0}
+        return {"broke": [], "fixed": [], "regressed": [], "improved": [], "unresolved": [],
+                "values": {}, "n_shared": 0}
 
     def _r(rows, t):
         return float(rows[t].get("reward", 0.0) or 0.0)
@@ -2425,8 +2453,9 @@ def _build_ledger(workdir: Path, run_dir: RunDir) -> None:
         rows = []
 
     table = ["| iter | candidate | parent | outcome | val | Δ vs parent | broke (were passing) "
-             "| fixed | unresolved (moved < 2·SE) |",
-             "| --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
+             "| fixed | regressed (dropped, never passing) | improved (rose, still < 1) "
+             "| unresolved (moved < 2·SE) |",
+             "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
     void: list[str] = []
     for i, rec in enumerate(rows, 1):
         cid = str(rec.get("candidate"))
@@ -2445,17 +2474,19 @@ def _build_ledger(workdir: Path, run_dir: RunDir) -> None:
         imp = _candidate_task_impact(run_dir, cid, gate_split(run_dir), parent_of=parent_of) or {}
         broke = "{" + ", ".join(str(t) for t in (imp.get("broke") or [])[:20]) + "}"
         fixed = "{" + ", ".join(str(t) for t in (imp.get("fixed") or [])[:20]) + "}"
+        regr = "{" + _fmt_moves(imp, "regressed", 20) + "}"
+        impr = "{" + _fmt_moves(imp, "improved", 20) + "}"
         unres = "{" + ", ".join(str(t) for t in (imp.get("unresolved") or [])[:20]) + "}"
         if imp.get("causal") is False:
             # Too few draws per task to call a move causal: counts against the null expectation only.
-            broke = fixed = "n/a"
+            broke = fixed = regr = impr = "n/a"
             unres = (f"{imp['n_flips']} tasks differ vs ~{imp['null_flips']:.0f} expected from "
                      f"re-measurement noise alone (n={imp['n_min']} trials/task; no causal claim)")
         vstr = f"{val:.3f}" if isinstance(val, (int, float)) else ""
         table.append(f"| {i} | {cid} | {par} | {outcome} | {vstr} | {d} | {broke} | {fixed} "
-                     f"| {unres} |")
+                     f"| {regr} | {impr} | {unres} |")
     if len(table) == 2:
-        table.append("| — | (baseline only) | — | — | — | — | {} | {} | {} |")
+        table.append("| — | (baseline only) | — | — | — | — | {} | {} | {} | {} | {} |")
 
     best = run_dir.best_id or "seed"
     text = (
@@ -2465,8 +2496,13 @@ def _build_ledger(workdir: Path, run_dir: RunDir) -> None:
         "only — your own narrative, lessons, and refuted hypotheses go in JOURNAL.md. Use "
         "this to never re-introduce a change that broke a task, and to see which approaches "
         "the gate accepted vs rejected.\n\n"
-        "`broke` / `fixed` list only tasks whose move EXCEEDED 2·SE of its own per-task "
-        "measurement error, so they are claims the measurement can support. A task that "
+        "`broke` / `fixed` / `regressed` / `improved` list only tasks whose move EXCEEDED 2·SE "
+        "of its own per-task measurement error, so they are claims the measurement can "
+        "support. `broke` / `fixed` cross a full 1.0 (passing → not, or the reverse); "
+        "`regressed` / `improved` are the same measured drops and gains on a task that was "
+        "not passing and still is not (parent → candidate reward shown) — on a 0-1 reward "
+        "they are usually the whole story, and a regression there is as real as a break. "
+        "A task that "
         "moved by less is in `unresolved`: it is NOT evidence the edit did anything to that "
         "task, in either direction, and must not be reasoned about as a regression or a "
         "win. Do not redesign an edit because a task appears there — re-measure it, or "
@@ -2546,9 +2582,11 @@ def _reconcile_journal(workdir: Path, run_dir: RunDir, cid: str, *,
     impact = _candidate_task_impact(run_dir, cid, gate_split(run_dir)) or {}
     broke = ", ".join(str(t) for t in (impact.get("broke") or [])[:30]) or "—"
     fixed = ", ".join(str(t) for t in (impact.get("fixed") or [])[:30]) or "—"
+    regr = _fmt_moves(impact, "regressed", 30, "—")
+    impr = _fmt_moves(impact, "improved", 30, "—")
     unres = ", ".join(str(t) for t in (impact.get("unresolved") or [])[:30]) or "—"
     if impact.get("causal") is False:
-        broke = fixed = "n/a (too few trials per task for a causal claim)"
+        broke = fixed = regr = impr = "n/a (too few trials per task for a causal claim)"
         unres = (f"{impact['n_flips']} tasks differ vs ~{impact['null_flips']:.0f} expected from "
                  f"re-measurement noise alone (n={impact['n_min']} trials/task)")
     if indecisive:
@@ -2565,10 +2603,13 @@ def _reconcile_journal(workdir: Path, run_dir: RunDir, cid: str, *,
         guidance = (" — per-task movement at this many trials per task is within re-measurement noise, "
                     "so neither a regression nor a fix is claimed for any single task. Judge the "
                     "aggregate; do not redesign an edit because a task moved.")
-    elif impact.get("broke"):
+    elif impact.get("broke") or impact.get("regressed"):
+        # ``regressed`` counts as damage exactly like ``broke``: on a 0-1 reward a task that
+        # never reached 1.0 cannot "break", so without it a measured 0.70 → 0.32 drop fell
+        # through to the nothing-regressed branch below and the journal said to keep the batch.
         verdict = "REJECTED (champion unchanged)"
         guidance = (" — its WHOLE batch was reverted; re-introduce only the edits that did NOT "
-                    "break a task above, dropping/redesigning the ones that did.")
+                    "break or regress a task above, dropping/redesigning the ones that did.")
     elif impact:
         # Rejected with NOTHING regressed: the batch was not harmful, it just did not clear the
         # bar. The regression guidance is not merely unhelpful here, it is misdirection — it
@@ -2576,10 +2617,10 @@ def _reconcile_journal(workdir: Path, run_dir: RunDir, cid: str, *,
         # just measured HELPING. Observed on a round stamped `Δ=+0.043 · fixed={2 tasks} ·
         # broke={—}`, rejected against a 0.048 threshold.
         verdict = "REJECTED (champion unchanged)"
-        guidance = (" — no task that was passing under the parent regressed: this batch did not "
-                    "clear the gate's threshold, it did not do damage. So the lever is POWER or "
-                    "SIZE, not a redesign — re-measure with more trials in ONE evaluation, or "
-                    "make the effect bigger. Keep the edits that produced the `fixed` tasks "
+        guidance = (" — no task measurably regressed: this batch did not clear the gate's "
+                    "threshold, it did not do damage. So the lever is POWER or SIZE, not a "
+                    "redesign — re-measure with more trials in ONE evaluation, or make the "
+                    "effect bigger. Keep the edits that produced the `fixed`/`improved` tasks "
                     "above as your starting point; do not rewrite them on this round's numbers.")
     else:
         verdict = "REJECTED (champion unchanged)"
@@ -2590,7 +2631,8 @@ def _reconcile_journal(workdir: Path, run_dir: RunDir, cid: str, *,
     vs = f"{val:.3f}" if isinstance(val, (int, float)) else "—"
     ds = f"{delta:+.3f}" if isinstance(delta, (int, float)) else "—"
     stamp = (f"\n\n> **RESULT (framework, measured):** {verdict} · val={vs} "
-             f"Δ={ds} · fixed={{{fixed}}} · broke={{{broke}}} · unresolved={{{unres}}} "
+             f"Δ={ds} · fixed={{{fixed}}} · broke={{{broke}}} · improved={{{impr}}} · "
+             f"regressed={{{regr}}} · unresolved={{{unres}}} "
              f"(moved less than 2·SE of its own measurement — NOT evidence the edit touched "
              f"those tasks; do not redesign on them).{guidance}\n"
              f"<!-- {cid}: "
@@ -4046,7 +4088,10 @@ def run_step(
         _step_extra["coverage_check"] = cov_info
     if mv["n_shared"]:
         _step_extra.update(broke=mv["broke"], fixed=mv["fixed"],
-                           n_broke=len(mv["broke"]), n_fixed=len(mv["fixed"]))
+                           regressed=mv["regressed"], improved=mv["improved"],
+                           unresolved=mv["unresolved"],
+                           n_broke=len(mv["broke"]), n_fixed=len(mv["fixed"]),
+                           n_regressed=len(mv["regressed"]), n_improved=len(mv["improved"]))
     # Charge the budget, write the iteration record, fold the JOURNAL — the shared step
     # every algorithm routes through (see ``record_iteration``).
     record_iteration(run_dir, workdir, cid, parent_id=parent_id, accepted=accepted,
@@ -4108,6 +4153,8 @@ def run_step(
         # publishes (``movement``), recorded whether or not any veto is enabled.
         "broke": mv["broke"],
         "fixed": mv["fixed"],
+        "regressed": mv["regressed"],
+        "improved": mv["improved"],
         "optimizer_seconds": optimizer_seconds,
         "optimizer_usd": opt_cost_usd,
         "optimizer_tokens": opt_tokens,
@@ -4447,6 +4494,135 @@ def _failures_block(always_fail, flaky, errored, run_dir=None, optimizer=None,
             "",
         ]
     return "\n".join(lines)
+
+
+def _trials_of(pt: dict) -> int:
+    """How many valid trials a per-task row was measured on (1 when it does not say)."""
+    raw = pt.get("raw") or {}
+    try:
+        return max(1, int(raw.get("valid_trials") or pt.get("n") or 1))
+    except (TypeError, ValueError):
+        return 1
+
+
+def _last_reject_block(steps, current_val: SplitResult, run_dir=None, optimizer=None,
+                       budget: "feedback_digest.Budget | None" = None) -> str:
+    """The previous step's NOT-accepted candidate set against the current best, task by task.
+
+    Hill-climb's prompt is built from the best's results only, and a rejected candidate's
+    edits are reverted, so the next proposal never saw what its predecessor's edit actually
+    did to the judge's verdicts: the rejected candidate's own feedback reached it only as raw
+    trial files under ``./prior_iterations/<id>/trajectories/``. This block puts that feedback
+    in the prompt for every task the candidate measurably moved (``movement`` — the same
+    rule LEDGER.md uses): worse first, worst first, then better. The best's own feedback on
+    the same tasks is in the failure index, so the two can be read side by side. Every task
+    on the split is considered, whatever ``--focus`` narrows the failure index to.
+
+    Kept consistent with the rest of the framework's per-task claims:
+      * history ablation off (``history_enabled()`` false) → no block: it IS cross-iteration
+        history, and ``prior_iterations/`` is not even created then;
+      * ``ledger_noise_guard`` on and fewer than ``ledger_min_trials`` trials per task → the
+        same "no causal claim" rule as LEDGER.md and the RESULT stamp: the changed tasks are
+        listed under ONE neutral heading, never as worse/better;
+      * an indecisive (unresolved) step is called "not accepted", not "rejected";
+      * a pooled run's confirm stratum never reaches the prompt: only the proposer-visible
+        split's rows are used, and if the splits cannot be read the block is dropped.
+
+    It takes about HALF of what is left of the prompt's feedback ``budget``
+    (``feedback_digest.fit``, condensed + linked like the failure index), its own header lines
+    included and charged; ``fit`` always lists at least one row, so a very small budget can be
+    exceeded by that one entry. The failure index rendered after it gets ``budget.left``, so
+    the prompt's feedback as a whole stays inside the budget. It sees only the steps of
+    this ``hill_climb_loop`` call, so the first iteration after a resume has no block.
+    """
+    if not steps or not history_enabled():
+        return ""
+    last = steps[-1]
+    if last.get("accepted") or not last.get("candidate_val"):
+        return ""
+    cid = str(last.get("candidate_id") or "the last candidate")
+    cand_val = SplitResult.from_dict(last["candidate_val"])
+    cand_rows = list(cand_val.per_task or [])
+    guard, min_trials, cfg_unread = False, 0, False
+    if run_dir is not None:
+        try:
+            visible = set(map(str, run_dir.read_splits().ids(gate_split(run_dir))))
+        except (OSError, ValueError, KeyError, AttributeError):
+            return ""          # fail closed: cannot prove a row is not in the confirm stratum
+        cand_rows = [pt for pt in cand_rows if str(pt.get("task_id")) in visible]
+        try:
+            gcfg = gatecfg.GateConfig.for_run(run_dir)
+            guard, min_trials = bool(gcfg.ledger_noise_guard), int(gcfg.ledger_min_trials)
+        except Exception:  # noqa: BLE001 — unreadable spec: assume the guard is on (no causal claim)
+            cfg_unread = True
+    mv = movement(current_val.per_task, cand_rows)
+    if not mv["n_shared"]:
+        return ""
+    by_id = {str(pt.get("task_id")): pt for pt in cand_rows}
+    par_by_id = {str(pt.get("task_id")): pt for pt in (current_val.per_task or [])}
+    shared = [t for t in by_id if t in par_by_id and has_valid_trials(by_id[t])
+              and has_valid_trials(par_by_id[t])]
+    n_min = min([min(_trials_of(by_id[t]), _trials_of(par_by_id[t])) for t in shared] or [1])
+    causal = not (cfg_unread or (guard and n_min < min_trials))
+    rew = lambda rows, t: float(rows[t].get("reward", 0.0) or 0.0)
+    vals = dict(mv["values"])
+    if causal:
+        worse = sorted(mv["broke"] + mv["regressed"], key=lambda t: vals[t][1] - vals[t][0])
+        better = sorted(mv["fixed"] + mv["improved"], key=lambda t: vals[t][0] - vals[t][1])
+        groups = [worse, better]
+    else:
+        changed = [t for t in shared if abs(rew(by_id, t) - rew(par_by_id, t)) > 1e-9]
+        for t in changed:
+            vals[t] = [rew(par_by_id, t), rew(by_id, t)]
+        groups = [sorted(changed, key=lambda t: vals[t][1] - vals[t][0])]
+    fd = feedback_digest
+    budget = budget if budget is not None else fd.Budget()
+    room = budget.left // 2
+    indecisive = bool((last.get("decision") or {}).get("indecisive"))
+    outcome = ("was not accepted (the measurement could not decide; NOT evidence against the "
+               "edit)" if indecisive else "was rejected")
+    head_lines = [
+        f"## Last {'unresolved' if indecisive else 'rejected'} candidate `{cid}` vs the current "
+        "best — ITS OWN judge feedback",
+        f"`{cid}` scored {cand_val.reward:.3f} against the best's {current_val.reward:.3f} and "
+        f"{outcome}; its edit was reverted. Below is ITS feedback on the tasks it moved "
+        "(best → candidate reward in each head). The current best's feedback on the same "
+        "tasks is in the failure index; compare the two to see which part of the edit did "
+        f"what. Its diff and every trial are in `./prior_iterations/{cid}/`.",
+    ]
+    unres_ids = ", ".join(str(t) for t in mv["unresolved"][:40])
+    unres_line = (("Moved by less than 2·SE (no claim either way): "
+                   + (unres_ids if len(unres_ids) <= 1500 else f"{len(mv['unresolved'])} task(s)"))
+                  if causal and mv["unresolved"] else "")
+    fixed_cost = fd._size("\n".join(head_lines + [unres_line])) + 400   # + headings / rest line
+    rows = [by_id[t] for g in groups for t in g]
+    got = fd.fit(rows, max(0, room - fixed_cost),
+                 head=lambda pt: (f"- {pt.get('task_id')} (best {vals[str(pt.get('task_id'))][0]:.2f}"
+                                  f" → {cid} {vals[str(pt.get('task_id'))][1]:.2f}): "),
+                 run_dir=run_dir, optimizer=optimizer)
+    listed = lambda ids: [got.entries[t] for t in ids if t in got.entries]
+    lines = head_lines + [""]
+    if causal:
+        lines.append(f"### Measurably WORSE than the best ({len(groups[0])}, moved > 2·SE) — "
+                     "find what the edit broke here")
+        lines += listed(groups[0]) or ["- (none)"]
+        lines += ["", f"### Measurably BETTER than the best ({len(groups[1])}, moved > 2·SE) — "
+                      "keep what caused these"]
+        lines += listed(groups[1]) or ["- (none)"]
+    else:
+        why = ("the run's gate config could not be read" if cfg_unread else
+               f"n={n_min} trial(s) per task is below ledger_min_trials={min_trials}")
+        lines.append(f"### Changed vs the best ({len(groups[0])}) — {why}, so NO causal claim: "
+                     "read these as context, not as what the edit broke or fixed")
+        lines += listed(groups[0]) or ["- (none)"]
+    if got.rest:
+        lines += ["", f"(+{len(got.rest)} more moved task(s) not listed, over the feedback budget "
+                      f"({fd.ENV_BUDGET}). Their trials are in `./prior_iterations/{cid}/trajectories/`.)"]
+    if unres_line:
+        lines += ["", unres_line]
+    text = "\n".join(lines)
+    budget.spend(fd._size(text))
+    return text
 
 
 def _optimizer_parallel(optimizer_name: str | None) -> bool:
@@ -5388,9 +5564,14 @@ def hill_climb_loop(
         else:
             focus_ids, label = None, focus
         parent_dir = run_dir.candidate_dir(run_dir.best_id)
+        # ONE feedback budget: the last reject's per-task comparison, then the failure index.
+        budget = feedback_digest.Budget()
+        reject_block = _last_reject_block(steps, current_val, run_dir=run_dir,
+                                          optimizer=optimizer, budget=budget)
         instructions = ctx.instructions(current_val, focus_ids, label,
                                         algorithm=algorithm, parent_dir=parent_dir, run_dir=run_dir,
-                                        optimizer=optimizer)
+                                        optimizer=optimizer, extra=reject_block,
+                                        feedback_budget=budget)
         if convergence:
             # Pure: recomputed from the steps so far, so a resumed run rebuilding the
             # same observation list gets the identical signal.

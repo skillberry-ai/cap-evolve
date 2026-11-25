@@ -123,8 +123,11 @@ def test_no_regression_claim_is_not_made_when_there_was_nothing_to_compare(tmp_p
                              reason="below threshold", val=0.553, parent_val=0.51)
     entry = (run_dir.root / "JOURNAL.md").read_text(encoding="utf-8")
     entry = entry[entry.rindex("RESULT (framework"):]
-    assert "no task that was passing" not in entry, (
+    # "did not do damage" is in the nothing-regressed guidance in every wording it has had, so a
+    # rewording of that guidance cannot silently turn this guard into one that never fails.
+    assert "did not do damage" not in entry, (
         f"claims nothing regressed when no per-task comparison existed at all: {entry}")
+    assert "UNKNOWN rather than empty" in entry, entry
 
 
 def test_an_accept_is_unchanged(tmp_path):
