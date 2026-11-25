@@ -164,7 +164,7 @@ def main(argv=None) -> int:
         # algorithm resumes straight from the current best. state.json is left untouched.
         if args.resume and (run_dir.root / "baseline.json").exists():
             splits = run_dir.read_splits()
-            recorded = json.loads((run_dir.root / "baseline.json").read_text(encoding="utf-8"))
+            recorded = run_dir.read_baseline()
             print(json.dumps({
                 "run_dir": str(run_dir.root),
                 "splits": {"train": len(splits.train), "val": len(splits.val), "test": len(splits.test)},

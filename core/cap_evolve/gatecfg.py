@@ -18,9 +18,9 @@ mode, ``gate_check``) read the same config.
   fault_attribution     false  tag exceptions raised by the candidate's own code (error_kind=candidate)
   hc_feedback_split     "auto" which split the legacy hill-climb PROPOSER learns from: "train" | "val" |
                         "auto" (train when the frozen train and val ids differ as sets, else val). The
-                        gate always decides on val; under "train" the proposer's inputs and the run's
-                        event/graph logs carry no val task id and val rollouts are sealed (splits.json
-                        and baseline.json still list val: follow-up). Not used by pooled/P2/HC-2
+                        gate always decides on val; under "train" val ids and per-task val results
+                        are kept out of the run tree and the proposer's inputs (sealed dir, outside the
+                        run tree; its path is in state.json). Not used by pooled/P2/HC-2
                         (they have F/C); there an explicit "train" is a logged no-op.
 """
 

@@ -24,7 +24,12 @@ _LEGACY_DECISION = {"accept": "accept", "reject": "reject"}
 
 def _val_ids(run_root, nodes) -> list[str]:
     try:
-        v = json.loads((run_root / "splits.json").read_text(encoding="utf-8")).get("val")
+        d = json.loads((run_root / "splits.json").read_text(encoding="utf-8"))
+        v = d.get("val")
+        if not v and d.get("sealed") and not d.get("pooled"):
+            # A sealed legacy val list (hc_feedback_split: train): the run dir merges it back.
+            from .rundir import RunDir
+            v = RunDir(run_root).read_splits().val
         if v:
             return [str(x) for x in v]
     except (OSError, ValueError, AttributeError):

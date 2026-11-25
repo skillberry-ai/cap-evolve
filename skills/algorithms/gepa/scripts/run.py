@@ -90,7 +90,7 @@ def main(argv=None) -> int:
     adapter = load_adapter(Path(args.project))
     optimizer = harness.optimizer_from_command(shlex.split(args.optimizer))
     seed_val = SplitResult.from_dict(
-        json.loads((run_dir.root / "baseline.json").read_text())["val"])
+        run_dir.read_baseline()["val"])
 
     # The gate's kwargs. ``gate_max_broke`` is added ONLY when set, so the dict every run so
     # far passed is byte-identical and the accept/reject decision cannot have moved.

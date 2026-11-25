@@ -29,6 +29,25 @@ import json, sys
 from pathlib import Path
 
 
+def _load_record(p: Path) -> dict:
+    """A run record with the per-task results a sealed split keeps in the run's sealed dir merged back
+    (``sealed_per_task``; see ``cap_evolve.rundir.RunDir.read_record``)."""
+    d = json.loads(p.read_text())
+    if d.pop("sealed_per_task", False):
+        def merge(node, priv):
+            for k, v in priv.items():
+                if isinstance(v, dict) and isinstance(node.get(k), dict):
+                    merge(node[k], v)
+                else:
+                    node[k] = v
+        try:
+            sd = json.loads((p.parent / "state.json").read_text()).get("sealed_dir")
+            merge(d, json.loads((Path(sd) / p.name).read_text()))
+        except Exception:  # noqa: BLE001 — aggregates are still there; only the per-task view is missing
+            pass
+    return d
+
+
 def _infra_task(pt: dict) -> bool:
     """True if this task's reward≈0 is an infrastructure error, not a capability result.
 
@@ -63,9 +82,9 @@ def main(argv: list[str]) -> int:
             print(f"FAIL: missing {f} — the run did not complete (a step crashed or was killed)")
             return 1
 
-    baseline = json.loads((rd / "baseline.json").read_text())["val"]
+    baseline = _load_record(rd / "baseline.json")["val"]
     base = baseline["reward"]
-    fin = json.loads((rd / "final.json").read_text())["test"]["reward"]
+    fin = _load_record(rd / "final.json")["test"]["reward"]
     it = json.loads((rd / "state.json").read_text()).get("spent", {}).get("iterations", 0)
 
     if it < min_it:

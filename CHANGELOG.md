@@ -17,13 +17,17 @@ All notable changes to cap-evolve are documented here. The format follows
   wins), resolved once per run from the frozen splits and logged as an `hc_feedback_split` event: `auto` is
   `train` when train and val differ as sets, `val` when they are the same set; a run started before the key
   existed (iterations spent, nothing frozen) stays `val`. Under `train` the proposer is given the val verdict and
-  aggregates: its work-dir inputs (prompt, trajectories, LEDGER/JOURNAL/RUNMAP, `prior_iterations/`,
-  `rejected.jsonl`/`history.jsonl`) and the run's event and graph logs carry no val task id (reasons name counts;
-  a bare numeric id in free text is left as is). Val rollouts and evidence-ledger rows, and the per-step
-  broke/fixed lists, raw gate reasons, footprint and quarantine ids, go to the sealed dir outside the run tree
-  (as for pooled mode: by default `<project>.sealed/<run>`, a sibling of the project dir; `CAPEVOLVE_SEALED_DIR`
-  overrides). Not sealed yet (follow-up): the run tree's `splits.json` and `baseline.json`, so an unsandboxed
-  proposer that browses the run tree can still find the val ids and the seed's per-task val results. Each accepted champion is run once on train
+  aggregates: val task ids and per-task val results are not in the run tree and not in anything handed to the
+  proposer (prompt, work-dir files, `rejected.jsonl`/`history.jsonl`, events, `graph.jsonl`; reasons name counts,
+  a bare numeric id in free text is left as is). They go to the sealed dir outside the run tree (as for pooled
+  mode: by default `<project>.sealed/<run>`, a sibling of the project dir; `CAPEVOLVE_SEALED_DIR` overrides): val
+  rollouts and evidence-ledger rows, the val id list (`splits.json` keeps train/test; `read_splits` merges it
+  back), the per-task val results of `baseline.json` and `final.json` (they keep the aggregates;
+  `RunDir.read_baseline`/`read_record` merge them back, and an old-layout record is migrated once), per-step
+  broke/fixed lists with the raw gate reason (`steps.jsonl`), quarantine ids. The sealed dir's path is in
+  `state.json`, so an unsandboxed proposer that deliberately follows it can still read it (as in pooled mode);
+  read isolation (a work-dir-only sandbox or a read-deny hook) is separate hardening. The report phase's
+  `report.md`/`dashboard.html`, written after the search for the operator, may show per-task val results. Each accepted champion is run once on train
   (tagged with its candidate id) so LEDGER compares its train results with its parent's; a rejected candidate is
   never run on train. Cost: |train| x num_trials extra rollouts per accepted candidate, charged to
   `max_metric_calls` and always reserved first (`champion_train_unfunded` stops the loop instead of

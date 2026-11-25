@@ -1381,7 +1381,7 @@ def _copy_rollouts(src: Path, scratch: Path, ev: dict) -> None:
     if ev.get("kind") != "evaluate" or not ev.get("tag"):
         return
     split = str(ev.get("split") or "val")
-    from_dir = src / "rollouts" / split
+    from_dir = _src_rollout_dir(src, split)
     if not from_dir.is_dir():
         return
     to_dir = scratch / "rollouts" / split
@@ -1392,6 +1392,29 @@ def _copy_rollouts(src: Path, scratch: Path, ev: dict) -> None:
             shutil.copy2(f, to_dir / f.name)
         except OSError:  # noqa: PERF203 — one unreadable rollout must not stop the replay
             continue
+
+
+def _src_rollout_dir(src: Path, split: str) -> Path:
+    """The recorded run's rollouts of ``split``, wherever they live (a sealed split's are outside the run tree)."""
+    if (src / "state.json").exists():
+        from .rundir import RunDir
+        try:
+            return RunDir(src).rollout_dir(split)
+        except (OSError, ValueError):
+            pass
+    return src / "rollouts" / split
+
+
+def _copy_record(src: Path, scratch: Path, name: str) -> None:
+    """Copy a run record into the replay scratch dir with any sealed per-task results merged back."""
+    if (src / "state.json").exists():
+        from .rundir import RunDir
+        try:
+            (scratch / name).write_text(json.dumps(RunDir(src).read_record(name), indent=2), encoding="utf-8")
+            return
+        except (OSError, ValueError):
+            pass
+    shutil.copy2(src / name, scratch / name)
 
 
 def replay(src, *, stream=None, color: bool | None = None, speed: float = 1.0,
@@ -1441,7 +1464,7 @@ def replay(src, *, stream=None, color: bool | None = None, speed: float = 1.0,
                     fh.write(json.dumps(ev) + "\n")
                 for name, kind in (("baseline.json", "baseline"), ("final.json", "finalize")):
                     if ev.get("kind") == kind and (src / name).exists():
-                        shutil.copy2(src / name, scratch / name)
+                        _copy_record(src, scratch, name)
                 _copy_rollouts(src, scratch, ev)
                 gap = 0.0
                 if prev_t is not None:

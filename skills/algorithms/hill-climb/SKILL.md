@@ -42,13 +42,22 @@ differences and point back here. One iteration is `harness.run_step`
 4. **Optimize.** The optimizer command mutates the workdir. A crash is caught, logged,
    and left as an unchanged copy of the parent, so the gate simply rejects it — a
    wasted iteration, not a dead run (`harness.py:1486-1500`).
-5. **Evaluate on val only** (`harness.py:1516`), at `--n-trials` trials per task.
-   Under train feedback an ACCEPTED candidate is then also run once on train, so the
-   next prompt shows the new champion's own train failures.
+5. **Evaluate on val only** (`harness.py:1516`): the EDITED candidate is scored on every
+   val task, at `--n-trials` trials per task. The parent is not re-measured: its side of
+   the comparison is its STORED val result (the seed's from baseline, a champion's from
+   the evaluation that accepted it; rule P's confirmation is the exception, it re-measures
+   both arms on fresh seeds).
 6. **Gate.** With per-task data on both sides the paired test is chosen automatically:
-   accept iff mean per-task Δ > `k`·SE of those paired deltas (`harness.py:1524-1532`).
-   `--no-regression` adds a second, harder condition on top.
-7. **Commit.** *Every* candidate is snapshotted — accepted and rejected — so any
+   accept iff mean per-task Δ (edited candidate − stored parent result, per val task) >
+   `k`·SE of those paired deltas (`harness.py:1524-1532`). `--no-regression` adds a
+   second, harder condition on top.
+7. **Champion on train (train feedback only).** Under train feedback, an accepted
+   candidate is run once on the full train split at `--n-trials` (budget-reserved; an
+   unfunded eval stops the loop) so the next prompt shows its own train failures. A
+   rejected candidate is never run on train. If this eval raises, it is retried once
+   before the next prompt; if that fails too, the prompt's failures and `trajectories/`
+   both stay the previous champion's, and the prompt says so.
+8. **Commit.** *Every* candidate is snapshotted — accepted and rejected — so any
    iteration can be diffed (`harness.py:1557`); the version store commits it
    (`harness.py:1609-1612`). Only an accepted candidate calls `set_best` and becomes
    the next parent (`harness.py:1558-1559`); a rejected one is filed in the rejected
@@ -79,19 +88,21 @@ splits, frozen in `state.json`, and logged as an `hc_feedback_split` event.
 - **`train`**: the trajectories, the failure index, the passing block, the focus order,
   LEDGER's broke/fixed columns and `prior_iterations/<id>/trajectories/` all come from
   TRAIN. The gate is unchanged: every candidate is measured on val against the parent's
-  val. What the proposer is given about val is the verdict and the aggregate val numbers
-  (reward, Δ): its work-dir inputs (prompt, trajectories, LEDGER/JOURNAL/RUNMAP,
-  `prior_iterations/`, `rejected.jsonl`/`history.jsonl`) and the run's event and graph logs
-  carry no val task id. Val rollouts and their ledger rows move to the sealed dir (outside
-  the run tree, as for pooled mode's confirm stratum); per-step broke/fixed lists, the gate's
-  raw reason, footprint and quarantine ids go there too (`steps.jsonl`, `quarantine.json`).
-  Gate reasons and evaluation errors reach the logs with ids replaced; a purely numeric id is
-  replaced only where it is quoted, a bare number in free text is left as is. **Not sealed
-  yet (follow-up):** the run tree's `splits.json` (val membership) and `baseline.json` (the
-  seed's per-task val results), so an unsandboxed proposer that browses the run tree can
-  still find the val ids and the seed's per-task val results; `final.json`, written at
-  finalize after the search, also holds per-task val. The seed's train result comes from
-  baseline. Each ACCEPTED candidate is run once on train (the run's
+  val. **The guarantee:** val task ids and per-task val results are not in the run tree and
+  not in anything handed to the proposer (prompt, trajectories, LEDGER/JOURNAL/RUNMAP,
+  `prior_iterations/`, `rejected.jsonl`/`history.jsonl`, events, `graph.jsonl`); it gets the
+  val verdict and aggregates (reward, Δ). They live in the sealed dir instead: the val
+  rollouts and ledger rows, the val id list (`splits_full.json`; the run tree's `splits.json`
+  keeps train and test), the seed's and the finalists' per-task val results (`baseline.json`
+  and `final.json` keep the aggregates), per-step broke/fixed lists with the gate's raw
+  reason (`steps.jsonl`) and quarantine ids. Gate reasons and evaluation errors reach the logs
+  with ids replaced; a purely numeric id is replaced only where it is quoted. The sealed dir
+  is OUTSIDE the run tree but its path is recorded in `state.json`, so an unsandboxed proposer
+  that deliberately follows it can still read it, as in pooled mode; enforcing read isolation
+  (a sandbox that mounts only the work dir, or a read-deny hook) is separate hardening, not
+  part of this. The report phase, which runs after the search, writes `report.md` /
+  `dashboard.html` into the run dir for the operator; those may show per-task val results. The
+  seed's train result comes from baseline. Each ACCEPTED candidate is run once on train (the run's
   `--n-trials`), so LEDGER compares the champion's train results with its parent's; a
   rejected candidate is never run on train. Cost: |train| × n_trials extra rollouts per
   accept, charged to `max_metric_calls` and always reserved first; a champion train eval

@@ -107,7 +107,7 @@ def main(argv=None) -> int:
         current_val = harness.resume_val(run_dir, run_dir.best_id, bool(getattr(args, "promotion_rule", None)))
     else:
         current_val = SplitResult.from_dict(
-            json.loads((run_dir.root / "baseline.json").read_text())["val"])
+            run_dir.read_baseline()["val"])
 
     # The gate's kwargs. ``gate_max_broke`` is added ONLY when set, so the dict every run so
     # far passed is byte-identical and the accept/reject decision cannot have moved.

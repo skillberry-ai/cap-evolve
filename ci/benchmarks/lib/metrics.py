@@ -26,11 +26,30 @@ import sys
 from pathlib import Path
 
 
+def _merge(node: dict, priv: dict) -> dict:
+    for k, v in priv.items():
+        if isinstance(v, dict) and isinstance(node.get(k), dict):
+            _merge(node[k], v)
+        else:
+            node[k] = v
+    return node
+
+
 def _load(p: Path) -> dict:
+    """A run-dir JSON file. A record whose per-task results of a sealed split live in the run's sealed dir
+    (``sealed_per_task``: hill-climb under ``hc_feedback_split: train``) is merged back, as
+    ``RunDir.read_record`` does."""
     try:
-        return json.loads(p.read_text(encoding="utf-8"))
+        d = json.loads(p.read_text(encoding="utf-8"))
     except Exception:
         return {}
+    if isinstance(d, dict) and d.pop("sealed_per_task", False):
+        try:
+            sd = json.loads((p.parent / "state.json").read_text(encoding="utf-8")).get("sealed_dir")
+            d = _merge(d, json.loads((Path(sd) / p.name).read_text(encoding="utf-8")))
+        except Exception:
+            pass
+    return d
 
 
 def _fmt(v, unit=""):

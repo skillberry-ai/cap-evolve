@@ -3,7 +3,7 @@
 With distinct train and val ids the default is ``train``: the proposer's trajectories, failure lists,
 focus order, LEDGER broke/fixed and ``prior_iterations/`` come from TRAIN, every candidate is still gated
 on val against its parent's val, and the proposer's inputs and the run's logs carry the val verdict and
-aggregates only (``splits.json``/``baseline.json`` still hold val ids: the documented follow-up).
+aggregates only; no file of the run tree holds a val id (they are in the sealed dir, outside it).
 Each accepted champion is measured on train once (budget-reserved); a rejected one never is. Val
 rollouts are sealed outside the run tree. ``hc_feedback_split: val`` is the loop as it was.
 
@@ -41,8 +41,11 @@ PASS = {
 
 
 class Adapter:
-    def __init__(self):
+    """``fail_train``: {cfg name: n} raises in the next ``n`` TRAIN evaluations of that candidate."""
+
+    def __init__(self, fail_train=None):
         self.calls = []
+        self.fail_train = dict(fail_train or {})
 
     def tasks(self, split):
         return [Task(id=t, input={"q": t}) for t in TR + VA + TE]
@@ -50,6 +53,9 @@ class Adapter:
     def run_target(self, task, ctx, *, seed=0):
         name = json.loads((Path(ctx) / "cfg.json").read_text())["name"]
         self.calls.append(task.id)
+        if task.id == TR[0] and self.fail_train.get(name):
+            self.fail_train[name] -= 1
+            raise RuntimeError(f"runner crashed on {name}")
         ok = task.id in PASS[name]
         return Rollout(task_id=task.id, output="pass" if ok else "fail", trace=f"agent trace for {task.id}")
 
@@ -77,7 +83,7 @@ class Scripted:
         return None
 
 
-def _setup(tmp_path, *, spec=None, max_metric_calls=0, n_trials=1, train=TR, val=VA):
+def _setup(tmp_path, *, spec=None, max_metric_calls=0, n_trials=1, train=TR, val=VA, adapter=None):
     seed = tmp_path / "seed"
     seed.mkdir(parents=True, exist_ok=True)
     (seed / "cfg.json").write_text(json.dumps({"name": "seed"}))
@@ -88,7 +94,7 @@ def _setup(tmp_path, *, spec=None, max_metric_calls=0, n_trials=1, train=TR, val
         f = tmp_path / "capevolve.yaml"
         f.write_text("".join(f"{k}: {str(v).lower() if isinstance(v, bool) else v}\n" for k, v in spec.items()))
         rd.log_event("run_config", spec=str(f))
-    adapter = Adapter()
+    adapter = adapter or Adapter()
     base = harness.baseline(adapter, seed, run_dir=rd, n_trials=n_trials)
     return adapter, rd, base
 
@@ -238,8 +244,8 @@ def test_free_text_hides_val_ids_only_where_they_are_ids(tmp_path):
 # ---- the loop -----------------------------------------------------------------------------------
 
 def _run(tmp_path, names, **kw):
-    adapter, rd, base = _setup(tmp_path, **{k: kw.pop(k) for k in ("spec", "max_metric_calls", "n_trials")
-                                            if k in kw})
+    adapter, rd, base = _setup(tmp_path, **{k: kw.pop(k) for k in ("spec", "max_metric_calls", "n_trials",
+                                                                   "adapter") if k in kw})
     opt = Scripted(names, tmp_path / "captures")
     res = harness.hill_climb_loop(adapter, run_dir=rd, optimizer=opt, current_val=base,
                                   max_iterations=len(names), n_trials=kw.pop("n_trials_loop", 1),
@@ -300,9 +306,14 @@ def test_no_val_task_id_reaches_the_proposer(tmp_path):
     # RUNMAP does not send a train-feedback proposer to the live run dir
     runmap = (opt.calls[3]["snap"] / "RUNMAP.md").read_text()
     assert str(rd.root) not in runmap and "live run dir" not in runmap
-    # EVERY file of the run tree: the only ones still holding val-only ids are the documented follow-up
+    # EVERY file of the run tree, after finalize too: none holds a val-only id (state.json, splits.json,
+    # baseline.json, final.json, events, graph, journal, ledger, candidates, work dirs, rollouts ...)
+    harness.finalize(Adapter(), run_dir=rd, best_dir=rd.candidate_dir(rd.best_id),
+                     baseline_dir=rd.candidate_dir("seed"))
     holders = sorted({os.path.relpath(f, rd.root) for f, _, _ in _leaks(rd.root, VA, skip=(".git/objects",))})
-    assert holders == ["baseline.json", "splits.json"], holders
+    assert holders == [], holders
+    assert (rd.root / "final.json").exists() and json.loads((rd.root / "final.json").read_text())["sealed_per_task"]
+    assert [pt["task_id"] for pt in rd.read_record("final.json")["best"]["val"]["per_task"]] == VA
     steps = _events(rd, "step")
     assert all("broke" not in e and "fixed" not in e for e in steps)
     assert [e.get("n_broke") for e in steps] == [0, 1, 5, 0]
@@ -443,3 +454,73 @@ def test_the_hill_climb_script_reports_the_champion_train_eval(tmp_path):
     assert step["accepted"] is True and step["champion_train"]["split"] == "train"
     assert step["champion_train"]["reward"] == 1.0 and step["candidate_val"]["split"] == "val"
     assert _events(rd, "hc_feedback_split")[-1]["value"] == "train"
+
+
+def test_splits_and_baseline_keep_their_public_part_and_the_run_dir_merges_the_sealed_one(tmp_path):
+    _, rd, base = _setup(tmp_path)
+    harness.resolve_hc_feedback_split(rd)
+    on_disk = json.loads(rd.splits_path.read_text())
+    assert on_disk["val"] == [] and on_disk["train"] == TR and on_disk["test"] == TE and on_disk["sealed"]
+    assert rd.read_splits().val == VA and rd.read_splits().train == TR
+    b = json.loads((rd.root / "baseline.json").read_text())
+    assert "per_task" not in b["val"] and b["sealed_per_task"] is True
+    want = json.loads(json.dumps(base.to_dict()))
+    for k in ("reward", "stderr", "n_scored", "n_tasks", "pass_k", "pass_at_k"):
+        assert b["val"][k] == want[k], k
+    assert b["train"]["per_task"] and b["train"]["reward"] == 0.25          # train stays public
+    full = rd.read_baseline()
+    assert [pt["task_id"] for pt in full["val"]["per_task"]] == VA and "sealed_per_task" not in full
+    rd.commit_test()                                                       # a rewrite keeps the public view
+    assert json.loads(rd.splits_path.read_text())["val"] == [] and rd.read_splits().test_used
+
+
+def test_an_old_layout_train_run_is_read_as_is_and_migrated_once(tmp_path):
+    _, rd, base = _setup(tmp_path)
+    full = json.loads((rd.root / "baseline.json").read_text())             # what the earlier version left
+    splits_full = json.loads(rd.splits_path.read_text())
+    harness.resolve_hc_feedback_split(rd)
+    (rd.root / "baseline.json").write_text(json.dumps(full))               # old layout, under a sealed run
+    rd.splits_path.write_text(json.dumps(splits_full))
+    old = RunDir.open(rd.root)
+    assert old.read_baseline()["val"]["per_task"] and old.read_splits().val == VA      # still readable
+    assert harness.resolve_hc_feedback_split(old) == "train"                           # the resume
+    assert "per_task" not in json.loads((rd.root / "baseline.json").read_text())["val"]
+    assert json.loads(rd.splits_path.read_text())["val"] == []
+    assert [pt["task_id"] for pt in old.read_baseline()["val"]["per_task"]] == VA
+    stamp = (rd.root / "baseline.json").stat().st_mtime_ns
+    harness.resolve_hc_feedback_split(old)
+    assert (rd.root / "baseline.json").stat().st_mtime_ns == stamp                     # once
+
+
+def test_a_champion_train_eval_that_raises_is_retried_before_the_next_prompt(tmp_path):
+    rd, opt, res = _run(tmp_path, ["good", "worse"], adapter=Adapter(fail_train={"good": 1}))
+    assert [s["accepted"] for s in res["steps"]] == [True, False] and res["steps"][0]["champion_train"] is None
+    assert _events(rd, "champion_train_error")[0]["candidate"] == "cand_0001"
+    retry = [e for e in _events(rd, "champion_train") if e["candidate"] == "cand_0001"]
+    assert len(retry) == 1 and retry[0]["reason"] == "retry"
+    trajs = sorted(p.name for p in (opt.calls[1]["snap"] / "trajectories").iterdir())
+    assert trajs == sorted(f"{t}__cand_0001__t0.json" for t in TR)
+    assert "Current train reward 0.500" in opt.calls[1]["prompt"] and "## Note: the failures" not in opt.calls[1]["prompt"]
+    assert not _events(rd, "hc_feedback_tag")
+
+
+def test_if_the_retry_fails_too_failures_and_trajectories_stay_the_previous_champions(tmp_path):
+    rd, opt, res = _run(tmp_path, ["good", "worse"], adapter=Adapter(fail_train={"good": 2}))
+    assert [s["accepted"] for s in res["steps"]] == [True, False]
+    ev = _events(rd, "hc_feedback_tag")
+    assert len(ev) == 1 and ev[0]["tag"] == "seed" and ev[0]["champion"] == "cand_0001"
+    trajs = sorted(p.name for p in (opt.calls[1]["snap"] / "trajectories").iterdir())
+    assert trajs == sorted(f"{t}__seed__t0.json" for t in TR)           # the SAME candidate as the failures
+    prompt = opt.calls[1]["prompt"]
+    assert "Current train reward 0.250" in prompt and "are from `seed`" in prompt and "`cand_0001`" in prompt
+
+
+def test_a_one_trial_baseline_is_topped_up_to_the_loops_trials_not_reused_as_is(tmp_path):
+    rd, opt, res = _run(tmp_path, ["worse"], n_trials=1, n_trials_loop=3)
+    train = [(e["tag"], e["n_trials"], e["rollouts"]) for e in _events(rd, "eval_start") if e["split"] == "train"]
+    assert train == [("seed", 1, len(TR)), ("seed", 2, 2 * len(TR))]      # baseline, then only the missing 2
+    ev = [e for e in _events(rd, "champion_train") if e["candidate"] == "seed"][0]
+    assert ev["reason"] == "loop_entry" and ev["topped_up"] == len(TR) and ev["trials"] == 3
+    trajs = sorted(p.name for p in (opt.calls[0]["snap"] / "trajectories").iterdir())
+    assert trajs == sorted(f"{t}__seed__t{k}.json" for t in TR for k in range(3))
+    assert rd.spent.metric_calls == len(VA) + len(TR) + 2 * len(TR) + 3 * len(VA)
