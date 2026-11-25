@@ -203,11 +203,11 @@ def test_conductor_commit_accept_turns_a_tamper_refusal_into_a_clean_conductor_r
 # ---- #1011 review 3-5: seal at the baseline; ledger race -----------------------------------------
 
 def test_manifest_exists_right_after_baseline_and_a_changed_scorer_is_reported(tmp_path, capsys, monkeypatch):
-    project = tmp_path / "proj"
+    project = tmp_path / ".capevolve" / "project"  # the standard layout
     (project / "adapters").mkdir(parents=True)
     (project / "adapters" / "adapter.py").write_text("X = 1\n")
     (project / "scorer.py").write_text("def score(*a): return 0.0\n")
-    rd = RunDir.create(project / ".capevolve", ts="bl")
+    rd = RunDir.create(tmp_path / ".capevolve", ts="bl")
     seed = tmp_path / "seedcap"
     seed.mkdir()
     (seed / "a.txt").write_text("a")
@@ -216,6 +216,22 @@ def test_manifest_exists_right_after_baseline_and_a_changed_scorer_is_reported(t
     (project / "scorer.py").write_text("def score(*a): return 1.0\n")  # between baseline and first propose
     man = integrity.read_manifest(Path(rd.private_dir) / integrity.EVAL_SURFACE_MANIFEST)
     assert integrity.verify_eval_surface(man, project).modified == ["scorer.py"]
+
+
+def test_stray_adapters_in_work_does_not_seal_the_wrong_root(tmp_path):
+    (tmp_path / "adapters").mkdir()
+    (tmp_path / "adapters" / "x.py").write_text("X = 1\n")
+    project = tmp_path / ".capevolve" / "project"
+    (project / "adapters").mkdir(parents=True)
+    (project / "adapters" / "adapter.py").write_text("X = 1\n")
+    rd = RunDir.create(tmp_path / ".capevolve", ts="a")
+    seed = tmp_path / "seedcap"
+    seed.mkdir()
+    (seed / "a.txt").write_text("a")
+    rd.snapshot("seed", seed)
+    man = integrity.read_manifest(Path(rd.private_dir) / integrity.EVAL_SURFACE_MANIFEST)
+    rep = integrity.verify_eval_surface(man, project)
+    assert rep.ok, rep.reason
 
 
 def test_a_late_seal_is_flagged_not_silent(tmp_path, capsys, monkeypatch):

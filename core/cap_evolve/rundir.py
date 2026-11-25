@@ -775,19 +775,27 @@ class RunDir:
 
     def _seal_eval_surface_at_baseline(self) -> None:
         """Record the project's eval-surface manifest when the seed is snapshotted, i.e. before the
-        baseline is scored, so a scorer edited after the baseline is caught. The project is the run
-        dir's parent-of-``.capevolve``; any other layout is left to act.py's first call. Best effort."""
+        baseline is scored, so a scorer edited after the baseline is caught. The project is the one
+        this run was started with (the folder of its recorded spec); failing that, the standard
+        sibling ``<work>/.capevolve/project`` next to the run folder. If no project is found for
+        sure, nothing is recorded (act.py records it on its first call). Best effort."""
         try:
             from . import integrity
-            resolved = self.root.resolve()
-            if resolved.parent.name != ".capevolve":
-                return
-            project = resolved.parent.parent
+            from .specfile import resolve_spec_path
             path = self.private_dir / integrity.EVAL_SURFACE_MANIFEST
-            if path.exists() or not project.is_dir():
+            if path.exists():
                 return
-            if not ((project / "adapters").is_dir() or (project / "adapter.py").is_file()):
-                return  # not a cap-evolve project folder (e.g. a bare scratch parent)
+            project = None
+            spec = resolve_spec_path(self)
+            if spec is not None and (spec.parent / "adapters").is_dir():
+                project = spec.parent
+            else:
+                sib = self.root.resolve().parent / "project"
+                if sib.is_dir():
+                    project = sib
+            if project is None or not (
+                    (project / "adapters").is_dir() or (project / "adapter.py").is_file()):
+                return
             integrity.record_eval_surface(path, project)
             self.log_event("eval_surface_recorded", project=str(project), late=False, at="baseline")
         except Exception:  # noqa: BLE001 - sealing is an aid here; act.py records it later if this fails
