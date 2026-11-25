@@ -720,18 +720,20 @@ class RunDir:
             th = hashlib.sha256(json.dumps(sorted(map(str, splits.test))).encode()).hexdigest()
             ledger = self.root.parent / "test_ledger.jsonl"
             earlier: list = []
+            # Read and append under one lock hold, so two runs finalizing together each see the other.
             # An empty test split scored nothing: no ledger entry, no warning (count 0).
-            if splits.test and ledger.is_file():
-                for line in ledger.read_text(encoding="utf-8").splitlines():
-                    try:
-                        e = json.loads(line)
-                    except ValueError:
-                        continue
-                    if isinstance(e, dict) and e.get("test_hash") == th and e.get("run") != self.root.name:
-                        earlier.append(e["run"])
-            if splits.test:
-                with ledger.open("a", encoding="utf-8") as f:
-                    f.write(json.dumps({"test_hash": th, "run": self.root.name, "time": time.time()}) + "\n")
+            with _file_lock(self.root.parent / "test_ledger.lock"):
+                if splits.test and ledger.is_file():
+                    for line in ledger.read_text(encoding="utf-8").splitlines():
+                        try:
+                            e = json.loads(line)
+                        except ValueError:
+                            continue
+                        if isinstance(e, dict) and e.get("test_hash") == th and e.get("run") != self.root.name:
+                            earlier.append(e["run"])
+                if splits.test:
+                    with ledger.open("a", encoding="utf-8") as f:
+                        f.write(json.dumps({"test_hash": th, "run": self.root.name, "time": time.time()}) + "\n")
             earlier = sorted(set(earlier))
             if earlier:
                 self.log_event("test_reuse", count=len(earlier), runs=earlier,
@@ -767,7 +769,29 @@ class RunDir:
             shutil.rmtree(dst)
         ig = shutil.ignore_patterns(*ignore) if ignore else None
         shutil.copytree(src_dir, dst, ignore=ig)
+        if candidate_id == "seed":
+            self._seal_eval_surface_at_baseline()
         return dst
+
+    def _seal_eval_surface_at_baseline(self) -> None:
+        """Record the project's eval-surface manifest when the seed is snapshotted, i.e. before the
+        baseline is scored, so a scorer edited after the baseline is caught. The project is the run
+        dir's parent-of-``.capevolve``; any other layout is left to act.py's first call. Best effort."""
+        try:
+            from . import integrity
+            resolved = self.root.resolve()
+            if resolved.parent.name != ".capevolve":
+                return
+            project = resolved.parent.parent
+            path = self.private_dir / integrity.EVAL_SURFACE_MANIFEST
+            if path.exists() or not project.is_dir():
+                return
+            if not ((project / "adapters").is_dir() or (project / "adapter.py").is_file()):
+                return  # not a cap-evolve project folder (e.g. a bare scratch parent)
+            integrity.record_eval_surface(path, project)
+            self.log_event("eval_surface_recorded", project=str(project), late=False, at="baseline")
+        except Exception:  # noqa: BLE001 - sealing is an aid here; act.py records it later if this fails
+            pass
 
     def candidate_dir(self, candidate_id: str) -> Path:
         return self.candidates / candidate_id

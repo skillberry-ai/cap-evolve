@@ -198,3 +198,52 @@ def test_conductor_commit_accept_turns_a_tamper_refusal_into_a_clean_conductor_r
     assert conductor.supervise([], max_restarts=3, sleep_s=0, sleep=lambda s: None,
                                spawn=lambda a: spawns.append(1) or conductor.EXIT_REFUSED) == conductor.EXIT_REFUSED
     assert len(spawns) == 1, "a refusal is not relaunched"
+
+
+# ---- #1011 review 3-5: seal at the baseline; ledger race -----------------------------------------
+
+def test_manifest_exists_right_after_baseline_and_a_changed_scorer_is_reported(tmp_path, capsys, monkeypatch):
+    project = tmp_path / "proj"
+    (project / "adapters").mkdir(parents=True)
+    (project / "adapters" / "adapter.py").write_text("X = 1\n")
+    (project / "scorer.py").write_text("def score(*a): return 0.0\n")
+    rd = RunDir.create(project / ".capevolve", ts="bl")
+    seed = tmp_path / "seedcap"
+    seed.mkdir()
+    (seed / "a.txt").write_text("a")
+    rd.snapshot("seed", seed)  # the first step of harness.baseline, before anything is scored
+    assert (Path(rd.private_dir) / integrity.EVAL_SURFACE_MANIFEST).exists()
+    (project / "scorer.py").write_text("def score(*a): return 1.0\n")  # between baseline and first propose
+    man = integrity.read_manifest(Path(rd.private_dir) / integrity.EVAL_SURFACE_MANIFEST)
+    assert integrity.verify_eval_surface(man, project).modified == ["scorer.py"]
+
+
+def test_a_late_seal_is_flagged_not_silent(tmp_path, capsys, monkeypatch):
+    rd, project, _, val = _run(tmp_path)
+    (rd.candidates / "seed").mkdir(parents=True, exist_ok=True)  # baseline already scored, no manifest
+    _first_call(monkeypatch, capsys, rd, project)
+    ev = _events(rd, "eval_surface_recorded")
+    assert ev and ev[-1]["late"] is True
+
+
+def test_two_finalizing_runs_see_each_other_in_the_ledger(tmp_path):
+    import threading
+
+    from cap_evolve.splits import Splits
+    base = tmp_path / ".capevolve"
+    rds = [RunDir.create(base, ts=f"r{i}") for i in range(2)]
+    splits = Splits(train=[], val=[], test=["t1", "t2"])
+    barrier = threading.Barrier(2)
+
+    def go(rd):
+        barrier.wait()
+        rd._record_test_reuse(splits)
+
+    ts = [threading.Thread(target=go, args=(rd,)) for rd in rds]
+    [t.start() for t in ts]
+    [t.join() for t in ts]
+    lines = (base / "test_ledger.jsonl").read_text().splitlines()
+    assert len(lines) == 2
+    # the second to take the lock saw the first; with the lock held across read+append, at least one run does
+    seen = [bool(_events(rd, "test_reuse")) for rd in rds]
+    assert any(seen)

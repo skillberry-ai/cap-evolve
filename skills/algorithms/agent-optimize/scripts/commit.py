@@ -534,6 +534,9 @@ def _newest_gate_record(run_dir: RunDir, candidate_id: str) -> dict | None:
     recs: list[tuple[float, int, dict]] = []
     work = run_dir.root / "work"
     if work.is_dir():
+        # Round-table records are ordered by file mtime. That is safe only because nothing rewrites an
+        # old round table (a re-gate writes a new ``.rN.json`` beside it); a touched old file would
+        # look newest.
         for log in work.iterdir():
             if not log.is_file() or log.suffix != ".json":
                 continue

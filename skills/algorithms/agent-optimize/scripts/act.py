@@ -435,7 +435,11 @@ def record_eval_surface(ctx) -> None:
         return
     _, created = integrity.record_eval_surface(_surface_path(ctx), ctx.project)
     if created:
-        ctx.run_dir.log_event("eval_surface_recorded", project=str(Path(ctx.project).resolve()))
+        late = (ctx.run_dir.candidates / "seed").exists()   # baseline already scored: the seal is late
+        ctx.run_dir.log_event("eval_surface_recorded", project=str(Path(ctx.project).resolve()), late=late)
+        if late:
+            ctx.warn("eval surface sealed only now, after the baseline was scored (the run did not record it "
+                     "at the baseline); edits made before this call are not detected")
 
 
 def guard_eval_surface(ctx, verb: str) -> None:
@@ -444,6 +448,8 @@ def guard_eval_surface(ctx, verb: str) -> None:
     test seal are untouched."""
     path = _surface_path(ctx)
     if not path.exists():
+        # Normally recorded at the baseline. Missing here means the run never sealed it, so this record
+        # is made late (record_eval_surface logs late=True and warns): it cannot catch earlier edits.
         record_eval_surface(ctx)
         if not path.exists():
             raise Refused(f"{verb} needs the run's eval-surface record: pass --project (no act call of this "
