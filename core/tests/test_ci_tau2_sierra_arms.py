@@ -257,7 +257,7 @@ def test_native_sims_are_on_for_the_tau2_legs():
     """A rollout that fails before scoring is only readable from its raw trajectory. Written to the
     run dir only; not uploaded."""
     sh = RUN_SUITE.read_text(encoding="utf-8")
-    assert "tau2|tau2_sierra|tau2_sierra_blackbox) _NATIVE_SIMS_DEFAULT=1" in sh
+    assert "tau2|tau2_harness|tau2_sierra|tau2_sierra_blackbox) _NATIVE_SIMS_DEFAULT=1" in sh
     assert "*)                                      _NATIVE_SIMS_DEFAULT=0" in sh, "other benches stay off"
     assert 'CAPEVOLVE_NATIVE_SIMS:-$_NATIVE_SIMS_DEFAULT' in sh, "env must still win"
 

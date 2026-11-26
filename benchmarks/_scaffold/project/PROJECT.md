@@ -4,7 +4,7 @@ Filled by the `intake` skill. Records the decisions behind this run so anyone
 (human or agent) can understand and reproduce it.
 
 ## What we're optimizing
-- Capability: <skill-package | tools | mcp-tool | system-prompt | ...>
+- Capability: <skill-package | tools | mcp-tool | system-prompt | agent-harness | ...>
 - Artifact: `<path>`
 - Allowed edits: <...>
 

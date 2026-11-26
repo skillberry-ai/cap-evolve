@@ -126,7 +126,7 @@ def test_missing_lint_cache_fails_loudly(tmp_path):
 
 def test_ci_setup_provisions_appworld_like_the_readme():
     src = (LIB / "ci_setup.sh").read_text()
-    block = src[src.index("  appworld)\n    # benchmarks/appworld/examples/react_agent/README.md"):src.index("  tau2)\n")]
+    block = src[src.index("  appworld)\n    # benchmarks/appworld/examples/react_agent/README.md"):src.index("  tau2|tau2_harness)\n")]
     for needle in ("42b5bcf", "git lfs pull", "appworld-extra-headers.patch", "fastapi==0.135.0",
                    "starlette>=0.48", "pydantic>=2.12,<2.13", "appworld\" install --repo", "src/appworld/apps/admin",
                    "download data --root", "make_roots.py", "make_reference.py", "check_injection.py"):

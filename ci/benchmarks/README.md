@@ -1,6 +1,6 @@
 # Benchmark regression suite
 
-Triggerable, real-model optimization regression over **tau2 · swebench · skillsbench ·
+Triggerable, real-model optimization regression over **tau2 (+ the tau2_harness A/B arm) · swebench · skillsbench ·
 spreadsheetbench · rfe-creator**, plus the two tau2-airline **delivery arms**
 (**tau2_sierra · tau2_sierra_blackbox**) and an **appworld** integration tier,
 built on the [adapter templates](../../benchmarks/). Each benchmark runs a curated
@@ -119,6 +119,18 @@ also optimizes `policy.md`, and installs an unpinned checkout of the same public
 
 Cheapest way to exercise an arm: **Integration tests** → Run workflow → `bench` =
 `tau2_sierra_blackbox`. One task, 1 iteration, 1 trial.
+
+## tau2_harness: the agent-harness A/B arm
+
+`tau2_harness` is the plain `tau2` leg with the **agent-harness** capability added
+(`[system-prompt, tools, agent-harness]` instead of `[system-prompt, tools]`). The seed
+gains `benchmarks/tau2/examples/airline/harness_seed/` (harness settings at plain tau2's
+values, an empty lesson memory), and the optimizer instructions gain one section that names
+the settings the adapter wires. Tasks, models, trials, iterations and gate are the `tau2`
+leg's. Run the two legs on the same commit with the same inputs, for example with the PR
+labels `benchmark-smoke-tau2` and `benchmark-smoke-tau2_harness`, and compare them. What to
+compare, and why both legs must report the same `tau2-bench @ <commit>` line, is in
+[`tau2_harness/README.md`](tau2_harness/README.md).
 
 ## AppWorld (integration tier only)
 

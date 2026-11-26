@@ -57,3 +57,156 @@
   title = {Anthropic Agent Skills — authoring model and best practices},
   note  = {First-party: progressive disclosure (3-level loading), frontmatter rules (name <=64/[a-z0-9-]/no XML/no reserved words; description <=1024/no XML), description-as-trigger (third person, keywords, front-load for the ~1536-char listing cap), body <500 lines/<5k tokens, one-level references, scripts run output-only. Sources: skill-creator (anthropics/skills@main); platform.claude.com agent-skills overview + best-practices; code.claude.com/skills; engineering blog "Equipping agents for the real world with Agent Skills".},
 }
+
+% --- agent-harness capability (skills/capabilities/agent-harness) ---
+
+@misc{ace,
+  title        = {Agentic Context Engineering: Evolving Contexts for Self-Improving Language Models},
+  author       = {Zhang, Qizheng and Hu, Changran and others},
+  year         = {2025},
+  howpublished = {arXiv:2510.04618},
+  note         = {Generator/reflector/curator playbook with incremental updates; names "brevity bias" and "context collapse"; +10.6\% on agent benchmarks.},
+}
+
+@misc{reasoningbank,
+  title        = {ReasoningBank: Scaling Agent Self-Evolving with Reasoning Memory},
+  author       = {Ouyang, Siru and Yan, Jun and others},
+  year         = {2025},
+  howpublished = {arXiv:2509.25140},
+  note         = {Distills strategies from self-judged successes and failures; memory-aware test-time scaling (MaTTS).},
+}
+
+@misc{awm,
+  title        = {Agent Workflow Memory},
+  author       = {Wang, Zora Zhiruo and Mao, Jiayuan and Fried, Daniel and Neubig, Graham},
+  year         = {2024},
+  howpublished = {arXiv:2409.07429},
+  note         = {Reusable workflows induced offline or online; +24.6\% / +51.1\% relative success on Mind2Web / WebArena.},
+}
+
+@misc{reflexion,
+  title        = {Reflexion: Language Agents with Verbal Reinforcement Learning},
+  author       = {Shinn, Noah and Cassano, Federico and others},
+  year         = {2023},
+  howpublished = {arXiv:2303.11366},
+  note         = {Verbal self-reflections in an episodic memory buffer; 91\% pass@1 on HumanEval.},
+}
+
+@misc{expel,
+  title        = {ExpeL: LLM Agents Are Experiential Learners},
+  author       = {Zhao, Andrew and Huang, Daniel and others},
+  year         = {2023},
+  howpublished = {arXiv:2308.10144},
+  note         = {Offline extraction of natural-language insights from training tasks, recalled at inference.},
+}
+
+@misc{dynamic-cheatsheet,
+  title        = {Dynamic Cheatsheet: Test-Time Learning with Adaptive Memory},
+  author       = {Suzgun, Mirac and Yuksekgonul, Mert and Bianchi, Federico and Jurafsky, Dan and Zou, James},
+  year         = {2025},
+  howpublished = {arXiv:2504.07952},
+  note         = {Self-curated memory of strategies and code snippets; GPT-4o Game of 24 from 10\% to 99\%.},
+}
+
+@misc{experience-following,
+  title        = {How Memory Management Impacts LLM Agents: An Empirical Study of Experience-Following Behavior},
+  year         = {2025},
+  howpublished = {arXiv:2505.16067},
+  note         = {Agents copy retrieved memory; wrong records propagate errors; evaluator reliability decides memory quality.},
+}
+
+@misc{mpbench,
+  title        = {From Untrusted Input to Trusted Memory: A Systematic Study of Memory Poisoning Attacks in LLM Agents},
+  author       = {Dash, Pritam and Ge, Tongyu and Jain, Aditi and Shah, Tanmay and Shang, Zhiwei},
+  year         = {2026},
+  howpublished = {arXiv:2606.04329},
+  note         = {Agents that write and retrieve memory more aggressively are more exploitable; prompt-injection defenses do not cover memory poisoning.},
+}
+
+@misc{complexity-trap,
+  title        = {The Complexity Trap: Simple Observation Masking Is as Efficient as LLM Summarization for Agent Context Management},
+  author       = {Lindenbauer, Tobias and Slinko, Igor and Felder, Ludwig and Bogomolov, Egor and Zharov, Yaroslav},
+  year         = {2025},
+  howpublished = {arXiv:2508.21433},
+  note         = {SWE-agent on SWE-bench Verified: masking halves cost vs the raw agent and matches summarization; hybrid a further 7\%/11\% cheaper.},
+}
+
+@misc{swe-agent,
+  title        = {SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering},
+  author       = {Yang, John and Jimenez, Carlos E. and others},
+  year         = {2024},
+  howpublished = {arXiv:2405.15793},
+  note         = {Table 3 ablations on SWE-bench Lite: lint-on-edit 18.0 vs 15.0; last-5 observations 18.0 vs full history 15.0; 100-line viewer 18.0 vs full file 12.7.},
+}
+
+@misc{anthropic-context-engineering,
+  title = {Effective context engineering for AI agents},
+  author = {Anthropic},
+  year  = {2025},
+  url   = {https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents},
+  note  = {Context rot; compaction; tool-result clearing; structured note-taking; sub-agents returning 1-2k token summaries.},
+}
+
+@misc{manus-context-engineering,
+  title = {Context Engineering for AI Agents: Lessons from Building Manus},
+  author = {Ji, Yichao},
+  year  = {2025},
+  url   = {https://manus.im/blog/Context-Engineering-for-AI-Agents-Lessons-from-Building-Manus},
+  note  = {KV-cache hit rate, stable prefix, mask tools instead of removing, file system as context, todo recitation, keep errors in context.},
+}
+
+@misc{anthropic-think-tool,
+  title = {The "think" tool: Enabling Claude to stop and think in complex tool use situations},
+  author = {Anthropic},
+  year  = {2025},
+  url   = {https://www.anthropic.com/engineering/claude-think-tool},
+  note  = {tau-bench airline pass^1 0.332 -> 0.584 with think tool plus optimized prompt; Dec 2025 update prefers extended thinking in most cases.},
+}
+
+@misc{langchain-harness-engineering,
+  title = {Improving Deep Agents with harness engineering},
+  author = {LangChain},
+  year  = {2026},
+  url   = {https://www.langchain.com/blog/improving-deep-agents-with-harness-engineering},
+  note  = {Terminal Bench 2.0 52.8\% -> 66.5\% with the model fixed: pre-completion checklist, loop detection, context injection, reasoning budget per phase. Companion: "The Anatomy of an Agent Harness".},
+}
+
+@misc{anthropic-multi-agent,
+  title = {How we built our multi-agent research system},
+  author = {Anthropic},
+  year  = {2025},
+  url   = {https://www.anthropic.com/engineering/multi-agent-research-system},
+  note  = {+90.2\% vs single agent on an internal research eval; about 15x chat tokens; token use explains 80\% of BrowseComp variance.},
+}
+
+@misc{cognition-multi-agent,
+  title = {Don't Build Multi-Agents},
+  author = {Cognition},
+  year  = {2025},
+  url   = {https://cognition.com/blog/dont-build-multi-agents},
+  note  = {Share full traces; actions carry implicit decisions; prefer a single-threaded agent with history compression.},
+}
+
+@misc{large-language-monkeys,
+  title        = {Large Language Monkeys: Scaling Inference Compute with Repeated Sampling},
+  author       = {Brown, Bradley and Juravsky, Jordan and others},
+  year         = {2024},
+  howpublished = {arXiv:2407.21787},
+  note         = {SWE-bench Lite coverage 15.9\% (1 sample) -> 56\% (250); majority vote and reward models plateau without a verifier.},
+}
+
+@misc{dgm,
+  title        = {Darwin G\"odel Machine: Open-Ended Evolution of Self-Improving Agents},
+  author       = {Zhang, Jenny and Hu, Shengran and Lu, Cong and Lange, Robert and Clune, Jeff},
+  year         = {2025},
+  howpublished = {arXiv:2505.22954},
+  note         = {Self-modifying coding agent: SWE-bench 20.0\% -> 50.0\%, Polyglot 14.2\% -> 30.7\%; found better editing tools, long-context management, peer review.},
+}
+
+@misc{adas,
+  title        = {Automated Design of Agentic Systems},
+  author       = {Hu, Shengran and Lu, Cong and Clune, Jeff},
+  year         = {2024},
+  howpublished = {arXiv:2408.08435},
+  note         = {Meta Agent Search writes agents as code from an archive of earlier designs.},
+}

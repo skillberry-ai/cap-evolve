@@ -22,6 +22,9 @@ SETUP:
 WHAT THIS OPTIMIZES:
   - The airline domain's system-prompt policy (policy/policy.md)
   - Optionally the tool implementations (tools/tools.py)
+  - Optionally the agent harness (harness.json + memory/lessons.jsonl), when the candidate
+    has a harness.json — see "agent-harness capability" below. Without that file the run is
+    byte-for-byte the plain tau2 ``llm_agent``.
 
 HOW IT WORKS:
   - tasks()      → all 50 airline tasks from tau2 (stable, no network).
@@ -32,7 +35,9 @@ HOW IT WORKS:
 
 from __future__ import annotations
 
+import functools
 import importlib.util
+import json
 import os
 import threading
 import uuid
@@ -138,16 +143,22 @@ def _load_candidate_tools_class(tools_path: Path):
     return cls, remove
 
 
-def _build_candidate_tools(candidate_dir: Path):
-    """Instantiate the candidate AirlineTools from tools/tools.py on the FlightDB."""
+def _build_candidate_tools(candidate_dir: Path, think_tool: bool = False):
+    """Instantiate the candidate AirlineTools from tools/tools.py on the FlightDB.
+
+    ``think_tool`` (the agent-harness ``loop.think_tool`` setting) adds a no-op ``think``
+    tool when the candidate's toolkit has none.
+    """
     from tau2.domains.airline.data_model import FlightDB
     from tau2.domains.airline.tools import AirlineTools as _PristineAirlineTools
     from tau2.domains.airline.utils import AIRLINE_DB_PATH
 
     db = FlightDB.load(AIRLINE_DB_PATH)
-    tools_path = candidate_dir / "tools" / "tools.py"
+    tools_path = Path(candidate_dir) / "tools" / "tools.py"
     cand_cls, remove = _load_candidate_tools_class(tools_path)
     AirlineToolsClass = cand_cls or _PristineAirlineTools
+    if think_tool:
+        AirlineToolsClass = _with_think_tool(AirlineToolsClass)
 
     if not remove:
         return AirlineToolsClass(db)
@@ -173,6 +184,268 @@ def _build_candidate_tools(candidate_dir: Path):
 #: Toolkit factory for the built-in pre-gate (#708): `pregate: {toolkit: <this file>:pregate_toolkit}`
 #: in capevolve.yaml makes tool smoke + tool-call replay live (callable(candidate_dir) -> toolkit).
 pregate_toolkit = _build_candidate_tools
+
+
+# ---- agent-harness capability (skills/capabilities/agent-harness) ---------------------
+#
+# A candidate that carries ``harness.json`` runs under HARNESS_AGENT, a subclass of tau2's
+# own LLMAgent; one without it runs tau2's plain ``llm_agent`` exactly as before, so adding
+# this section changes nothing for the policy+tools legs. tau2 itself is never edited: the
+# agent is registered through tau2's public agent registry.
+#
+# The settings below are the ones this adapter WIRES. The capability's
+# ``harness_policy.json`` lists the same paths, so a setting nothing reads is refused at
+# edit time instead of costing a gate evaluation. Hooks (``hooks/*.py``) are not wired here.
+HARNESS_AGENT = "capevolve_harness_agent"
+HARNESS_WIRED = (
+    "loop.max_steps", "loop.think_tool", "loop.repeat_limit", "sampling.temperature",
+    "memory.mode", "memory.top_k", "memory.max_entries",
+)
+DEFAULT_MAX_STEPS = 100
+
+_REPEAT_NUDGE = (
+    "You are about to make the same tool call with the same arguments again, and the "
+    "previous identical calls did not move the task forward. Do not repeat it. Re-read the "
+    "last tool results and the policy, then either change the arguments, call a different "
+    "tool, or tell the user what you found and what you need from them."
+)
+_WORD = re.compile(r"[a-z0-9]+")
+
+
+def _with_think_tool(tools_cls):
+    """``tools_cls`` plus tau2's no-op ``think`` tool (ToolType.THINK), unless it has one."""
+    from tau2.environment.toolkit import ToolType, is_tool
+
+    if "think" in getattr(tools_cls, "__dict__", {}) or any(
+            "think" in getattr(b, "__dict__", {}) for b in tools_cls.__mro__):
+        return tools_cls
+
+    def think(self, thought: str) -> str:
+        """
+        Use the tool to think about something. It will not obtain new information or change the database, but just append the thought to the log. Use it when complex reasoning is needed, for example to check the policy against the facts you have before a change.
+
+        Args:
+            thought: A thought to think about.
+
+        Returns:
+            Empty string
+        """
+        return ""
+
+    meta = type(tools_cls)   # tau2's ToolKitType: its __init__ collects @is_tool methods
+    return meta(tools_cls.__name__, (tools_cls,), {"think": is_tool(ToolType.THINK)(think)})
+
+
+def _load_harness(candidate_dir) -> dict | None:
+    """The candidate's harness settings and lessons, or None when it has no harness.json.
+
+    Lessons are READ here and never written: memory is read-only while a rollout is scored
+    (the capability's validate() fails ``memory.write_during_eval``). A malformed lesson line
+    is skipped; validate() reports it to the optimizer.
+    """
+    d = Path(candidate_dir)
+    f = d / "harness.json"
+    if not f.is_file():
+        return None
+    try:
+        cfg = json.loads(f.read_text(encoding="utf-8") or "{}")
+    except json.JSONDecodeError:
+        cfg = {}
+    if not isinstance(cfg, dict):
+        cfg = {}
+    mem = cfg.get("memory") if isinstance(cfg.get("memory"), dict) else {}
+    lessons: list[dict] = []
+    lp = d / "memory" / "lessons.jsonl"
+    if mem.get("mode", "off") in ("all", "retrieved") and lp.is_file():
+        for line in lp.read_text(encoding="utf-8").splitlines():
+            try:
+                les = json.loads(line) if line.strip() else None
+            except json.JSONDecodeError:
+                continue
+            if isinstance(les, dict) and les.get("do") and les.get("source_split") != "test":
+                lessons.append(les)
+    cap = mem.get("max_entries")
+    if isinstance(cap, int) and not isinstance(cap, bool) and cap >= 0:
+        lessons = lessons[:cap]
+    return {"cfg": cfg, "lessons": lessons}
+
+
+def _hget(h: dict | None, path: str, default=None):
+    cur = (h or {}).get("cfg", {})
+    for part in path.split("."):
+        if not isinstance(cur, dict) or part not in cur:
+            return default
+        cur = cur[part]
+    return cur
+
+
+def _lessons_block(lessons: list[dict]) -> str:
+    if not lessons:
+        return ""
+    lines = []
+    for les in lessons:
+        line = f"- When {str(les.get('when', '')).strip()}: {str(les['do']).strip()}"
+        steps = les.get("steps")
+        if isinstance(steps, list) and steps:
+            line += " Steps: " + " ".join(f"{i}) {str(x).strip()}" for i, x in enumerate(steps, 1))
+        lines.append(line)
+    return ("<lessons>\nLessons learned from earlier runs of this agent. Apply a lesson only "
+            "when its condition holds; the policy above always takes precedence.\n"
+            + "\n".join(lines) + "\n</lessons>")
+
+
+def _retrieve_lessons(lessons: list[dict], text: str, top_k) -> list[dict]:
+    """Top-k lessons by word overlap with ``text`` (the conversation so far). Stable order."""
+    if not isinstance(top_k, int) or isinstance(top_k, bool) or top_k <= 0:
+        return list(lessons)
+    words = set(_WORD.findall(text.lower()))
+
+    def overlap(les):
+        key = " ".join([str(les.get("when", "")), " ".join(map(str, les.get("tags", []) or []))])
+        return len(words & set(_WORD.findall(key.lower())))
+
+    ranked = sorted(range(len(lessons)), key=lambda i: (-overlap(lessons[i]), i))
+    return [lessons[i] for i in sorted(ranked[:top_k])]
+
+
+def _call_signature(message) -> tuple:
+    calls = getattr(message, "tool_calls", None) or []
+    return tuple((c.name, json.dumps(c.arguments, sort_keys=True, default=str)) for c in calls)
+
+
+@functools.lru_cache(maxsize=None)
+def _harness_agent_class():
+    """Build the LLMAgent subclass lazily: tau2 is importable only where it is installed."""
+    from tau2.agent.llm_agent import LLMAgent
+    from tau2.data_model.message import AssistantMessage, SystemMessage, UserMessage
+    from tau2.utils.llm_utils import generate
+
+    class HarnessAgent(LLMAgent):
+        """tau2's LLMAgent plus the wired agent-harness settings.
+
+        - ``memory.mode: all`` appends every lesson to the system prompt; ``retrieved``
+          appends the ``memory.top_k`` lessons that best match the user's first message.
+        - ``loop.repeat_limit: N`` (N >= 2): when the agent is about to make the same tool
+          call with the same arguments for the N-th time in a row, it is asked once to
+          reconsider, and that second answer is used.
+        """
+
+        def __init__(self, *args, harness: dict | None = None, **kwargs):
+            super().__init__(*args, **kwargs)
+            self._harness = harness or {"cfg": {}, "lessons": []}
+            self._mem_mode = _hget(self._harness, "memory.mode", "off")
+            limit = _hget(self._harness, "loop.repeat_limit", 0)
+            self._repeat_limit = limit if isinstance(limit, int) and limit >= 2 else 0
+            self._retrieved = False
+            self.repeat_nudges = 0
+
+        @property
+        def system_prompt(self) -> str:
+            base = super().system_prompt
+            if self._mem_mode == "all":
+                block = _lessons_block(self._harness["lessons"])
+                return f"{base}\n{block}" if block else base
+            return base
+
+        def _place_retrieved_lessons(self, message, state) -> None:
+            if self._retrieved or self._mem_mode != "retrieved":
+                return
+            self._retrieved = True
+            text = " ".join(str(getattr(m, "content", "") or "") for m in state.messages
+                            if isinstance(m, UserMessage))
+            if isinstance(message, UserMessage):
+                text += " " + str(message.content or "")
+            chosen = _retrieve_lessons(self._harness["lessons"], text,
+                                       _hget(self._harness, "memory.top_k"))
+            block = _lessons_block(chosen)
+            if block and state.system_messages:
+                state.system_messages[0] = SystemMessage(
+                    role="system", content=f"{state.system_messages[0].content}\n{block}")
+
+        def _is_repeat(self, msg, state) -> bool:
+            sig = _call_signature(msg)
+            if not self._repeat_limit or not sig:
+                return False
+            same = 0
+            for prev in reversed(state.messages):
+                if not isinstance(prev, AssistantMessage):
+                    continue
+                if _call_signature(prev) != sig:
+                    break
+                same += 1
+            return same >= self._repeat_limit - 1
+
+        def _generate_next_message(self, message, state):
+            self._place_retrieved_lessons(message, state)
+            msg = super()._generate_next_message(message, state)
+            if not self._is_repeat(msg, state):
+                return msg
+            nudge = SystemMessage(role="system", content=_REPEAT_NUDGE)
+            try:
+                retry = generate(model=self.llm, tools=self.tools,
+                                 messages=state.system_messages + state.messages + [nudge],
+                                 call_name="agent_response", **self.llm_args)
+            except Exception:  # noqa: BLE001 — a nudge must never turn a turn into an error
+                return msg
+            self.repeat_nudges += 1
+            # The discarded first answer was paid for too: keep its cost on the record.
+            if msg.cost is not None:
+                retry.cost = (retry.cost or 0.0) + msg.cost
+            return retry
+
+    return HarnessAgent
+
+
+def _harness_agent_factory(tools, domain_policy, **kwargs):
+    """tau2 agent factory for HARNESS_AGENT. Ignores ``task``: the task object holds the user
+    simulator's hidden instructions, which the agent must never see."""
+    import inspect
+
+    cls = _harness_agent_class()
+    extra = {}
+    # Older tau2 checkouts (the CI clone is cached per runner) have no stop-tool argument.
+    if "additional_stop_tool_names" in inspect.signature(cls.__mro__[1].__init__).parameters:
+        extra["additional_stop_tool_names"] = kwargs.get("additional_stop_tool_names", frozenset())
+    return cls(tools=tools, domain_policy=domain_policy, llm=kwargs.get("llm"),
+               llm_args=kwargs.get("llm_args"), harness=Adapter._live_harness, **extra)
+
+
+def _register_harness_agent() -> None:
+    from tau2.registry import registry
+
+    if registry.get_agent_factory(HARNESS_AGENT) is None:
+        registry.register_agent_factory(_harness_agent_factory, HARNESS_AGENT)
+
+
+def _harness_summary(h: dict | None) -> dict:
+    """What the harness did for this rollout, recorded in its metadata for the optimizer."""
+    if h is None:
+        return {"agent": "llm_agent"}
+    return {"agent": HARNESS_AGENT, "memory_mode": _hget(h, "memory.mode", "off"),
+            "lessons_loaded": len(h["lessons"]),
+            "lesson_ids": [str(x.get("id")) for x in h["lessons"]][:50],
+            "think_tool": bool(_hget(h, "loop.think_tool", False)),
+            "repeat_limit": _hget(h, "loop.repeat_limit", 0),
+            "max_steps": _hget(h, "loop.max_steps", DEFAULT_MAX_STEPS),
+            "temperature": _hget(h, "sampling.temperature")}
+
+
+def _run_settings(ctx) -> tuple[str, int, dict, dict | None]:
+    """(agent name, max_steps, agent llm kwargs, harness) for one evaluation of ``ctx``."""
+    h = _load_harness(ctx) if ctx is not None else None
+    llm_args = dict(model_config.llm_kwargs_for("agent"))
+    if h is None:
+        Adapter._live_harness = None
+        return "llm_agent", DEFAULT_MAX_STEPS, llm_args, None
+    _register_harness_agent()
+    Adapter._live_harness = h
+    steps = _hget(h, "loop.max_steps", DEFAULT_MAX_STEPS)
+    if not isinstance(steps, int) or isinstance(steps, bool) or steps < 1:
+        steps = DEFAULT_MAX_STEPS
+    temp = _hget(h, "sampling.temperature")
+    if isinstance(temp, (int, float)) and not isinstance(temp, bool):
+        llm_args["temperature"] = float(temp)
+    return HARNESS_AGENT, steps, llm_args, h
 
 
 def _read_candidate_policy(candidate_dir: Path) -> str:
@@ -299,6 +572,9 @@ def _native_sims_enabled() -> bool:
 class Adapter(CapabilityAdapter):
 
     _original_env_ctor = None
+    #: The live candidate's agent-harness settings (``_load_harness``), or None. Process-global
+    #: like the env-constructor override in apply(): one candidate is live per process.
+    _live_harness = None
     #: Tags errored rollouts with ``metadata["error_kind"]`` ("candidate" | "infra"), so
     #: ``errored_trial_policy: fail`` is not a no-op on this adapter.
     supports_error_kind = True
@@ -420,17 +696,18 @@ class Adapter(CapabilityAdapter):
             return results
 
         max_concurrency = _max_concurrency()
+        agent_name, max_steps, agent_args, harness = _run_settings(ctx)
 
         config = TextRunConfig(
             domain=DOMAIN,
-            agent="llm_agent",
+            agent=agent_name,
             llm_agent=model_config.MODEL,
-            llm_args_agent=model_config.llm_kwargs_for("agent"),
+            llm_args_agent=agent_args,
             user="user_simulator",
             llm_user=_user_model(),
             llm_args_user=model_config.llm_kwargs_for("user"),
             num_trials=1,
-            max_steps=100,
+            max_steps=max_steps,
             max_errors=10,
             # Per-simulation wallclock cap, so ONE wedged rollout cannot block a whole
             # batch (measured: a stuck airline sim ran 40+ min while litellm retried a
@@ -459,8 +736,10 @@ class Adapter(CapabilityAdapter):
                 # data/simulations and finds nothing — these sims live in the run dir.
                 print(f"tau2 view --dir {sim_save.parent}", file=sys.stderr)
 
+        summary = _harness_summary(harness)
         for sim in sim_results.simulations:
             rollout = self._sim_to_rollout(sim)
+            rollout.metadata["harness"] = summary
             results[str(rollout.task_id)] = rollout
 
         for t in tasks:
@@ -590,17 +869,18 @@ class Adapter(CapabilityAdapter):
             return results
 
         max_concurrency = _max_concurrency()
+        agent_name, max_steps, agent_args, harness = _run_settings(ctx)
 
         config = TextRunConfig(
             domain=DOMAIN,
-            agent="llm_agent",
+            agent=agent_name,
             llm_agent=model_config.MODEL,
-            llm_args_agent=model_config.llm_kwargs_for("agent"),
+            llm_args_agent=agent_args,
             user="user_simulator",
             llm_user=_user_model(),
             llm_args_user=model_config.llm_kwargs_for("user"),
             num_trials=n_trials,
-            max_steps=100,
+            max_steps=max_steps,
             max_errors=10,
             # Per-simulation wallclock cap, so ONE wedged rollout cannot block a whole
             # batch (measured: a stuck airline sim ran 40+ min while litellm retried a
@@ -630,9 +910,12 @@ class Adapter(CapabilityAdapter):
                 print(f"tau2 view --dir {sim_save.parent}", file=sys.stderr)
 
         by_task_trial: dict[tuple[str, int], Rollout] = {}
+        summary = _harness_summary(harness)
         for sim in sim_results.simulations:
             trial = int(sim.trial) if sim.trial is not None else 0
-            by_task_trial[(str(sim.task_id), trial)] = self._sim_to_rollout(sim)
+            rollout = self._sim_to_rollout(sim)
+            rollout.metadata["harness"] = summary
+            by_task_trial[(str(sim.task_id), trial)] = rollout
 
         for t in tasks:
             if t.id not in by_id:
@@ -1117,11 +1400,12 @@ class Adapter(CapabilityAdapter):
             registry._domains[DOMAIN] = Adapter._original_env_ctor
 
         policy_text = _read_candidate_policy(candidate_dir)
+        think_tool = bool(_hget(_load_harness(candidate_dir), "loop.think_tool", False))
 
         def candidate_get_environment(db=None, solo_mode: bool = False):
             if solo_mode:
                 raise ValueError("Airline domain does not support solo mode")
-            tools = _build_candidate_tools(candidate_dir)
+            tools = _build_candidate_tools(candidate_dir, think_tool=think_tool)
             return Environment(
                 domain_name=DOMAIN,
                 policy=policy_text,

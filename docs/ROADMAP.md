@@ -19,7 +19,7 @@ prioritizes what makes cap-evolve best-in-class and widely adopted.
   textual-LR edit budget, rejected-edit buffer, gated slow update; arXiv:2605.23904),
   **`hill-climb`** (one skill, `--focus all|cyclic|hardest-first`)
   (a thin precursor).
-- Capabilities: system-prompt, skill-package, tools, mcp-tool (action-policy / mutation-lock); capabilities chosen as a LIST.
+- Capabilities: system-prompt, skill-package, tools, mcp-tool, agent-harness (action-policy / mutation-lock); capabilities chosen as a LIST.
 - Optimizers: one **`run-optimizer`** skill + `optimizers/registry.yaml`
   (claude-code, codex, gemini-cli, opencode, cursor, droid, copilot, kimi, pi,
   antigravity, openclaw, ibm-bob, generic, mock — the agent set matches

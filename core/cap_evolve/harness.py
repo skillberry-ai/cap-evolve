@@ -4530,6 +4530,18 @@ _CAP_EDIT_SPACE = {
     "mcp-tool": "ONLY safe edits: tool/parameter documentation, in-description examples, and "
                 "adding/removing tools from the exposed set. The wire schema and tool code "
                 "are owned by the external server and are NOT editable here.",
+    "agent-harness": "Edit the harness AROUND the model: harness.json settings (loop and "
+                     "stopping rules, context compaction, memory, tool-error retries, "
+                     "sampling, sub-agents), the cross-run lessons in memory/lessons.jsonl, "
+                     "and code hooks under hooks/. HIGHEST-LEVERAGE EDIT: DISTILL A LESSON "
+                     "from a failure CLUSTER in the train/val traces (when -> do, with the "
+                     "evidence), so the agent starts every task with what past runs learned; "
+                     "then a context or loop change that removes the trace symptom (output "
+                     "truncation, repeated calls, ending without acting). Memory is written "
+                     "by YOU between iterations and is read-only while a rollout is scored; "
+                     "never set memory.write_during_eval, never cite the test split. Only "
+                     "change settings the adapter wires (harness_policy.json 'wired'), and "
+                     "report the cost_factor next to any gain from sampling or verification.",
 }
 
 
